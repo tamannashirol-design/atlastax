@@ -1,6 +1,8 @@
 import { motion } from 'framer-motion'
 import { useEffect, useState, type ReactNode } from 'react'
 import { AnswerTile } from '../components/AnswerTile'
+import { FlowStepper } from '../components/FlowStepper'
+import { allSteps } from '../flow/sections'
 import { PrimaryButton } from '../components/PrimaryButton'
 import cssText from '../index.css?raw'
 import { contrastRatio } from '../lib/contrast'
@@ -131,6 +133,53 @@ function PairRow({ pair }: { pair: Pair }) {
         </span>
       </span>
     </li>
+  )
+}
+
+function DemoButton({ children, onClick, disabled }: { children: ReactNode; onClick: () => void; disabled?: boolean }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      disabled={disabled}
+      className="flex h-11 items-center rounded-sm border border-border-strong bg-surface px-4 text-body font-semibold focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-text disabled:border-border-decorative disabled:text-text-muted"
+    >
+      {children}
+    </button>
+  )
+}
+
+// Live stepper demo: move through the flow to see done / current / upcoming and the motion.
+function StepperDemo() {
+  const [index, setIndex] = useState(3) // start in "Tax details" so one section is done
+  const position = allSteps[index]
+  const goToSection = (section: number) => setIndex(allSteps.findIndex((p) => p.section === section))
+  return (
+    <>
+      <div className="col-span-full flex flex-col gap-3 tablet:col-span-4 desktop:col-span-3">
+        <span className="text-body font-semibold">Rail</span>
+        <Label>Laptop and iPad landscape. Done sections are clickable.</Label>
+        <FlowStepper presentation="rail" position={position} onNavigate={goToSection} />
+      </div>
+      <div className="col-span-full flex flex-col gap-3 tablet:col-span-4 desktop:col-span-6 desktop:col-start-5">
+        <span className="text-body font-semibold">Compact</span>
+        <Label>Phone and iPad portrait. Tap it to open the sheet.</Label>
+        <div className="flex">
+          <FlowStepper presentation="compact" position={position} onNavigate={goToSection} />
+        </div>
+        <div className="flex flex-wrap gap-3 pt-3">
+          <DemoButton onClick={() => setIndex(index - 1)} disabled={index === 0}>
+            Previous step
+          </DemoButton>
+          <DemoButton onClick={() => setIndex(index + 1)} disabled={index === allSteps.length - 1}>
+            Next step
+          </DemoButton>
+        </div>
+        <Label>
+          Step {index + 1} of {allSteps.length} overall
+        </Label>
+      </div>
+    </>
   )
 }
 
@@ -299,6 +348,13 @@ export default function Styleguide() {
                 <PrimaryButton disabled>Continue</PrimaryButton>
               </div>
             </div>
+          </Section>
+
+          <Section
+            title="Stepper"
+            description="One component, two presentations. Navy marks progress; Continue stays the only blue element. Use the buttons to watch the marker glide, the check draw in and the connector fill."
+          >
+            <StepperDemo />
           </Section>
 
           <Section

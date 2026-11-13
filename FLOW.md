@@ -21,6 +21,21 @@ help link, and Continue.
 10. Review forms
 11. Ready to submit
 
+## Stepper sections
+
+The flow is grouped into 5 sections for the stepper (`src/flow/sections.ts`):
+
+| # | Section | Steps |
+|---|---|---|
+| 1 | About you | Visa type, Years on this visa, State |
+| 2 | Tax details | SSN or ITIN, Filed before, Country of citizenship* |
+| 3 | Income | Income sources (+ follow-ups) |
+| 4 | Documents | Document checklist |
+| 5 | Review | Review and submit |
+
+*Placement of Country of citizenship is to confirm (used for the tax-treaty check).
+"2 of 3" is shown only for sections with more than one step.
+
 Persistent across the app (old version): bottom tab bar with 3 tabs (Home,
 Documents/Scan, Profile), a menu button, and a security/trust badge.
 

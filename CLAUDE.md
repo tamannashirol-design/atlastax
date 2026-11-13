@@ -43,6 +43,10 @@ elements floating over each other. The flow is documented in FLOW.md.
 - Phone: bottom tab bar.
 - iPad: left sidebar.
 - Laptop: left sidebar or top nav (decide in the style direction step).
+- During the filing flow, the stepper (`FlowStepper`) replaces navigation:
+  vertical rail in grid columns 1–3 at ≥1024px (laptop, iPad landscape);
+  compact header stepper + bottom sheet below 1024px (phone, iPad portrait).
+  Progress is navy; Continue stays the only blue element.
 
 
 ## Icons

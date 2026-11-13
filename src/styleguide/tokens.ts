@@ -1,5 +1,6 @@
 // Data shown on the style guide. Values mirror the tokens in src/index.css.
 import {
+  CaretDownIcon,
   CaretLeftIcon,
   CheckIcon,
   DownloadSimpleIcon,
@@ -107,7 +108,8 @@ export const icons: { name: string; Icon: Icon; reason: string }[] = [
   { name: 'User', Icon: UserIcon, reason: 'Profile tab' },
   { name: 'CaretLeft', Icon: CaretLeftIcon, reason: 'Back on question screens' },
   { name: 'Question', Icon: QuestionIcon, reason: '"Not sure?" help links' },
-  { name: 'Check', Icon: CheckIcon, reason: 'Selected answer, uploaded doc' },
+  { name: 'Check', Icon: CheckIcon, reason: 'Selected answer, done section, uploaded doc' },
+  { name: 'CaretDown', Icon: CaretDownIcon, reason: 'Compact stepper opens a sheet' },
   { name: 'UploadSimple', Icon: UploadSimpleIcon, reason: 'Upload a document' },
   { name: 'DownloadSimple', Icon: DownloadSimpleIcon, reason: 'Download checklist PDF' },
   { name: 'X', Icon: XIcon, reason: 'Close a bottom sheet' },

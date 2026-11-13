@@ -2,8 +2,12 @@ import { CaretLeftIcon, QuestionIcon } from '@phosphor-icons/react'
 import { useRef, useState, type KeyboardEvent } from 'react'
 import { AnswerTile } from '../components/AnswerTile'
 import { PrimaryButton } from '../components/PrimaryButton'
-import { StepProgress } from '../components/StepProgress'
+import { FlowStepper } from '../components/FlowStepper'
+import type { FlowPosition } from '../flow/sections'
 import { DebugStack, useUrlFlag } from '../lib/debug'
+
+// Q1 is the first step of the first section.
+const position: FlowPosition = { section: 0, step: 0 }
 
 const options = [
   { code: 'F-1', description: 'Academic' },
@@ -15,6 +19,9 @@ const options = [
 //
 // Column: snapped to the page grid. Phone = all 4 columns, iPad = columns 2–7
 // of 8, laptop = columns 4–9 of 12 (6 columns each).
+//
+// Stepper: laptop/iPad landscape (≥1024) → vertical rail in grid columns 1–3.
+// Phone/iPad portrait → compact stepper in the header (opens a bottom sheet).
 //
 // Phone: question + tiles at the top; helper, link, Continue pinned to the bottom.
 // iPad/laptop: one block (question, tiles, Continue, helper, link) with fixed
@@ -42,7 +49,14 @@ export default function VisaQuestion() {
     <DebugStack grid={grid} outlines={outlines}>
       <div className="flex flex-1 flex-col pt-[env(safe-area-inset-top)] page-x">
         <div className="page-content page-grid flex-1">
-          <div className="col-span-full flex flex-col tablet:col-span-6 tablet:col-start-2 tablet:pb-8 desktop:col-start-4">
+          {/* Laptop: stepper rail in columns 1–3 (replaces the left nav during the flow) */}
+          <div className="hidden desktop:col-span-3 desktop:col-start-1 desktop:row-start-1 desktop:block">
+            <div className="sticky top-0">
+              <FlowStepper presentation="rail" position={position} />
+            </div>
+          </div>
+
+          <div className="col-span-full flex flex-col tablet:col-span-6 tablet:col-start-2 tablet:pb-8 desktop:col-start-4 desktop:row-start-1">
             <header className="flex h-14 items-center gap-4">
               <a
                 href="/"
@@ -53,7 +67,10 @@ export default function VisaQuestion() {
                     itself, not its built-in padding, sits on the margin. */}
                 <CaretLeftIcon size={24} width={9} viewBox="72 0 96 256" weight="regular" aria-hidden />
               </a>
-              <StepProgress step={1} total={7} />
+              {/* Phone + iPad portrait: compact stepper */}
+              <div className="flex min-w-0 flex-1 desktop:hidden">
+                <FlowStepper presentation="compact" position={position} />
+              </div>
             </header>
 
             {/* iPad/laptop: top spacer (2 parts) */}

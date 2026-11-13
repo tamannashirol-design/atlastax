@@ -34,7 +34,8 @@ export const pairs: Pair[] = [
   { fg: 'border-strong', bg: 'sage-100', kind: 'ui', use: 'Tile border while pressed' },
   { fg: 'text', bg: 'surface', kind: 'ui', use: 'Selected tile border + check' },
   { fg: 'text', bg: 'background', kind: 'ui', use: 'Selected tile border vs page, focus ring' },
-  { fg: 'text', bg: 'sage-100', kind: 'ui', use: 'Progress bar fill vs track' },
+  { fg: 'text', bg: 'sage-100', kind: 'ui', use: 'Stepper: done-section check' },
+  { fg: 'text', bg: 'border-decorative', kind: 'ui', use: 'Stepper: bar/connector fill vs track' },
   { fg: 'primary', bg: 'background', kind: 'ui', use: 'Primary button vs page' },
   { fg: 'primary-pressed', bg: 'background', kind: 'ui', use: 'Pressed primary button vs page' },
 

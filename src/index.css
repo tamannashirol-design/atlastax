@@ -149,6 +149,11 @@
   }
 }
 
+/* While a modal sheet is open, the page behind doesn't scroll */
+html:has(dialog[open]) {
+  overflow: hidden;
+}
+
 /* ---- Debug tooling (not part of the design) ---- */
 
 /* Outline every element. Outlines never change layout. */
