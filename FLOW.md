@@ -1,22 +1,25 @@
 # AtlasTax flow
 
-Taken from the old screens in `/references`. This covers flow, copy and logic
-only. It does not describe visual style.
+Taken from the old screens in `/references`, plus answers from the designer.
+This covers flow, copy and logic only. It does not describe visual style.
 
-Old screens showed a numbered progress bar (steps 1 to 7). Steps 2, 3 and 4
-have no reference screen. See "Open questions" at the bottom.
+Every question screen (steps 1 to 7) uses the same layout: progress (step X
+of 7), back, question, answer options, "why we ask" helper line, an optional
+help link, and Continue.
 
 ## Order at a glance
 
 1. Home
 2. Q1: Visa type
-3. Q2 to Q4: *(missing, no reference)*
-4. Q5: Filed U.S. taxes before? (opens the "Previous return" sheet if Yes)
-5. Q6: Income sources (multi-select; each pick opens a follow-up sheet, then follow-up questions such as Scholarship withholding)
-6. Q7: Country of citizenship
-7. Document checklist (empty, then complete)
-8. Review forms
-9. Ready to submit
+3. Q2: Years on this visa
+4. Q3: State
+5. Q4: SSN / ITIN
+6. Q5: Filed U.S. taxes before? (opens the "Previous return" sheet)
+7. Q6: Income sources (multi-select; each pick opens a follow-up sheet, then follow-up questions such as Scholarship withholding)
+8. Q7: Country of citizenship
+9. Document checklist (empty, then complete)
+10. Review forms
+11. Ready to submit
 
 Persistent across the app (old version): bottom tab bar with 3 tabs (Home,
 Documents/Scan, Profile), a menu button, and a security/trust badge.
@@ -50,12 +53,32 @@ Documents/Scan, Profile), a menu button, and a security/trust badge.
 **Why we ask:** "To personalize the experience and show only visa-relevant forms"
 **Help link:** "Not sure about your visa type?"
 **Action:** Continue (disabled until an answer is picked)
-**Navigation:** Back arrow
 
-## 3. Q2 to Q4 (steps 2 to 4)
-**No reference screens.** Content unknown.
+## 3. Q2: Years on this visa (step 2)
+**Source:** Designer (no reference screen)
+**Question:** "How many years have you been on this visa?"
+**Answers (single choice):** <5, 5> (read as "Less than 5" and "5 or more")
+**Why we ask:** "To determine residency status for correct tax forms - substantial presence"
+**Help link:** "Calculate how long you have been in the U.S."
+**Action:** Continue
 
-## 4. Q5: Filed before (step 5)
+## 4. Q3: State (step 3)
+**Source:** Designer (no reference screen)
+**Question:** "What U.S. state do you currently live or study in?"
+**Answer:** Dropdown of the 50 states plus DC
+**Why we ask:** "To identify if a state tax return is required"
+**Help link:** None
+**Action:** Continue
+
+## 5. Q4: SSN / ITIN (step 4)
+**Source:** Designer (no reference screen)
+**Question:** "Do you have a Social Security Number (SSN) or ITIN?"
+**Answers (single choice):** SSN, ITIN, N/A
+**Why we ask:** "To decide if you can e-file or must paper file."
+**Help link:** "Not sure whether you have it?"
+**Action:** Continue
+
+## 6. Q5: Filed before (step 5)
 **Source:** `ssn add q.png`
 **Question:** "Have you filed U.S. taxes before?"
 **Answers:** Not visible (covered by the sheet). Assumed Yes / No.
@@ -67,27 +90,38 @@ Documents/Scan, Profile), a menu button, and a security/trust badge.
 - Actions: **Skip for now** / **Upload file**
 - Close button (X)
 
-Note: the file is named "ssn add q", which suggests an SSN question once
-lived here or nearby. Not shown on screen.
-
-## 5. Q6: Income sources (step 6)
-**Source:** `Finance picture.jpg`, `job add q.png`
+## 7. Q6: Income sources (step 6)
+**Source:** `Finance picture.jpg` (version A), `job add q.png` (version B)
 **Question:** "Select the ones that apply to you"
-**Answers (multi-select, each with an illustration):**
+**Answers (multi-select, each with an illustration). Merged list from both versions:**
 
-| Version A (`Finance picture.jpg`) | Version B (`job add q.png`, bottom row visible) |
-|---|---|
-| Bank Interest | |
-| OPT/CPT | |
-| On-Campus Job | On-Campus Job (selected) |
-| Scholarship | |
-| Freelance | |
-| Investments | |
-| Donation | Trading |
-| Contract Work | Contract Work |
-| Child Care | No Earnings |
+1. Bank Interest
+2. OPT/CPT
+3. On-Campus Job
+4. Scholarship
+5. Freelance
+6. Investments
+7. Trading *(version B only)*
+8. Contract Work
+9. Donation *(version A only)*
+10. Child Care *(version A only)*
+11. No Earnings *(version B only)*
 
 **Action:** Continue
+
+### What differs between the two versions (to confirm)
+- Only the bottom row of the grid differs:
+  - Version A: Donation, Contract Work, Child Care
+  - Version B: Trading, Contract Work, No Earnings
+- In version B, the sheet covers the top two rows, so we're assuming they
+  match version A.
+- **Donation and Child Care aren't income.** They're deductions and credits.
+  That may be why version B replaced them. If we keep them, they may belong
+  on a separate "expenses" question.
+- **Trading and Investments overlap.** Should they be one option, or two
+  separate ones?
+- **No Earnings is an "opt-out" option.** If it's kept, picking it should
+  clear the other picks, and vice versa.
 
 **Follow-up sheet per selection** (example for On-Campus Job):
 - Title: "You selected On-Campus Job. We just need a few more details."
@@ -107,7 +141,7 @@ lived here or nearby. Not shown on screen.
 Other income types presumably have their own follow-ups. Only Scholarship
 has a reference screen.
 
-## 6. Q7: Country of citizenship (step 7)
+## 8. Q7: Country of citizenship (step 7)
 **Source:** `treaty.png`
 **Question:** "What is your country of citizenship?"
 **Answer:** Dropdown, placeholder "Select one"
@@ -115,7 +149,7 @@ has a reference screen.
 **Help link:** "What is a tax-treaty?"
 **Action:** Continue
 
-## 7. Document checklist
+## 9. Document checklist
 **Source:** `Document Upload.png` (empty), `Document Upload 5.png` (complete)
 **Title:** "Document Checklist"
 **Sections (each one is an upload row):**
@@ -129,14 +163,16 @@ has a reference screen.
 - Always: **Download Checklist PDF**
 - When all four are complete: **File 2025** appears and becomes the main action
 
-## 8. Review forms
+## 10. Review forms
 **Source:** `Document Upload 7.png`
 **Title:** "Your Forms Are Ready"
 **Subtitle:** "Review your forms to confirm everything is correct before submitting"
 **Content:** Preview of the generated Form 1040-NR (U.S. Nonresident Alien Income Tax Return, 2025)
-**Actions:** **Submit Forms** / **Review Forms**
+**Actions:**
+- Primary: **Submit Forms**
+- Secondary (quieter): **Review Forms**
 
-## 9. Ready to submit
+## 11. Ready to submit
 **Source:** `Document Upload 8.png`
 **Title:** "Your forms are ready for submission."
 **Body:** "Download, sign, and mail your forms to the IRS."
@@ -145,14 +181,13 @@ has a reference screen.
 ---
 
 ## Open questions
-1. **Steps 2 to 4 are missing.** What were these questions? (Possibly SSN/ITIN,
-   days in the U.S., school details.)
+1. **Q2 boundary:** does exactly 5 years count as "5 or more"? (This matters
+   for the substantial presence test, where F-1 students are exempt for 5
+   calendar years.) Also, should the labels read "Less than 5" / "5 or more"
+   instead of "<5" / "5>"?
 2. **Q5 answers:** Yes / No? Does the sheet only appear after Yes?
-3. **Q6 options:** Version A or B? (Donation and Child Care vs Trading and No
-   Earnings.) Should "No Earnings" clear the other choices?
+3. **Q6 options:** confirm the merged list. See "What differs" above.
 4. **Q6 follow-ups:** which follow-up questions belong to each income type?
-5. **Review screen:** two buttons ("Submit" and "Review") break the
-   one-primary-action rule. Which is primary?
-6. **Ready screen:** what does the arrow do? Download a PDF, show mailing
+5. **Ready screen:** what does the arrow do? Download a PDF, show mailing
    instructions, or both?
-7. **Previous years (2024 to 2022):** same flow as 2025?
+6. **Previous years (2024 to 2022):** same flow as 2025?
