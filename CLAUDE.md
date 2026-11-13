@@ -61,7 +61,9 @@ elements floating over each other. The flow is documented in FLOW.md.
   | Body | 17 | 24 |
   | Small | 13 | 20 |
 - Max 2 weights per family.
-- Tabular numerals for all numbers and money.
+- Tabular numerals for all numbers and money: add the `tabular-nums` class
+  to any element showing numbers. (Not applied globally, because in Inter it
+  also widens hyphens.)
 - Hierarchy comes from size, weight, and color only.
 - Text scales with the user's font size settings (sizes in rem).
 
@@ -82,7 +84,7 @@ never pure white. Roles only; no decorative colors.
 | success | #166534 | Success states |
 | error | #B42318 | Error states |
 | border-decorative | #C3D0BE | Dividers only (not for controls) |
-| border-strong | #7F8F7B | Control borders (needs 3:1) |
+| border-strong | #788874 | Control borders (needs 3:1) |
 | sage-100 | #E6EDE3 | Quiet fills, pressed and disabled states |
 
 Rules:

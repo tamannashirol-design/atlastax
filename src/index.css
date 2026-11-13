@@ -1,1 +1,163 @@
 @import "tailwindcss";
+@import "@fontsource-variable/inter/wght.css";
+@import "@fontsource-variable/fraunces/soft.css";
+
+/*
+  AtlasTax design tokens. This file is the single source of truth.
+  - Everything sits on a 4pt grid. 1pt = 1 CSS px (as on iOS).
+  - Type sizes are in rem so text grows with the user's font size setting.
+  - Colors here are read by `npm run contrast` and by the style guide.
+*/
+@theme {
+  /* Breakpoints: phone < 600, iPad 600–1023, laptop ≥ 1024 */
+  --breakpoint-*: initial;
+  --breakpoint-tablet: 600px;
+  --breakpoint-desktop: 1024px;
+
+  /* Spacing: base unit 4px, so p-1 = 4, p-2 = 8, p-4 = 16 … */
+  --spacing: 0.25rem;
+
+  /* Layout widths */
+  --container-content: 1120px; /* laptop max content width */
+  --container-column: 560px; /* question-screen column */
+
+  /* Fonts: swap a family by changing ONE line here. */
+  --font-*: initial;
+  --font-display: "Fraunces Variable", Georgia, serif; /* stand-in for Arizona Flare */
+  --font-ui: "Inter Variable", -apple-system, BlinkMacSystemFont, sans-serif; /* stand-in for Dia */
+
+  /* Weights: max 2 per family. Fraunces uses 600 only. Inter uses 400 + 600. */
+  --font-weight-*: initial;
+  --font-weight-normal: 400;
+  --font-weight-semibold: 600;
+
+  /* Type scale: 4 sizes only. Line heights on the 4pt grid. */
+  --text-*: initial;
+  --text-display: 2.125rem; /* 34 */
+  --text-display--line-height: 2.5rem; /* 40 */
+  --text-display--letter-spacing: -0.01em;
+  --text-title: 1.375rem; /* 22 */
+  --text-title--line-height: 1.75rem; /* 28 */
+  --text-body: 1.0625rem; /* 17 */
+  --text-body--line-height: 1.5rem; /* 24 */
+  --text-small: 0.8125rem; /* 13 */
+  --text-small--line-height: 1.25rem; /* 20 */
+
+  /* Motion: CSS color fades use a spring-shaped curve (same family as
+     Framer Motion's springs), 300ms by default. */
+  --ease-*: initial;
+  --ease-spring: linear(0, 0.18 5%, 0.39 11%, 0.58 18%, 0.73 26%, 0.85 35%, 0.93 46%, 0.97 58%, 0.99 72%, 1);
+  --default-transition-duration: 300ms;
+  --default-transition-timing-function: var(--ease-spring);
+
+  /* Radii: 12 / 16 / 24, plus "full" for pills and round controls */
+  --radius-*: initial;
+  --radius-sm: 12px;
+  --radius-md: 16px;
+  --radius-lg: 24px;
+  --radius-full: 9999px;
+
+  /* Shadows: 3 levels, tinted with the text navy so they feel warm, not gray */
+  --shadow-*: initial;
+  --shadow-1: 0 1px 2px rgb(14 27 44 / 0.06), 0 1px 4px rgb(14 27 44 / 0.04);
+  --shadow-2: 0 2px 8px rgb(14 27 44 / 0.08), 0 4px 16px rgb(14 27 44 / 0.04);
+  --shadow-3: 0 8px 24px rgb(14 27 44 / 0.12), 0 16px 48px rgb(14 27 44 / 0.08);
+
+  /* Colors: roles only. Cobalt + sage, light mode. */
+  --color-*: initial;
+  --color-background: #f4f7f2;
+  --color-surface: #ffffff;
+  --color-text: #0e1b2c;
+  --color-text-muted: #5b6b58;
+  --color-primary: #1f4fd8;
+  --color-primary-pressed: #183daa;
+  --color-primary-tint: #e8eefc;
+  --color-on-primary: #ffffff;
+  --color-success: #166534;
+  --color-error: #b42318;
+  --color-border-decorative: #c3d0be;
+  --color-border-strong: #788874; /* draft was #7f8f7b: 2.87:1 on sage-100, darkened to pass 3:1 */
+  --color-sage-100: #e6ede3;
+  --color-transparent: transparent;
+  --color-current: currentColor;
+}
+
+@layer base {
+  html {
+    -webkit-text-size-adjust: 100%;
+    -webkit-font-smoothing: antialiased;
+  }
+  body {
+    @apply bg-background font-ui text-body text-text;
+    /* Numbers: add the `tabular-nums` class to anything showing numbers or money.
+       Not set globally: in Inter it also widens hyphens ("visa - relevant"). */
+  }
+  /* Fraunces' "soft" axis rounds the letter corners a little: warm, not stiff */
+  .font-display {
+    font-weight: 600;
+    font-variation-settings: "SOFT" 50;
+  }
+}
+
+/*
+  Page layout. Margins and gutters change per breakpoint.
+  Margins never go smaller than the device's safe area (notch, rounded corners).
+*/
+:root {
+  --page-margin: 16px;
+  --grid-gutter: 16px;
+}
+@media (width >= 600px) {
+  :root {
+    --page-margin: 24px;
+    --grid-gutter: 24px;
+  }
+}
+@media (width >= 1024px) {
+  :root {
+    --page-margin: 32px;
+  }
+}
+
+@layer components {
+  /* Full-width band with safe page margins on both sides */
+  .page-x {
+    padding-left: max(var(--page-margin), env(safe-area-inset-left));
+    padding-right: max(var(--page-margin), env(safe-area-inset-right));
+  }
+  /* Centered content, capped at 1120 on laptop */
+  .page-content {
+    width: 100%;
+    max-width: var(--container-content);
+    margin-inline: auto;
+  }
+  /* 4 / 8 / 12 column grid */
+  .page-grid {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    column-gap: var(--grid-gutter);
+  }
+  @media (width >= 600px) {
+    .page-grid {
+      grid-template-columns: repeat(8, minmax(0, 1fr));
+    }
+  }
+  @media (width >= 1024px) {
+    .page-grid {
+      grid-template-columns: repeat(12, minmax(0, 1fr));
+    }
+  }
+}
+
+/* ---- Debug tooling (not part of the design) ---- */
+
+/* Outline every element. Outlines never change layout. */
+.debug-outlines * {
+  outline: 1px solid rgb(255 0 100 / 0.45);
+  outline-offset: -1px;
+}
+
+.grid-overlay-col {
+  background: rgb(255 0 100 / 0.08);
+  box-shadow: inset 1px 0 rgb(255 0 100 / 0.3), inset -1px 0 rgb(255 0 100 / 0.3);
+}
