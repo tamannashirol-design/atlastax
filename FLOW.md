@@ -21,6 +21,19 @@ help link, and Continue.
 10. Review forms
 11. Ready to submit
 
+## Built screens (routes)
+
+| Route | Screen | Answer control |
+|---|---|---|
+| /visa | Q1 Visa type | Tiles F-1 / J-1 / M-1 |
+| /years | Q2 Years on this visa | Tiles "< 5" (Less than 5 years) / "5+" (5 years or more) |
+| /state | Q3 State | Dropdown: phone picker below 600px, custom list above |
+| /tax-id | Q4 SSN / ITIN | Tiles SSN / ITIN / N/A |
+| /filed-before | Q5 Filed before | Tiles Yes / No. Continue with Yes opens the previous-return sheet (Upload file / Skip for now); No goes straight on |
+| /citizenship | Q7 Country of citizenship | Searchable country list (placeholder "Search countries") |
+
+Continue on /citizenship goes to /income (not built yet).
+
 ## Stepper sections
 
 The flow is grouped into 5 sections for the stepper (`src/flow/sections.ts`):

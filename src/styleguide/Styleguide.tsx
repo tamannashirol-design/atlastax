@@ -1,7 +1,13 @@
-import { motion } from 'framer-motion'
+import { AnimatePresence, motion } from 'framer-motion'
 import { useEffect, useState, type ReactNode } from 'react'
 import { AnswerTile } from '../components/AnswerTile'
+import { BottomSheet } from '../components/BottomSheet'
 import { FlowStepper } from '../components/FlowStepper'
+import { SearchSelect } from '../components/SearchSelect'
+import { SecondaryButton } from '../components/SecondaryButton'
+import { SelectField } from '../components/SelectField'
+import { TileGroup } from '../components/TileGroup'
+import { countries, usStates } from '../data/places'
 import { allSteps } from '../flow/sections'
 import { PrimaryButton } from '../components/PrimaryButton'
 import cssText from '../index.css?raw'
@@ -136,19 +142,6 @@ function PairRow({ pair }: { pair: Pair }) {
   )
 }
 
-function DemoButton({ children, onClick, disabled }: { children: ReactNode; onClick: () => void; disabled?: boolean }) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      disabled={disabled}
-      className="flex h-11 items-center rounded-sm border border-border-strong bg-surface px-4 text-body font-semibold focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-text disabled:border-border-decorative disabled:text-text-muted"
-    >
-      {children}
-    </button>
-  )
-}
-
 // Live stepper demo: move through the flow to see done / current / upcoming and the motion.
 function StepperDemo() {
   const [index, setIndex] = useState(3) // start in "Tax details" so one section is done
@@ -167,17 +160,75 @@ function StepperDemo() {
         <div className="flex">
           <FlowStepper presentation="compact" position={position} onNavigate={goToSection} />
         </div>
-        <div className="flex flex-wrap gap-3 pt-3">
-          <DemoButton onClick={() => setIndex(index - 1)} disabled={index === 0}>
+        <div className="grid grid-cols-2 gap-3 pt-3">
+          <SecondaryButton onClick={() => setIndex(index - 1)} disabled={index === 0}>
             Previous step
-          </DemoButton>
-          <DemoButton onClick={() => setIndex(index + 1)} disabled={index === allSteps.length - 1}>
+          </SecondaryButton>
+          <SecondaryButton onClick={() => setIndex(index + 1)} disabled={index === allSteps.length - 1}>
             Next step
-          </DemoButton>
+          </SecondaryButton>
         </div>
         <Label>
           Step {index + 1} of {allSteps.length} overall
         </Label>
+      </div>
+    </>
+  )
+}
+
+// Live form controls: the pieces the question screens are built from.
+function FormControlsDemo() {
+  const [years, setYears] = useState<'under5' | '5plus'>()
+  const [state, setState] = useState<string>()
+  const [country, setCountry] = useState<string>()
+  const [sheet, setSheet] = useState(false)
+  return (
+    <>
+      <div className="col-span-full flex flex-col gap-3 desktop:col-span-6">
+        <span id="sg-tiles" className="text-body font-semibold">
+          Tile group (2 or 3 options)
+        </span>
+        <Label>Fills the 88pt answer area. Arrow keys move and select.</Label>
+        <div className="flex h-(--answer-h)">
+          <TileGroup
+            labelledBy="sg-tiles"
+            value={years}
+            onChange={setYears}
+            options={[
+              { value: 'under5', code: '< 5', description: 'Less than 5 years', codeHidden: true },
+              { value: '5plus', code: '5+', description: '5 years or more', codeHidden: true },
+            ]}
+          />
+        </div>
+      </div>
+      <div className="col-span-full flex flex-col gap-3 desktop:col-span-6">
+        <span id="sg-select" className="text-body font-semibold">
+          Select field
+        </span>
+        <Label>Phone: the phone’s own picker. iPad and laptop: custom list (↑ ↓, Enter, Escape, type to jump).</Label>
+        <SelectField labelledBy="sg-select" options={usStates} value={state} onChange={setState} placeholder="Choose a state" />
+      </div>
+      <div className="col-span-full flex flex-col gap-3 desktop:col-span-6">
+        <span id="sg-search" className="text-body font-semibold">
+          Search select
+        </span>
+        <Label>Type to filter; accents don’t matter. ↑ ↓, Enter, Escape.</Label>
+        <SearchSelect labelledBy="sg-search" options={countries()} value={country} onChange={setCountry} placeholder="Search countries" />
+      </div>
+      <div className="col-span-full flex flex-col gap-3 desktop:col-span-6">
+        <span className="text-body font-semibold">Secondary button + bottom sheet</span>
+        <Label>Secondary is never blue, so each screen keeps one primary.</Label>
+        <SecondaryButton onClick={() => setSheet(true)}>Open a bottom sheet</SecondaryButton>
+        <AnimatePresence>
+          {sheet && (
+            <BottomSheet title="Sample sheet" onClose={() => setSheet(false)}>
+              <p className="text-body text-text-muted">Slides up with the soft spring. Escape, the close button, or tapping outside closes it.</p>
+              <div className="flex flex-col gap-2 pt-6">
+                <SecondaryButton onClick={() => setSheet(false)}>Close</SecondaryButton>
+              </div>
+            </BottomSheet>
+          )}
+        </AnimatePresence>
       </div>
     </>
   )
@@ -348,6 +399,13 @@ export default function Styleguide() {
                 <PrimaryButton disabled>Continue</PrimaryButton>
               </div>
             </div>
+          </Section>
+
+          <Section
+            title="Form controls"
+            description="The answer controls used on question screens. Each fits the fixed 88pt answer area so every question screen lines up."
+          >
+            <FormControlsDemo />
           </Section>
 
           <Section

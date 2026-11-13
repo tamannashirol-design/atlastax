@@ -1,21 +1,24 @@
-import VisaQuestion from './screens/VisaQuestion'
+import FlowPage from './flow/FlowPage'
+import { isFlowPath } from './flow/screens'
+import { Link, usePath } from './lib/router'
 import Styleguide from './styleguide/Styleguide'
 
-// Tiny router: pick a screen from the address bar path.
+// Picks a page from the address bar. Flow screens share one FlowPage so the
+// shell and stepper stay mounted as you move between questions.
 export default function App() {
-  const path = window.location.pathname.replace(/\/+$/, '')
+  const path = usePath()
   if (path === '/styleguide') return <Styleguide />
-  if (path === '/visa') return <VisaQuestion />
+  if (isFlowPath(path)) return <FlowPage path={path} />
 
   return (
     <main className="flex min-h-dvh flex-col items-center justify-center gap-2 p-4">
-      <p className="text-body">AtlasTax: screens coming soon.</p>
-      <a href="/visa" className="flex min-h-11 items-center text-body font-semibold underline underline-offset-4">
-        Visa question
-      </a>
-      <a href="/styleguide" className="flex min-h-11 items-center text-body font-semibold underline underline-offset-4">
+      <p className="text-body">{path === '/' ? 'AtlasTax: Home is coming soon.' : 'This screen is coming soon.'}</p>
+      <Link href="/visa" className="flex min-h-11 items-center text-body font-semibold underline underline-offset-4">
+        Start the questions
+      </Link>
+      <Link href="/styleguide" className="flex min-h-11 items-center text-body font-semibold underline underline-offset-4">
         Style guide
-      </a>
+      </Link>
     </main>
   )
 }

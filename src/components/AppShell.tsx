@@ -1,5 +1,6 @@
 import { CaretLeftIcon, FileTextIcon, HouseIcon, UserIcon, type Icon } from '@phosphor-icons/react'
 import type { ReactNode } from 'react'
+import { Link } from '../lib/router'
 
 // App shell: three rows filling the screen.
 //   1. Top bar (every breakpoint): back, title.
@@ -27,10 +28,10 @@ export function AppShell({ title, backHref, activeTab, children }: Props) {
       <header className="bg-background shadow-[inset_0_-1px_0_var(--color-border-decorative)] pt-(--safe-top) page-x">
         <div className="grid h-(--top-bar-h) page-content grid-cols-[2.75rem_minmax(0,1fr)_2.75rem] items-center gap-4">
           {backHref ? (
-            <a href={backHref} aria-label="Back" className={`flex size-11 items-center rounded-sm ${focusRing}`}>
+            <Link href={backHref} aria-label="Back" className={`flex size-11 items-center rounded-sm ${focusRing}`}>
               {/* viewBox cropped to the glyph so the arrow itself sits on the margin */}
               <CaretLeftIcon size={24} width={9} viewBox="72 0 96 256" weight="regular" aria-hidden />
-            </a>
+            </Link>
           ) : (
             <span aria-hidden />
           )}
@@ -50,7 +51,7 @@ export function AppShell({ title, backHref, activeTab, children }: Props) {
             const active = id === activeTab
             return (
               <li key={id} className="flex flex-1">
-                <a
+                <Link
                   href={href}
                   aria-current={active ? 'page' : undefined}
                   className={`flex flex-1 flex-col items-center justify-center gap-1 rounded-sm text-small ${
@@ -59,7 +60,7 @@ export function AppShell({ title, backHref, activeTab, children }: Props) {
                 >
                   <Icon size={24} weight="regular" aria-hidden />
                   {label}
-                </a>
+                </Link>
               </li>
             )
           })}

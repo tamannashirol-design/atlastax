@@ -12,7 +12,8 @@ import { PrimaryButton } from './PrimaryButton'
 //   │ unused space falls here, ABOVE the question, so the │
 //   │ helper stays close to the tiles and nothing below   │
 //   │ ever moves                                          │
-//   │ question (Display, 2 lines reserved)                │
+//   │ question (Display: 3 lines reserved on phone, 2 at  │
+//   │ 600px+; the longest questions need 3 on a phone)    │
 //   │ ── 8 ──                                             │
 //   │ helper text (2 lines reserved on phone, 1 above)    │
 //   └─────────────────────────────────────────────────────┘
@@ -21,7 +22,7 @@ import { PrimaryButton } from './PrimaryButton'
 //   ── 32 ──
 //   Continue
 //   ── 8 ──
-//   help link
+//   help link (2 lines reserved, so long links never shift the block)
 //
 // Below 1024px: compact stepper directly under the top bar; the block sits
 // slightly above the middle of the space between stepper and tab bar.
@@ -31,6 +32,8 @@ import { PrimaryButton } from './PrimaryButton'
 
 type Props = {
   position: FlowPosition
+  /** Where the back arrow goes (the previous question, or Home) */
+  backHref: string
   /** id of the question heading; answers use it as their aria-labelledby */
   questionId: string
   question: string
@@ -47,9 +50,9 @@ const focusRing = 'focus-visible:outline-2 focus-visible:outline-offset-2 focus-
 // The 6-column question column (all 4 columns on phone)
 const column = 'col-span-full tablet:col-span-6 tablet:col-start-2 desktop:col-start-4'
 
-export function QuestionLayout({ position, questionId, question, answers, canContinue, onContinue, helper, help, onNavigate }: Props) {
+export function QuestionLayout({ position, backHref, questionId, question, answers, canContinue, onContinue, helper, help, onNavigate }: Props) {
   return (
-    <AppShell title={`${TAX_YEAR} tax return`} backHref="/" activeTab="home">
+    <AppShell title={`${TAX_YEAR} tax return`} backHref={backHref} activeTab="home">
       <div className="flex flex-1 flex-col page-x">
         {/* Phone + iPad portrait: compact stepper, directly under the top bar */}
         <div className="page-content page-grid desktop:hidden">
@@ -64,10 +67,10 @@ export function QuestionLayout({ position, questionId, question, answers, canCon
         {/* Rows: 1 = filler (only the unused part of the reserved header height),
             2 = question + helper, 3 = answers, 4 = Continue + link. */}
         <div className="page-content page-grid grid-rows-[1fr_auto_auto_auto]">
-          {/* Invisible reserve: header height = 80 (2 question lines) + 8 + helper
-              (40 phone / 20 at 600px+). It spans rows 1–2, so row 1 takes only the
+          {/* Invisible reserve: header height = question lines + 8 + helper lines.
+              Phone: 120 + 8 + 40 = 168. 600px+: 80 + 8 + 20 = 108. It spans rows 1–2, so row 1 takes only the
               space the question and helper don't use: the extra lands above them. */}
-          <div aria-hidden className={`pointer-events-none row-span-2 row-start-1 min-h-32 tablet:min-h-27 ${column}`} />
+          <div aria-hidden className={`pointer-events-none row-span-2 row-start-1 min-h-42 tablet:min-h-27 ${column}`} />
 
           {/* Laptop + iPad landscape: rail starts at row 2 → level with the question text */}
           <div className="hidden self-start desktop:col-span-3 desktop:col-start-1 desktop:row-span-3 desktop:row-start-2 desktop:block">
@@ -75,7 +78,8 @@ export function QuestionLayout({ position, questionId, question, answers, canCon
           </div>
 
           <div className={`row-start-2 flex flex-col gap-2 ${column}`}>
-            <h1 id={questionId} className="font-display text-display">
+            {/* tabIndex -1: receives focus on screen change, for screen readers */}
+            <h1 id={questionId} tabIndex={-1} className="font-display text-display outline-none">
               {question}
             </h1>
             {helper && <p className="text-small text-text-muted">{helper}</p>}
@@ -83,7 +87,8 @@ export function QuestionLayout({ position, questionId, question, answers, canCon
 
           <div className={`row-start-3 mt-10 flex h-(--answer-h) flex-col ${column}`}>{answers}</div>
 
-          <div className={`row-start-4 mt-8 flex flex-col gap-2 ${column}`}>
+          {/* Fixed height = Continue 56 + 8 + link 48, even when there's no link */}
+          <div className={`row-start-4 mt-8 flex min-h-28 flex-col gap-2 ${column}`}>
             <PrimaryButton disabled={!canContinue} onClick={onContinue}>
               Continue
             </PrimaryButton>
@@ -91,7 +96,7 @@ export function QuestionLayout({ position, questionId, question, answers, canCon
               <button
                 type="button"
                 onClick={help.onClick}
-                className={`flex min-h-11 items-center gap-2 self-start rounded-sm text-body font-semibold underline underline-offset-4 ${focusRing}`}
+                className={`flex min-h-12 items-center gap-2 self-start rounded-sm text-left text-body font-semibold underline underline-offset-4 ${focusRing}`}
               >
                 <QuestionIcon size={24} weight="regular" aria-hidden />
                 {help.label}

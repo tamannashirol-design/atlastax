@@ -5,7 +5,9 @@ import { pressScale, spring } from '../lib/motion'
 
 type Props = {
   code: string
-  description: string
+  description?: string
+  /** Hide the code from screen readers when the description says the same thing. */
+  codeHidden?: boolean
   selected: boolean
   onSelect?: () => void
   /** Style guide only: show the pressed look without pressing. */
@@ -19,7 +21,7 @@ type Props = {
 // Unselected: white tile, sage border. Pressed: sage fill, shrinks slightly.
 // Selected: navy border (drawn 2px wide without shifting layout) + check mark.
 // Navy, not primary blue: the screen's one primary element is the Continue button.
-export function AnswerTile({ code, description, selected, onSelect, forcePressed, tabIndex, onKeyDown, ref }: Props) {
+export function AnswerTile({ code, description, codeHidden, selected, onSelect, forcePressed, tabIndex, onKeyDown, ref }: Props) {
   return (
     <motion.button
       ref={ref}
@@ -38,7 +40,9 @@ export function AnswerTile({ code, description, selected, onSelect, forcePressed
       }`}
     >
       <span className="flex items-center justify-between gap-2">
-        <span className="font-display text-title">{code}</span>
+        <span className="font-display text-title" aria-hidden={codeHidden || undefined}>
+          {code}
+        </span>
         <AnimatePresence initial={false}>
           {selected && (
             <motion.span
@@ -54,7 +58,7 @@ export function AnswerTile({ code, description, selected, onSelect, forcePressed
           )}
         </AnimatePresence>
       </span>
-      <span className="text-small text-text-muted">{description}</span>
+      {description && <span className="text-small text-text-muted">{description}</span>}
     </motion.button>
   )
 }

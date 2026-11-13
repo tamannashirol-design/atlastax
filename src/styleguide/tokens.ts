@@ -6,6 +6,7 @@ import {
   DownloadSimpleIcon,
   FileTextIcon,
   HouseIcon,
+  MagnifyingGlassIcon,
   QuestionIcon,
   UploadSimpleIcon,
   UserIcon,
@@ -110,8 +111,9 @@ export const icons: { name: string; Icon: Icon; reason: string }[] = [
   { name: 'CaretLeft', Icon: CaretLeftIcon, reason: 'Back on question screens' },
   { name: 'Question', Icon: QuestionIcon, reason: '"Not sure?" help links' },
   { name: 'Check', Icon: CheckIcon, reason: 'Selected answer, done section, uploaded doc' },
-  { name: 'CaretDown', Icon: CaretDownIcon, reason: 'Compact stepper opens a sheet' },
+  { name: 'CaretDown', Icon: CaretDownIcon, reason: 'Opens a list: stepper sheet, dropdowns' },
   { name: 'UploadSimple', Icon: UploadSimpleIcon, reason: 'Upload a document' },
   { name: 'DownloadSimple', Icon: DownloadSimpleIcon, reason: 'Download checklist PDF' },
   { name: 'X', Icon: XIcon, reason: 'Close a bottom sheet' },
+  { name: 'MagnifyingGlass', Icon: MagnifyingGlassIcon, reason: 'Search field (country)' },
 ]
