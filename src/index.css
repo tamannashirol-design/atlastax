@@ -166,6 +166,14 @@
   }
 }
 
+/* Scrollbar space: the content area scrolls; on systems with classic
+   scrollbars (Windows) that takes width. Bars and the debug overlay reserve the
+   same gutter so everything stays aligned. Zero where scrollbars overlay. */
+.scroll-gutter {
+  overflow-y: hidden;
+  scrollbar-gutter: stable;
+}
+
 /* While a modal sheet is open, the page behind doesn't scroll */
 html:has(dialog[open]) {
   overflow: hidden;

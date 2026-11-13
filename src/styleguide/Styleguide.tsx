@@ -3,6 +3,8 @@ import { useEffect, useState, type ReactNode } from 'react'
 import { AnswerTile } from '../components/AnswerTile'
 import { BottomSheet } from '../components/BottomSheet'
 import { FlowStepper } from '../components/FlowStepper'
+import { IncomeCard } from '../components/IncomeCard'
+import { extraOptions, incomeOptions } from '../data/income'
 import { SearchSelect } from '../components/SearchSelect'
 import { SecondaryButton } from '../components/SecondaryButton'
 import { SelectField } from '../components/SelectField'
@@ -384,6 +386,26 @@ export default function Styleguide() {
                 </div>
               </div>
             </div>
+            <div className="col-span-full flex flex-col gap-3">
+              <span className="text-body font-semibold">Income card (multi-select)</span>
+              <Label>Hover lifts with a shadow (pointer devices). Selected = navy border + check badge.</Label>
+              <div className="grid auto-rows-fr grid-cols-2 gap-(--grid-gutter) tablet:grid-cols-4 desktop:grid-cols-5">
+                {[
+                  { name: 'Default', props: { checked: false } },
+                  { name: 'Pressed', props: { checked: false, forcePressed: true } },
+                  { name: 'Selected', props: { checked: true } },
+                  { name: 'Placeholder (art not approved)', props: { checked: false, showArt: false } },
+                  { name: 'Quiet (No earnings)', props: { checked: false, quiet: true } },
+                ].map(({ name, props }) => (
+                  <div key={name} className="flex min-w-0 flex-col gap-2">
+                    <Label>{name}</Label>
+                    <div className="flex flex-1">
+                      <IncomeCard label={props.quiet ? 'No earnings' : 'Scholarship or fellowship'} form="1042-S" art={incomeOptions[3].art} {...props} />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
             <div className="col-span-full flex flex-col gap-3 desktop:col-span-6">
               <span className="text-body font-semibold">Primary button</span>
               <div className="flex flex-col gap-2">
@@ -446,6 +468,33 @@ export default function Styleguide() {
                 </li>
               ))}
             </ul>
+          </Section>
+
+          <Section
+            title="Illustrations"
+            description="The designer's files (src/assets/illustrations/), used exactly as provided: 64px, 1x/2x/3x, decorative (empty alt), lazy loaded, Income cards only. Each is shown on a white card, on the selected card (white + navy border), and on sage (the pressed fill), so halos or hard edges would show."
+          >
+            {[...incomeOptions, ...extraOptions]
+              .filter((o) => o.art)
+              .map((o) => (
+                <figure key={o.id} className="col-span-full flex flex-col gap-2 tablet:col-span-4 desktop:col-span-4">
+                  <div className="grid grid-cols-3 gap-2">
+                    {[
+                      'bg-surface border-border-decorative',
+                      'bg-surface border-text shadow-[inset_0_0_0_1px_var(--color-text)]',
+                      'bg-sage-100 border-sage-100',
+                    ].map((look) => (
+                      <div key={look} className={`flex h-24 items-center justify-center rounded-md border ${look}`}>
+                        <img src={o.art!.src} srcSet={o.art!.srcSet} alt="" width={64} height={64} loading="lazy" decoding="async" className="size-16 object-contain" />
+                      </div>
+                    ))}
+                  </div>
+                  <figcaption className="flex flex-col">
+                    <span className="text-body font-semibold">{o.label}</span>
+                    <Label>{o.file}</Label>
+                  </figcaption>
+                </figure>
+              ))}
           </Section>
 
           <Section title="Radii" description="Three corner sizes. Bigger surfaces get rounder corners.">

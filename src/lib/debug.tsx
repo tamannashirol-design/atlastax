@@ -15,7 +15,7 @@ export function useUrlFlag(name: string) {
 
 function GridOverlay() {
   return (
-    <div aria-hidden className="pointer-events-none z-20 page-x [grid-area:1/1]">
+    <div aria-hidden className="scroll-gutter pointer-events-none z-20 page-x [grid-area:1/1]">
       <div className="page-content page-grid h-full">
         {Array.from({ length: 12 }, (_, i) => (
           <div

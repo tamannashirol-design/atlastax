@@ -55,6 +55,7 @@ export default function FlowPage({ path }: { path: string }) {
         onContinue={onContinue}
         onNavigate={(section) => navigate(flow.find((s) => s.position.section === section)!.path)}
         answers={screen.answers(answers, questionId)}
+        answerArea={screen.answerArea}
       />
 
       <AnimatePresence>

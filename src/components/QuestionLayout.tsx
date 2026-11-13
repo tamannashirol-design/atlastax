@@ -37,8 +37,10 @@ type Props = {
   /** id of the question heading; answers use it as their aria-labelledby */
   questionId: string
   question: string
-  /** Must fit the fixed answer area. */
+  /** Must fit the fixed answer area, unless answerArea is "auto". */
   answers: ReactNode
+  /** "auto": the answer area grows with its content (multi-select card grids). */
+  answerArea?: 'fixed' | 'auto'
   canContinue: boolean
   onContinue?: () => void
   helper?: string
@@ -50,7 +52,7 @@ const focusRing = 'focus-visible:outline-2 focus-visible:outline-offset-2 focus-
 // The 6-column question column (all 4 columns on phone)
 const column = 'col-span-full tablet:col-span-6 tablet:col-start-2 desktop:col-start-4'
 
-export function QuestionLayout({ position, backHref, questionId, question, answers, canContinue, onContinue, helper, help, onNavigate }: Props) {
+export function QuestionLayout({ position, backHref, questionId, question, answers, answerArea = 'fixed', canContinue, onContinue, helper, help, onNavigate }: Props) {
   return (
     <AppShell title={`${TAX_YEAR} tax return`} backHref={backHref} activeTab="home">
       <div className="flex flex-1 flex-col page-x">
@@ -85,7 +87,7 @@ export function QuestionLayout({ position, backHref, questionId, question, answe
             {helper && <p className="text-small text-text-muted">{helper}</p>}
           </div>
 
-          <div className={`row-start-3 mt-10 flex h-(--answer-h) flex-col ${column}`}>{answers}</div>
+          <div className={`row-start-3 mt-10 flex flex-col ${answerArea === 'fixed' ? 'h-(--answer-h)' : ''} ${column}`}>{answers}</div>
 
           {/* Fixed height = Continue 56 + 8 + link 48, even when there's no link */}
           <div className={`row-start-4 mt-8 flex min-h-28 flex-col gap-2 ${column}`}>

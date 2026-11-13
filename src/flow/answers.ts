@@ -11,6 +11,7 @@ export type Answers = {
   filedBefore?: 'yes' | 'no'
   priorReturn?: 'skipped' | { fileName: string }
   citizenship?: string // two-letter region code
+  income?: import('../data/income').IncomeId[]
 }
 
 const KEY = 'atlastax:answers'

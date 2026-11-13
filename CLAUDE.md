@@ -65,9 +65,16 @@ elements floating over each other. The flow is documented in FLOW.md.
   Progress is navy; Continue stays the only blue element.
 
 
-## Icons
-- Phosphor, one weight (regular), 24px grid.
-- No SF Symbols (not licensed for web).
+## Icons and illustrations (two separate categories)
+**UI icons**
+- Phosphor only, one weight (regular), 24px. Every icon needs a reason
+  (listed on /styleguide). No SF Symbols (not licensed for web).
+
+**Illustrations**
+- Soft 3D objects, used only on the Income cards. About 64px, decorative
+  (empty alt), lazy loaded, 1x/2x/3x WebP via `npm run illustrations`.
+- Designer's files in `src/assets/illustrations/`, used exactly as provided:
+  never redraw, recolor, crop, or filter. Sources in CREDITS.md.
 
 ## Type (max 2 families, 4 sizes)
 - Display/headlines: **Fraunces** (free stand-in for Arizona Flare). One

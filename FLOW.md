@@ -31,8 +31,9 @@ help link, and Continue.
 | /tax-id | Q4 SSN / ITIN | Tiles SSN / ITIN / N/A |
 | /filed-before | Q5 Filed before | Tiles Yes / No. Continue with Yes opens the previous-return sheet (Upload file / Skip for now); No goes straight on |
 | /citizenship | Q7 Country of citizenship | Searchable country list (placeholder "Search countries") |
+| /income | Q6 Income sources | Multi-select income cards in two groups (see below) |
 
-Continue on /citizenship goes to /income (not built yet).
+Continue on /income goes to /income/details (follow-ups, not built yet).
 
 ## Stepper sections
 
@@ -216,12 +217,51 @@ no real PDF yet.)*
 
 ---
 
+## Q6 Income screen (built: /income)
+
+- Question: "Select the ones that apply to you". Multi-select cards, 3 across on
+  iPad and laptop, 2 on phone; every card 176pt tall with a 64px illustration.
+- Form code under the label only where one form clearly applies:
+  OPT or CPT · W-2, On-campus job · W-2, Scholarship or fellowship · 1042-S,
+  Freelance · 1099-NEC, Contract work · 1099-NEC. Left blank for Bank interest,
+  Investments and Trading, where the form can differ for nonresidents
+  (to confirm with a tax professional).
+- "No earnings" is a plain card ("None of the above"), full width on phone.
+- Group 2 "Anything else that applies?": Donation, Child care.
+- Continue goes to /income/details (follow-ups, not built yet).
+
+## Proposal: income follow-ups (to confirm before building)
+
+Each selected type gets a short follow-up (the old flow showed a sheet: "You
+selected On-Campus Job. We just need a few more details."). The proposal below
+only collects information and documents; it does not decide any tax treatment.
+Items marked **(tax review)** depend on rules a tax professional should confirm
+before we write questions for them.
+
+| Income type | Proposed follow-ups | Why |
+|---|---|---|
+| Bank interest | Did you get a form for this interest? (upload it, or "No form") · Total interest amount if no form | The return needs the amount; a bank form, if any, already has it |
+| OPT or CPT | Upload your W-2 (one per employer; "Add another") · Was it OPT, CPT, or both? | The W-2 has wages and withholding; OPT/CPT tells us which work authorization the job falls under |
+| On-campus job | Upload your W-2 (one per employer; "Add another") | Same document source as other wages |
+| Scholarship or fellowship | Did your university withhold any tax from your scholarship? (Yes / No, from the old flow) · Upload your 1042-S, or "I didn't get one" · Did part of it pay for things other than tuition and required fees? **(tax review)** | The old flow already asks about withholding; the 1042-S holds the amounts; the last question only matters if a tax professional confirms it should be asked |
+| Freelance | Upload each 1099-NEC, or enter the total you were paid if there's no form · Did you have work-related expenses? **(tax review)** | We need what you were paid; whether expenses can be counted needs confirmation |
+| Investments | Upload your brokerage or bank tax form(s) (1042-S or 1099-DIV), or "No form" | The forms list dividends and any tax withheld |
+| Trading | Upload your brokerage tax form(s) (1099-B or 1042-S), or "No form" | The forms list sales; nothing else should be asked until we know what's needed **(tax review)** |
+| Contract work | Same as Freelance | Same kind of documents |
+| No earnings | No follow-up | Nothing to collect |
+| Donation | Organization name · Amount · Upload the receipt | The receipt and amount are what any claim would rely on **(tax review)** for whether nonresident filers can use it |
+| Child care | Hold: no questions until a tax professional confirms whether and how this applies to nonresident filers **(tax review)** | Avoids asking for information we may not be able to use |
+
+Open questions for this proposal:
+1. One follow-up screen per selected type, or one combined "details" screen?
+2. Should uploads be required, or can people skip and add documents later in
+   the Documents section?
+
 ## Open questions
 1. **Q6 follow-ups:** which follow-up questions belong to each income type?
    Only Scholarship has one so far.
 2. **Q6 overlap:** Trading and Investments: one option or two?
-3. **Q6 follow-up sheets for group 2:** do Donation and Child Care open a
-   follow-up sheet too, like the income options?
+3. **Q6 follow-ups:** see the proposal above.
 
 ## Needs legal review
 - Q2: the 5-year boundary and its wording (see Q2 above).

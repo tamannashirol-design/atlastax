@@ -1,6 +1,7 @@
 // Every simple question screen, in flow order. Copy comes from FLOW.md.
 // All of them render through the same QuestionLayout (see FlowPage).
 import type { ReactNode } from 'react'
+import { IncomePicker } from '../components/IncomePicker'
 import { SearchSelect } from '../components/SearchSelect'
 import { SelectField } from '../components/SelectField'
 import { TileGroup } from '../components/TileGroup'
@@ -16,8 +17,9 @@ export type FlowScreen = {
   helper?: string
   helpLabel?: string
   isAnswered: (a: Answers) => boolean
-  /** The answer control; must fit the fixed answer area. */
+  /** The answer control; must fit the fixed answer area unless answerArea is "auto". */
   answers: (a: Answers, labelledBy: string) => ReactNode
+  answerArea?: 'fixed' | 'auto'
 }
 
 // Non-breaking hyphens (‑) keep words like "visa‑relevant" on one line.
@@ -136,9 +138,18 @@ export const flow: FlowScreen[] = [
       />
     ),
   },
+  {
+    id: 'income',
+    path: '/income',
+    position: { section: 2, step: 0 },
+    question: 'Select the ones that apply to you',
+    isAnswered: (a) => (a.income?.length ?? 0) > 0,
+    answerArea: 'auto',
+    answers: (a, id) => <IncomePicker labelledBy={id} value={a.income ?? []} onChange={(income) => setAnswers({ income })} />,
+  },
 ]
 
-/** Where Continue goes after the last simple question (Income isn't built yet). */
-export const AFTER_FLOW = '/income'
+/** Where Continue goes after the last built screen (income follow-ups aren't built yet). */
+export const AFTER_FLOW = '/income/details'
 
 export const isFlowPath = (path: string) => flow.some((s) => s.path === path)

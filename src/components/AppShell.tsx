@@ -25,7 +25,7 @@ export function AppShell({ title, backHref, activeTab, children }: Props) {
   return (
     <div className="grid h-dvh grid-rows-[auto_minmax(0,1fr)_auto]">
       {/* Hairline drawn as an inset shadow so the bar stays exactly --top-bar-h tall */}
-      <header className="bg-background shadow-[inset_0_-1px_0_var(--color-border-decorative)] pt-(--safe-top) page-x">
+      <header className="scroll-gutter bg-background shadow-[inset_0_-1px_0_var(--color-border-decorative)] pt-(--safe-top) page-x">
         <div className="grid h-(--top-bar-h) page-content grid-cols-[2.75rem_minmax(0,1fr)_2.75rem] items-center gap-4">
           {backHref ? (
             <Link href={backHref} aria-label="Back" className={`flex size-11 items-center rounded-sm ${focusRing}`}>
@@ -40,11 +40,11 @@ export function AppShell({ title, backHref, activeTab, children }: Props) {
         </div>
       </header>
 
-      <main className="flex min-h-0 flex-col overflow-y-auto">{children}</main>
+      <main className="flex min-h-0 flex-col overflow-y-auto [scrollbar-gutter:stable]">{children}</main>
 
       <nav
         aria-label="Main"
-        className="bg-background pb-(--safe-bottom) shadow-[inset_0_1px_0_var(--color-border-decorative)] page-x tabbar-hidden:hidden"
+        className="scroll-gutter bg-background pb-(--safe-bottom) shadow-[inset_0_1px_0_var(--color-border-decorative)] page-x tabbar-hidden:hidden"
       >
         <ul className="flex h-(--tab-bar-h) page-content">
           {tabs.map(({ id, href, label, Icon }) => {
