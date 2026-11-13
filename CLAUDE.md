@@ -17,7 +17,8 @@ elements floating over each other. The flow is documented in FLOW.md.
 - Premium but friendly, like Venmo and Airbnb: serious subject, warm and
   playful details.
 - Follow Apple HIG: 44pt tap targets, safe areas, large titles, bottom tab
-  bar, bottom sheets, system font stack.
+  bar, bottom sheets. (Fonts: see Type below, which replaces the system
+  font stack.)
 - Everything sits on a 4pt grid. Nothing floats. Flex/grid layout only, no
   absolute positioning for layout.
 - One primary action per screen. Clear type hierarchy.
@@ -43,15 +44,59 @@ elements floating over each other. The flow is documented in FLOW.md.
 - iPad: left sidebar.
 - Laptop: left sidebar or top nav (decide in the style direction step).
 
-## Brand
-- Brand color: brand new. Discard the old teal and cream entirely.
 
 ## Icons
 - Phosphor, one weight (regular), 24px grid.
 - No SF Symbols (not licensed for web).
 
-## Fonts
-- System stack (-apple-system, SF Pro on Apple devices) with Inter as fallback.
+## Type (max 2 families, 4 sizes)
+- Display/headlines: **Fraunces** (free stand-in for Arizona Flare). One
+  swappable token: `--font-display`.
+- UI/body: **Inter** (stand-in for Dia). One swappable token: `--font-ui`.
+- 4 sizes only, no others anywhere:
+  | Token | Size | Line height |
+  |---|---|---|
+  | Display | 34 | 40 |
+  | Title | 22 | 28 |
+  | Body | 17 | 24 |
+  | Small | 13 | 20 |
+- Max 2 weights per family.
+- Tabular numerals for all numbers and money.
+- Hierarchy comes from size, weight, and color only.
+- Text scales with the user's font size settings (sizes in rem).
+
+## Color (light mode only)
+Cobalt + sage. Trustworthy blues and deep greens. Off-white background,
+never pure white. Roles only; no decorative colors.
+
+| Role | Hex | Used for |
+|---|---|---|
+| background | #F4F7F2 | Page background |
+| surface | #FFFFFF | Cards, tiles, sheets |
+| text | #0E1B2C | Main text |
+| text-muted | #5B6B58 | Helper text, captions |
+| primary | #1F4FD8 | The one primary element per screen |
+| primary-pressed | #183DAA | Primary while pressed |
+| primary-tint | #E8EEFC | Light primary wash |
+| on-primary | #FFFFFF | Text/icons on primary |
+| success | #166534 | Success states |
+| error | #B42318 | Error states |
+| border-decorative | #C3D0BE | Dividers only (not for controls) |
+| border-strong | #7F8F7B | Control borders (needs 3:1) |
+| sage-100 | #E6EDE3 | Quiet fills, pressed and disabled states |
+
+Rules:
+- One primary-colored element per screen. Everything else is text, sage,
+  or surface.
+- Disabled controls keep a readable label (at least 3:1).
+- `npm run contrast` tests every text/background and UI pair we use and
+  fails if text is under 4.5:1 or UI components under 3:1. It runs before
+  every build. Register new pairs in `src/tokens/pairs.ts`.
+
+## Motion
+- Relaxing, not busy: soft springs, 200 to 400ms, one easing family
+  (springs).
+- Respect prefers-reduced-motion with calm static fallbacks.
 
 ## Tech stack
 React + TypeScript + Tailwind CSS + Framer Motion, built with Vite.
