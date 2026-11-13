@@ -14,8 +14,8 @@ help link, and Continue.
 3. Q2: Years on this visa
 4. Q3: State
 5. Q4: SSN / ITIN
-6. Q5: Filed U.S. taxes before? (opens the "Previous return" sheet)
-7. Q6: Income sources (multi-select; each pick opens a follow-up sheet, then follow-up questions such as Scholarship withholding)
+6. Q5: Filed U.S. taxes before? ("Yes" opens the "Previous return" sheet)
+7. Q6: Income sources (multi-select in two groups; each pick opens a follow-up sheet, then follow-up questions such as Scholarship withholding)
 8. Q7: Country of citizenship
 9. Document checklist (empty, then complete)
 10. Review forms
@@ -44,7 +44,8 @@ Documents/Scan, Profile), a menu button, and a security/trust badge.
   - "Student Visa Rule Changes: How They Could Impact Your U.S. Tax Residency"
   - Link: View More
 
-**Next:** File for 2025 → Q1.
+**Next:** File for 2025 → Q1. Previous years (2024, 2023, 2022) use the
+exact same flow; only the tax year changes.
 
 ## 2. Q1: Visa type (step 1)
 **Source:** `Visa.png`
@@ -57,10 +58,15 @@ Documents/Scan, Profile), a menu button, and a security/trust badge.
 ## 3. Q2: Years on this visa (step 2)
 **Source:** Designer (no reference screen)
 **Question:** "How many years have you been on this visa?"
-**Answers (single choice):** <5, 5> (read as "Less than 5" and "5 or more")
+**Answers (single choice):** "Less than 5 years", "5 years or more"
+**Rule:** exactly 5 years counts as "5 years or more".
 **Why we ask:** "To determine residency status for correct tax forms - substantial presence"
 **Help link:** "Calculate how long you have been in the U.S."
 **Action:** Continue
+
+> ⚠️ **Flag for legal review:** the 5-year boundary decides which forms apply
+> (substantial presence test; F-1 students are exempt for 5 calendar years).
+> Confirm the wording and the "exactly 5 counts as 5 or more" rule before launch.
 
 ## 4. Q3: State (step 3)
 **Source:** Designer (no reference screen)
@@ -81,10 +87,11 @@ Documents/Scan, Profile), a menu button, and a security/trust badge.
 ## 6. Q5: Filed before (step 5)
 **Source:** `ssn add q.png`
 **Question:** "Have you filed U.S. taxes before?"
-**Answers:** Not visible (covered by the sheet). Assumed Yes / No.
+**Answers (single choice):** Yes, No
 **Help link:** "Not sure whether you have filed before?"
+**Action:** Continue. "No" goes straight to Q6. "Yes" opens the sheet below.
 
-**Follow-up sheet (shown after answering, assumed after "Yes"):**
+**Follow-up sheet (only after "Yes"):**
 - Title: "To continue, we'll ask for your previous tax return."
 - Body: "This is optional, but uploading it will save you time and reduce errors."
 - Actions: **Skip for now** / **Upload file**
@@ -93,35 +100,35 @@ Documents/Scan, Profile), a menu button, and a security/trust badge.
 ## 7. Q6: Income sources (step 6)
 **Source:** `Finance picture.jpg` (version A), `job add q.png` (version B)
 **Question:** "Select the ones that apply to you"
-**Answers (multi-select, each with an illustration). Merged list from both versions:**
+**Answers:** one multi-select list of 11 options (each with an illustration)
+in two groups on the same screen. It merges both old versions.
 
+**Group 1: Income** (no group heading; it sits under the main question)
 1. Bank Interest
 2. OPT/CPT
 3. On-Campus Job
 4. Scholarship
 5. Freelance
 6. Investments
-7. Trading *(version B only)*
+7. Trading *(from version B)*
 8. Contract Work
-9. Donation *(version A only)*
-10. Child Care *(version A only)*
-11. No Earnings *(version B only)*
+9. No Earnings *(from version B)*
+
+**Group 2: "Anything else that applies?"**
+10. Donation *(from version A)*
+11. Child Care *(from version A)*
+
+**Rules:**
+- **No Earnings** is exclusive. Picking it clears every other pick in both
+  groups. Picking anything else unchecks No Earnings.
+- Continue is enabled once at least one option is picked.
 
 **Action:** Continue
 
-### What differs between the two versions (to confirm)
-- Only the bottom row of the grid differs:
-  - Version A: Donation, Contract Work, Child Care
-  - Version B: Trading, Contract Work, No Earnings
-- In version B, the sheet covers the top two rows, so we're assuming they
-  match version A.
-- **Donation and Child Care aren't income.** They're deductions and credits.
-  That may be why version B replaced them. If we keep them, they may belong
-  on a separate "expenses" question.
-- **Trading and Investments overlap.** Should they be one option, or two
-  separate ones?
-- **No Earnings is an "opt-out" option.** If it's kept, picking it should
-  clear the other picks, and vice versa.
+*Background:* the two old versions differed only in the bottom row (A: Donation,
+Contract Work, Child Care; B: Trading, Contract Work, No Earnings). Donation and
+Child Care are deductions and credits rather than income, which is why they sit
+in their own group.
 
 **Follow-up sheet per selection** (example for On-Campus Job):
 - Title: "You selected On-Campus Job. We just need a few more details."
@@ -176,18 +183,17 @@ has a reference screen.
 **Source:** `Document Upload 8.png`
 **Title:** "Your forms are ready for submission."
 **Body:** "Download, sign, and mail your forms to the IRS."
-**Action:** Continue (arrow), presumably to download
+**Action:** Arrow button downloads the checklist PDF. *(Placeholder for now:
+no real PDF yet.)*
 
 ---
 
 ## Open questions
-1. **Q2 boundary:** does exactly 5 years count as "5 or more"? (This matters
-   for the substantial presence test, where F-1 students are exempt for 5
-   calendar years.) Also, should the labels read "Less than 5" / "5 or more"
-   instead of "<5" / "5>"?
-2. **Q5 answers:** Yes / No? Does the sheet only appear after Yes?
-3. **Q6 options:** confirm the merged list. See "What differs" above.
-4. **Q6 follow-ups:** which follow-up questions belong to each income type?
-5. **Ready screen:** what does the arrow do? Download a PDF, show mailing
-   instructions, or both?
-6. **Previous years (2024 to 2022):** same flow as 2025?
+1. **Q6 follow-ups:** which follow-up questions belong to each income type?
+   Only Scholarship has one so far.
+2. **Q6 overlap:** Trading and Investments: one option or two?
+3. **Q6 follow-up sheets for group 2:** do Donation and Child Care open a
+   follow-up sheet too, like the income options?
+
+## Needs legal review
+- Q2: the 5-year boundary and its wording (see Q2 above).
