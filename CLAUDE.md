@@ -47,8 +47,9 @@ elements floating over each other. The flow is documented in FLOW.md.
 - Question screens (`QuestionLayout`): one block =
   header (question with 2 lines reserved, then helper 8 below it; helper
   reserves 2 lines on phone, 1 at 600px+), 40 gap, fixed-height answer area,
-  32 gap, Continue, 8 gap, help link. Unused header space falls below the
-  helper, so tiles and Continue never move for questions up to 2 lines.
+  32 gap, Continue, 8 gap, help link. Unused header space falls ABOVE the
+  question, so the helper stays 40 above the tiles and tiles/Continue never
+  move for questions up to 2 lines. The rail starts level with the question.
   No pinning. Block sits slightly above center
   (spacers 2:3). Below 1024: compact stepper directly under the top bar.
   1024+: rail (cols 1–3) top-aligned with the question (cols 4–9).
