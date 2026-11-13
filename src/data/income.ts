@@ -6,6 +6,9 @@ const files = import.meta.glob<string>('../assets/illustrations/generated/*.webp
 
 export type Art = { src: string; srcSet: string }
 
+/** Illustrations sit in a 64px box (keeps the 4pt grid) and render 5% larger inside it. */
+export const ART_CLASS = 'size-16 scale-105 object-contain'
+
 function art(name: string): Art {
   const at = (x: number) => files[`../assets/illustrations/generated/income-${name}@${x}x.webp`]
   return { src: at(1), srcSet: `${at(1)} 1x, ${at(2)} 2x, ${at(3)} 3x` }

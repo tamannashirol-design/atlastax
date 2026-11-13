@@ -1,5 +1,5 @@
 // npm run illustrations
-// Makes 1x / 2x / 3x WebP copies (64 / 128 / 192px) of the designer's income
+// Makes 1x / 2x / 3x WebP copies (68 / 136 / 204px) of the designer's income
 // illustrations. Only scales: no cropping (fits inside the box at the original
 // proportions), no recoloring, no filters. Originals are never modified.
 import { mkdirSync, readdirSync, statSync } from 'node:fs'
@@ -12,7 +12,8 @@ mkdirSync(OUT, { recursive: true })
 
 for (const file of readdirSync(SRC).filter((f) => /^income-.*\.png$/i.test(f))) {
   const name = file.replace(/(\.png)+$/i, '') // also handles "income-optcpt.png.png"
-  for (const [scale, size] of [[1, 64], [2, 128], [3, 192]]) {
+  // Shown in a 64px box, enlarged 5% (≈67px), so copies are made 5% larger to stay sharp
+  for (const [scale, size] of [[1, 68], [2, 136], [3, 204]]) {
     const dest = join(OUT, `${name}@${scale}x.webp`)
     await sharp(join(SRC, file))
       .resize(size, size, { fit: 'inside' })

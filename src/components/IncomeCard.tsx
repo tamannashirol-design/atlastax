@@ -1,7 +1,7 @@
 import { CheckIcon } from '@phosphor-icons/react'
 import { motion, useReducedMotion } from 'framer-motion'
 import { useEffect, useRef } from 'react'
-import type { Art } from '../data/income'
+import { ART_CLASS, type Art } from '../data/income'
 import { pressScale, spring } from '../lib/motion'
 
 // Multi-select card (checkbox). 176pt tall.
@@ -52,7 +52,7 @@ export function IncomeCard({ label, form, art, showArt = true, quiet, checked, o
           {!quiet &&
             (showArt && art ? (
               // Decorative: empty alt. Fits the 64px box at its own proportions (never cropped).
-              <img src={art.src} srcSet={art.srcSet} alt="" width={64} height={64} loading="lazy" decoding="async" className="size-16 object-contain" />
+              <img src={art.src} srcSet={art.srcSet} alt="" width={64} height={64} loading="lazy" decoding="async" className={ART_CLASS} />
             ) : (
               <span aria-hidden className="size-12 rounded-full bg-sage-100" />
             ))}

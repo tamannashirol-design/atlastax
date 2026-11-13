@@ -4,7 +4,7 @@ import { AnswerTile } from '../components/AnswerTile'
 import { BottomSheet } from '../components/BottomSheet'
 import { FlowStepper } from '../components/FlowStepper'
 import { IncomeCard } from '../components/IncomeCard'
-import { extraOptions, incomeOptions } from '../data/income'
+import { ART_CLASS, extraOptions, incomeOptions } from '../data/income'
 import { SearchSelect } from '../components/SearchSelect'
 import { SecondaryButton } from '../components/SecondaryButton'
 import { SelectField } from '../components/SelectField'
@@ -485,7 +485,7 @@ export default function Styleguide() {
                       'bg-sage-100 border-sage-100',
                     ].map((look) => (
                       <div key={look} className={`flex h-24 items-center justify-center rounded-md border ${look}`}>
-                        <img src={o.art!.src} srcSet={o.art!.srcSet} alt="" width={64} height={64} loading="lazy" decoding="async" className="size-16 object-contain" />
+                        <img src={o.art!.src} srcSet={o.art!.srcSet} alt="" width={64} height={64} loading="lazy" decoding="async" className={ART_CLASS} />
                       </div>
                     ))}
                   </div>
