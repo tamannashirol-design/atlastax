@@ -71,10 +71,11 @@ elements floating over each other. The flow is documented in FLOW.md.
   (listed on /styleguide). No SF Symbols (not licensed for web).
 
 **Illustrations**
-- Soft 3D objects, used only on the Income cards. 64px box, image shown
-  5% larger inside it (≈67px), decorative
-  (empty alt), lazy loaded, 1x/2x/3x WebP via `npm run illustrations`.
-- Designer's files in `src/assets/illustrations/`, used exactly as provided:
+- Soft 3D objects, used only on the Income cards. Decorative (empty alt),
+  lazy loaded. Icon box 80px on phone, 96px from 600px, centered, contain.
+- `npm run illustrations`: trims each file's transparent border, fits the art
+  in a 384px square with equal ~8% padding (illustrations/normalized/), then
+  exports 96/192/288px WebP. Designer's originals stay untouched; otherwise
   never redraw, recolor, crop, or filter. Sources in CREDITS.md.
 
 ## Type (max 2 families, 4 sizes)

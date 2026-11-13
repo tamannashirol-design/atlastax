@@ -1,12 +1,21 @@
 import { CheckIcon } from '@phosphor-icons/react'
 import { motion, useReducedMotion } from 'framer-motion'
 import { useEffect, useRef } from 'react'
-import { ART_CLASS, type Art } from '../data/income'
+import type { Art } from '../data/income'
 import { pressScale, spring } from '../lib/motion'
 
-// Multi-select card (checkbox). 176pt tall.
-//   top row:  [ 32 empty | illustration 64, centered | check badge 32 ]
-//   label (Body semibold, up to 2 lines) + form code (Small, space reserved)
+// Multi-select card (checkbox). A vertical stack of fixed zones, all on the
+// 4pt grid, so every card in a row is the same height and labels line up:
+//
+//   top band     44  = 12 padding + 32 selection circle (top-right corner)
+//   gap           8  ← the icon box always clears the circle by at least 8
+//   icon zone    80 phone / 96 from 600px; square icon box, centered, contain
+//   gap          12
+//   label zone   68  = two label lines (48) + form-code line (20), top-aligned
+//   bottom pad   16
+//   ─────────────────
+//   card height 228 phone / 244 from 600px
+//
 // States: default · hover (lifts with shadow, pointer devices only) · pressed
 // (shrinks + sage fill) · selected (navy border + check badge; never color
 // alone) · focus ring. "quiet" = the No earnings card: no illustration,
@@ -15,9 +24,9 @@ import { pressScale, spring } from '../lib/motion'
 type Props = {
   label: string
   form?: string
-  /** Illustration (1x/2x/3x). Omit for quiet cards. */
+  /** Illustration. Omit for quiet cards. */
   art?: Art
-  /** false = show the placeholder (illustrations not approved yet) */
+  /** false = show the placeholder instead of the illustration */
   showArt?: boolean
   quiet?: boolean
   checked: boolean
@@ -42,28 +51,43 @@ export function IncomeCard({ label, form, art, showArt = true, quiet, checked, o
       animate={{ opacity: 1, y: 0, scale: forcePressed ? pressScale.tile : 1 }}
       whileTap={{ scale: pressScale.tile }}
       transition={{ ...spring.soft, delay: index * 0.03, scale: spring.quick }}
-      className={`flex min-h-44 w-full min-w-0 flex-col gap-2 rounded-md border p-4 text-center transition-[background-color,box-shadow,border-color] hover:shadow-2 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-text active:bg-sage-100 data-pressed:bg-sage-100 ${
+      className={`flex h-57 w-full min-w-0 flex-col rounded-md border px-4 pt-3 pb-4 text-center transition-[background-color,box-shadow,border-color] hover:shadow-2 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-text active:bg-sage-100 data-pressed:bg-sage-100 tablet:h-61 ${
         quiet ? 'bg-background' : 'bg-surface'
       } ${checked ? 'border-text shadow-[inset_0_0_0_1px_var(--color-text)] hover:shadow-[inset_0_0_0_1px_var(--color-text),var(--shadow-2)]' : 'border-border-strong'}`}
     >
-      <span className="grid h-16 grid-cols-[2rem_minmax(0,1fr)_2rem]">
-        <span aria-hidden />
-        <span className="flex items-center justify-center">
-          {!quiet &&
-            (showArt && art ? (
-              // Decorative: empty alt. Fits the 64px box at its own proportions (never cropped).
-              <img src={art.src} srcSet={art.srcSet} alt="" width={64} height={64} loading="lazy" decoding="async" className={ART_CLASS} />
-            ) : (
-              <span aria-hidden className="size-12 rounded-full bg-sage-100" />
-            ))}
-        </span>
+      {/* Top band: selection circle in the top-right corner */}
+      <span className="flex h-8 shrink-0 justify-end">
         <CheckBadge checked={checked} />
       </span>
-      <span className="flex flex-1 flex-col justify-center">
-        <span className="text-body font-semibold">{label}</span>
-        <span className="min-h-5 text-small text-text-muted tabular-nums">{quiet ? 'None of the above' : form}</span>
+
+      {/* Icon zone */}
+      <span data-zone="icon" className="mt-2 flex h-20 shrink-0 items-center justify-center tablet:h-24">
+        {!quiet && (showArt && art ? <Illustration art={art} /> : <span aria-hidden className="size-12 rounded-full bg-sage-100" />)}
+      </span>
+
+      {/* Label zone: same height and top edge on every card */}
+      <span data-zone="label" className="mt-3 flex h-17 shrink-0 flex-col">
+        <span className="line-clamp-2 text-body font-semibold">{label}</span>
+        <span className="text-small text-text-muted tabular-nums">{quiet ? 'None of the above' : form}</span>
       </span>
     </motion.button>
+  )
+}
+
+/** The illustration itself: a square box (80 phone / 96 from 600px), centered, contain. Decorative. */
+export function Illustration({ art }: { art: Art }) {
+  return (
+    <img
+      src={art.src}
+      srcSet={art.srcSet}
+      sizes={art.sizes}
+      alt=""
+      width={96}
+      height={96}
+      loading="lazy"
+      decoding="async"
+      className="size-20 object-contain tablet:size-24"
+    />
   )
 }
 
@@ -75,7 +99,7 @@ function CheckBadge({ checked }: { checked: boolean }) {
     mounted.current = true
   }, [])
   return (
-    <span aria-hidden className="flex size-8 items-start justify-end">
+    <span aria-hidden data-zone="circle" className="flex size-8">
       {checked ? (
         <span className="flex size-8 items-center justify-center rounded-full bg-text text-on-primary">
           <motion.span

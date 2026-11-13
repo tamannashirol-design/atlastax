@@ -3,8 +3,8 @@ import { useEffect, useState, type ReactNode } from 'react'
 import { AnswerTile } from '../components/AnswerTile'
 import { BottomSheet } from '../components/BottomSheet'
 import { FlowStepper } from '../components/FlowStepper'
-import { IncomeCard } from '../components/IncomeCard'
-import { ART_CLASS, extraOptions, incomeOptions } from '../data/income'
+import { IncomeCard, Illustration } from '../components/IncomeCard'
+import { extraOptions, incomeOptions } from '../data/income'
 import { SearchSelect } from '../components/SearchSelect'
 import { SecondaryButton } from '../components/SecondaryButton'
 import { SelectField } from '../components/SelectField'
@@ -472,7 +472,7 @@ export default function Styleguide() {
 
           <Section
             title="Illustrations"
-            description="The designer's files (src/assets/illustrations/), used exactly as provided: 64px, 1x/2x/3x, decorative (empty alt), lazy loaded, Income cards only. Each is shown on a white card, on the selected card (white + navy border), and on sage (the pressed fill), so halos or hard edges would show."
+            description="The designer's files (src/assets/illustrations/), trimmed and normalized to equal padding (no redrawing or recoloring), shown in an 80px box on phone and 96px from 600px, decorative (empty alt), lazy loaded, Income cards only. Each is shown on a white card, on the selected card (white + navy border), and on sage (the pressed fill), so halos or hard edges would show."
           >
             {[...incomeOptions, ...extraOptions]
               .filter((o) => o.art)
@@ -484,8 +484,8 @@ export default function Styleguide() {
                       'bg-surface border-text shadow-[inset_0_0_0_1px_var(--color-text)]',
                       'bg-sage-100 border-sage-100',
                     ].map((look) => (
-                      <div key={look} className={`flex h-24 items-center justify-center rounded-md border ${look}`}>
-                        <img src={o.art!.src} srcSet={o.art!.srcSet} alt="" width={64} height={64} loading="lazy" decoding="async" className={ART_CLASS} />
+                      <div key={look} className={`flex h-28 items-center justify-center rounded-md border ${look}`}>
+                        <Illustration art={o.art!} />
                       </div>
                     ))}
                   </div>

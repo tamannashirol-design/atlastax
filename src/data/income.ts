@@ -1,17 +1,16 @@
 // Income types for Q6 (see FLOW.md). Form codes are shown only where one form
 // clearly applies; the rest are left blank on purpose (to confirm with a tax expert).
 // Illustrations: the designer's files in src/assets/illustrations/, matched by
-// filename. `npm run illustrations` makes the 1x/2x/3x WebP copies used here.
+// filename. `npm run illustrations` trims and normalizes them (equal ~8% padding
+// in a 384px square) and exports 96/192/288px WebP copies, used here.
 const files = import.meta.glob<string>('../assets/illustrations/generated/*.webp', { eager: true, import: 'default', query: '?url' })
 
-export type Art = { src: string; srcSet: string }
-
-/** Illustrations sit in a 64px box (keeps the 4pt grid) and render 5% larger inside it. */
-export const ART_CLASS = 'size-16 scale-105 object-contain'
+/** srcSet uses widths; `sizes` matches the icon box (80px phone, 96px from 600px). */
+export type Art = { src: string; srcSet: string; sizes: string }
 
 function art(name: string): Art {
-  const at = (x: number) => files[`../assets/illustrations/generated/income-${name}@${x}x.webp`]
-  return { src: at(1), srcSet: `${at(1)} 1x, ${at(2)} 2x, ${at(3)} 3x` }
+  const at = (px: number) => files[`../assets/illustrations/generated/income-${name}-${px}.webp`]
+  return { src: at(96), srcSet: `${at(96)} 96w, ${at(192)} 192w, ${at(288)} 288w`, sizes: '(width >= 600px) 96px, 80px' }
 }
 
 export type IncomeId =
