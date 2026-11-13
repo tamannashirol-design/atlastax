@@ -44,9 +44,12 @@ elements floating over each other. The flow is documented in FLOW.md.
   sits under a bar.
 - Tokens in index.css: `--top-bar-h` 56, `--tab-bar-h` 56 (0 at 768px+),
   `--stepper-h` 56, `--answer-h` 88, `--safe-top` / `--safe-bottom`.
-- Question screens (`QuestionLayout`): one block = question, fixed-height
-  answer area, Continue, helper (space reserved: 2 lines <1024, 1 line above),
-  link. Gaps 32 / 32 / 16 / 4. No pinning. Block sits slightly above center
+- Question screens (`QuestionLayout`): one block =
+  header (question with 2 lines reserved, then helper 8 below it; helper
+  reserves 2 lines on phone, 1 at 600px+), 40 gap, fixed-height answer area,
+  32 gap, Continue, 8 gap, help link. Unused header space falls below the
+  helper, so tiles and Continue never move for questions up to 2 lines.
+  No pinning. Block sits slightly above center
   (spacers 2:3). Below 1024: compact stepper directly under the top bar.
   1024+: rail (cols 1–3) top-aligned with the question (cols 4–9).
 

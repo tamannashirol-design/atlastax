@@ -8,14 +8,18 @@ import { PrimaryButton } from './PrimaryButton'
 
 // The layout every question screen uses. One block, same structure everywhere:
 //
-//   question (Display)
-//   ── 32 ──
+//   ┌ header (fixed height) ─────────────────────────────┐
+//   │ question (Display, 2 lines reserved)                │
+//   │ ── 8 ──                                             │
+//   │ helper text (2 lines reserved on phone, 1 above)    │
+//   │ unused space falls here, so the helper hugs the     │
+//   │ question while the tiles never move                 │
+//   └─────────────────────────────────────────────────────┘
+//   ── 40 ──
 //   answer area (fixed height: --answer-h)
 //   ── 32 ──
 //   Continue
-//   ── 16 ──
-//   helper text (space reserved even when empty, so the link never moves)
-//   ── 4 ──
+//   ── 8 ──
 //   help link
 //
 // Below 1024px: compact stepper directly under the top bar; the block sits
@@ -61,17 +65,19 @@ export function QuestionLayout({ position, questionId, question, answers, canCon
           </div>
 
           <div className="col-span-full flex flex-col gap-8 tablet:col-span-6 tablet:col-start-2 desktop:col-start-4 desktop:row-start-1">
-            <h1 id={questionId} className="font-display text-display">
-              {question}
-            </h1>
-            <div className="flex h-(--answer-h) flex-col">{answers}</div>
-            <div className="flex flex-col gap-4">
+            {/* Header: 80 (2 question lines) + 8 + helper (40 phone / 20 above) */}
+            <div className="flex min-h-32 flex-col gap-2 tablet:min-h-27">
+              <h1 id={questionId} className="font-display text-display">
+                {question}
+              </h1>
+              {helper && <p className="text-small text-text-muted">{helper}</p>}
+            </div>
+            <div className="mt-2 flex h-(--answer-h) flex-col">{answers}</div>
+            <div className="flex flex-col gap-2">
               <PrimaryButton disabled={!canContinue} onClick={onContinue}>
                 Continue
               </PrimaryButton>
-              <div className="flex flex-col gap-1">
-                {/* Reserved: 2 lines below 1024px, 1 line above */}
-                <p className="min-h-10 text-small text-text-muted desktop:min-h-5">{helper}</p>
+              <div className="flex flex-col">
                 {help && (
                   <button
                     type="button"
