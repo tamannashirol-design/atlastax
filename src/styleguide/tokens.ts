@@ -12,6 +12,7 @@ import {
   XIcon,
   type Icon,
 } from '@phosphor-icons/react'
+import { TAX_YEAR } from '../config'
 
 // Spacing scale in pt. Tailwind step = value / 4 (e.g. 16pt → p-4).
 export const spacing = [4, 8, 12, 16, 20, 24, 32, 40, 48, 64, 80]
@@ -52,7 +53,7 @@ export type TypeStyle = {
 // 4 sizes only. Each can be set in the display font (Fraunces) or UI font (Inter).
 export const typeScale: TypeStyle[] = [
   { name: 'Display', className: 'text-display', size: 34, lineHeight: 40, use: 'Questions, screen titles', sample: 'What is your visa type?' },
-  { name: 'Title', className: 'text-title', size: 22, lineHeight: 28, use: 'Section titles, answer codes', sample: 'File for 2025' },
+  { name: 'Title', className: 'text-title', size: 22, lineHeight: 28, use: 'Section titles, answer codes', sample: `File for ${TAX_YEAR}` },
   { name: 'Body', className: 'text-body', size: 17, lineHeight: 24, use: 'Reading text, buttons, links', sample: 'These quick questions help us file your taxes accurately.' },
   { name: 'Small', className: 'text-small', size: 13, lineHeight: 20, use: 'Helpers, captions, descriptions', sample: 'To personalize the experience and show only visa-relevant forms' },
 ]

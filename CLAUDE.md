@@ -104,6 +104,20 @@ Rules:
   (springs).
 - Respect prefers-reduced-motion with calm static fallbacks.
 
+## Filing flow
+- Sections and steps live in `src/flow/sections.ts` (see FLOW.md).
+- Country of citizenship sits in Tax details (designer confirming it's in
+  the flow).
+- Stepper shows "x of n" only for sections with more than one step.
+- Compact stepper: the current section's bar segment fills halfway through
+  the current step (e.g. step 1 of 3 = 1/6 filled), so it reads "in progress".
+- Rail at ≥1024px (laptop, iPad landscape); compact below.
+
+## Tax year
+- One constant: `TAX_YEAR` in `src/config.ts` (currently 2025, to confirm:
+  2025 or 2026). Every place a year appears (stepper rail, Home, previous
+  years, forms, deadlines) reads it from there. Never hard-code a year.
+
 ## Tech stack
 React + TypeScript + Tailwind CSS + Framer Motion, built with Vite.
 Run locally with `npm run dev`, then open http://localhost:5173.
