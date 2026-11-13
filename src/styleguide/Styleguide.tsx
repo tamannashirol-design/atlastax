@@ -336,7 +336,7 @@ export default function Styleguide() {
 
           <Section title="Radii" description="Three corner sizes. Bigger surfaces get rounder corners.">
             {radii.map((r) => (
-              <div key={r.name} className="col-span-2 flex flex-col gap-3 tablet:col-span-4">
+              <div key={r.name} className="col-span-full flex flex-col gap-3 tablet:col-span-2 desktop:col-span-4">
                 <div className={`h-24 border border-border-strong bg-surface ${r.className}`} />
                 <div className="flex flex-col">
                   <span className="text-body font-semibold">
@@ -350,7 +350,7 @@ export default function Styleguide() {
 
           <Section title="Shadows" description="Three levels, tinted navy. Higher means closer to the user.">
             {shadows.map((s) => (
-              <div key={s.name} className="col-span-2 flex flex-col gap-3 tablet:col-span-4">
+              <div key={s.name} className="col-span-full flex flex-col gap-3 tablet:col-span-2 desktop:col-span-4">
                 <div className="flex h-32 items-center rounded-md bg-sage-100 p-6">
                   <div className={`h-16 flex-1 rounded-md bg-surface ${s.className}`} />
                 </div>
