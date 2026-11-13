@@ -1,7 +1,6 @@
 import { CaretDownIcon, CheckIcon, XIcon } from '@phosphor-icons/react'
 import { AnimatePresence, LayoutGroup, motion, useReducedMotion } from 'framer-motion'
 import { useEffect, useRef, useState } from 'react'
-import { TAX_YEAR } from '../config'
 import { sections, stepCount, type FlowPosition } from '../flow/sections'
 import { spring } from '../lib/motion'
 
@@ -24,12 +23,7 @@ type Props = {
 
 export function FlowStepper({ presentation, position, onNavigate }: Props) {
   return presentation === 'rail' ? (
-    <div className="flex flex-col">
-      <div className="flex h-14 items-center">
-        <span className="text-small text-text-muted tabular-nums">{TAX_YEAR} tax return</span>
-      </div>
-      <StepList position={position} onNavigate={onNavigate} group="rail" />
-    </div>
+    <StepList position={position} onNavigate={onNavigate} group="rail" />
   ) : (
     <CompactStepper position={position} onNavigate={onNavigate} />
   )

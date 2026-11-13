@@ -36,11 +36,23 @@ elements floating over each other. The flow is documented in FLOW.md.
 | iPad | 600 to 1023px | 8 | 24pt | full width |
 | Laptop | 1024px+ | 12 | — | 1120px |
 
-- Question screens: a centered column, max width about 560px on iPad and
-  laptop. Never stretch rows edge to edge.
+- Question screens use `QuestionLayout` (see below).
+
+## App shell and layout tokens
+- Shell = 3 rows filling the screen: top bar (every breakpoint), content
+  (only part that scrolls), tab bar (phone only, below 768px). Content never
+  sits under a bar.
+- Tokens in index.css: `--top-bar-h` 56, `--tab-bar-h` 56 (0 at 768px+),
+  `--stepper-h` 56, `--answer-h` 88, `--safe-top` / `--safe-bottom`.
+- Question screens (`QuestionLayout`): one block = question, fixed-height
+  answer area, Continue, helper (space reserved: 2 lines <1024, 1 line above),
+  link. Gaps 32 / 32 / 16 / 4. No pinning. Block sits slightly above center
+  (spacers 2:3). Below 1024: compact stepper directly under the top bar.
+  1024+: rail (cols 1–3) top-aligned with the question (cols 4–9).
 
 ## Navigation
-- Phone: bottom tab bar.
+- Top bar on every breakpoint (back, title).
+- Phone (below 768px): bottom tab bar, also during the filing flow.
 - iPad: left sidebar.
 - Laptop: left sidebar or top nav (decide in the style direction step).
 - During the filing flow, the stepper (`FlowStepper`) replaces navigation:

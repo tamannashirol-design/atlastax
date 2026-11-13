@@ -2,6 +2,9 @@
 @import "@fontsource-variable/inter/wght.css";
 @import "@fontsource-variable/fraunces/soft.css";
 
+/* The tab bar shows on phones only. `tabbar-hidden:` = 768px and wider. */
+@custom-variant tabbar-hidden (@media (width >= 768px));
+
 /*
   AtlasTax design tokens. This file is the single source of truth.
   - Everything sits on a 4pt grid. 1pt = 1 CSS px (as on iOS).
@@ -106,6 +109,20 @@
 :root {
   --page-margin: 16px;
   --grid-gutter: 16px;
+
+  /* Layout tokens. Bars sit in their own rows of the app shell, so content
+     never sits under them. Safe-area insets are added on top. */
+  --safe-top: env(safe-area-inset-top, 0px);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+  --top-bar-h: 56px; /* every breakpoint */
+  --tab-bar-h: 56px; /* phone only; 0 at 768px+ */
+  --stepper-h: 56px; /* compact stepper row, below 1024px */
+  --answer-h: 88px; /* fixed answer area: fits 3 tiles or the state dropdown */
+}
+@media (width >= 768px) {
+  :root {
+    --tab-bar-h: 0px;
+  }
 }
 @media (width >= 600px) {
   :root {
