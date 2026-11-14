@@ -104,6 +104,18 @@ branches on it yet.
 **Question:** "How many years have you been on this visa?"
 **Answers (single choice):** "Less than 5 years", "5 years or more"
 **Rule:** exactly 5 years counts as "5 years or more".
+**"5 years or more" → Continue opens the "We can't file this return" sheet**
+(built, `src/flow/ResidentSheet.tsx`). After 5 years they're likely
+residents for tax purposes and file Form 1040; AtlasTax only prepares
+1040-NR. The sheet doesn't let them continue:
+- Title: "We can't file this return for you"
+- Body: "With 5 years or more on your visa, you're likely a U.S. resident for
+  tax purposes. Residents file Form 1040. AtlasTax only prepares Form 1040-NR,
+  for nonresidents."
+- "Other ways to file": IRS Free File (irs.gov/freefile) · Free help from
+  VITA volunteers (IRS VITA site locator) · A tax professional (ask the
+  international student office)
+- Action: **Change my answer** (closes the sheet). Close (X) does the same.
 **Why we ask:** "To determine residency status for correct tax forms - substantial presence"
 **Help link:** "Calculate how long you have been in the U.S."
 **Action:** Continue
@@ -111,6 +123,9 @@ branches on it yet.
 > ⚠️ **Flag for legal review:** the 5-year boundary decides which forms apply
 > (substantial presence test; F-1 students are exempt for 5 calendar years).
 > Confirm the wording and the "exactly 5 counts as 5 or more" rule before launch.
+> Also confirm the resident sheet's wording, and that the IRS links are the
+> right destinations. J-1 non-students (e.g. researchers) follow a different
+> rule (2 of the last 6 years), which this question doesn't capture.
 
 ## 4. Q3: State (step 3)
 **Source:** Designer (no reference screen)

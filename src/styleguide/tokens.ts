@@ -1,5 +1,6 @@
 // Data shown on the style guide. Values mirror the tokens in src/index.css.
 import {
+  ArrowSquareOutIcon,
   CaretDownIcon,
   CaretLeftIcon,
   CheckIcon,
@@ -116,4 +117,5 @@ export const icons: { name: string; Icon: Icon; reason: string }[] = [
   { name: 'DownloadSimple', Icon: DownloadSimpleIcon, reason: 'Download checklist PDF' },
   { name: 'X', Icon: XIcon, reason: 'Close a bottom sheet' },
   { name: 'MagnifyingGlass', Icon: MagnifyingGlassIcon, reason: 'Search field (country)' },
+  { name: 'ArrowSquareOut', Icon: ArrowSquareOutIcon, reason: 'Link opens another website in a new tab (other ways to file)' },
 ]

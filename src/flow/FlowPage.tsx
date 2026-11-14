@@ -8,6 +8,7 @@ import { UploadAnswer } from '../components/UploadAnswer'
 import { DebugStack, useUrlFlag } from '../lib/debug'
 import { navigate } from '../lib/router'
 import { setAnswers, setDetail, useAnswers } from './answers'
+import { ResidentSheet } from './ResidentSheet'
 import { AFTER_FLOW, flow } from './screens'
 
 // One page for the whole question flow. Because it stays mounted while the
@@ -23,6 +24,7 @@ export default function FlowPage({ path }: { path: string }) {
   const back = before !== undefined ? flow[before].path : '/'
   const next = after !== undefined ? flow[after].path : AFTER_FLOW
   const [sheet, setSheet] = useState(false)
+  const [residentSheet, setResidentSheet] = useState(false)
   const [priorFiles, setPriorFiles] = useState<string[]>(() => (typeof answers.priorReturn === 'object' ? [answers.priorReturn.fileName] : []))
   const firstRender = useRef(true)
   const [grid] = useUrlFlag('grid')
@@ -38,8 +40,15 @@ export default function FlowPage({ path }: { path: string }) {
     else document.getElementById(questionId)?.focus({ preventScroll: true })
   }, [screen.question, questionId])
 
-  // Filed before → Yes: ask for the previous return first. No: carry on.
-  const onContinue = () => (screen.id === 'filed-before' && answers.filedBefore === 'yes' ? setSheet(true) : navigate(next))
+  // Filed before → Yes: ask for the previous return first.
+  // 5 years or more → likely a resident (Form 1040), which we don't file: explain and offer other ways.
+  // Otherwise: carry on.
+  const onContinue = () =>
+    screen.id === 'filed-before' && answers.filedBefore === 'yes'
+      ? setSheet(true)
+      : screen.id === 'years' && answers.years === '5plus'
+        ? setResidentSheet(true)
+        : navigate(next)
 
   const finishSheet = (priorReturn: 'skipped' | { fileName: string }) => {
     setAnswers({ priorReturn })
@@ -70,6 +79,8 @@ export default function FlowPage({ path }: { path: string }) {
         answerArea={screen.answerArea}
         wide={screen.wide}
       />
+
+      <AnimatePresence>{residentSheet && <ResidentSheet onClose={() => setResidentSheet(false)} />}</AnimatePresence>
 
       <AnimatePresence>
         {sheet && (
