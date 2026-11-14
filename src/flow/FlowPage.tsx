@@ -30,15 +30,16 @@ export default function FlowPage({ path }: { path: string }) {
   const [grid] = useUrlFlag('grid')
   const [outlines] = useUrlFlag('outlines')
   const questionId = `q-${screen.id}`
+  const question = typeof screen.question === 'function' ? screen.question(answers) : screen.question
 
   // New screen: update the tab title, scroll to top, and move focus to the
   // question so screen-reader users hear where they are.
   useEffect(() => {
-    document.title = `${screen.question} · AtlasTax`
+    document.title = `${question} · AtlasTax`
     document.querySelector('main')?.scrollTo(0, 0)
     if (firstRender.current) firstRender.current = false
     else document.getElementById(questionId)?.focus({ preventScroll: true })
-  }, [screen.question, questionId])
+  }, [question, questionId])
 
   // Filed before → Yes: ask for the previous return first.
   // 5 years or more → likely a resident (Form 1040), which we don't file: explain and offer other ways.
@@ -62,7 +63,7 @@ export default function FlowPage({ path }: { path: string }) {
         position={screen.position}
         backHref={back}
         questionId={questionId}
-        question={screen.question}
+        question={question}
         helper={screen.helper}
         help={
           // The skip link hides once the question is answered (it would discard the upload)

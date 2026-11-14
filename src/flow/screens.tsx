@@ -17,7 +17,8 @@ export type FlowScreen = {
   id: string
   path: string
   position: FlowPosition
-  question: string
+  /** Fixed text, or text that depends on earlier answers (e.g. OPT vs CPT) */
+  question: string | ((a: Answers) => string)
   helper?: string
   helpLabel?: string
   isAnswered: (a: Answers) => boolean
@@ -61,7 +62,7 @@ function tiles(id: string, question: string, options: TileOption<string>[], when
 
 // Every upload question uses the same control (folder UploadZone + real upload)
 // and the same taller answer area, so Continue sits in one place on all of them.
-function upload(id: string, docLabel: string, question: string, helper: string, skipLabel: string, when: When): FlowScreen {
+function upload(id: string, docLabel: string, question: FlowScreen['question'], helper: string, skipLabel: string, when: When): FlowScreen {
   return {
     id,
     path: `/income/${id}`,
@@ -104,6 +105,15 @@ function amount(id: string, question: string, helper: string, when: When): FlowS
   }
 }
 
+// Names the work picked on the previous screen (OPT, CPT, or both)
+const optW2Question = (a: Answers) => {
+  const kind = detail(a, 'opt-type')
+  if (kind === 'opt') return 'Upload your W-2 from your OPT job'
+  if (kind === 'cpt') return 'Upload your W-2 from your CPT job'
+  if (kind === 'both') return 'Upload your W-2s from your OPT and CPT jobs'
+  return 'Upload your W-2 from your OPT or CPT job' // not answered yet (opened directly)
+}
+
 const yesNo: TileOption<string>[] = [
   { value: 'yes', code: 'Yes' },
   { value: 'no', code: 'No' },
@@ -134,7 +144,7 @@ function incomeFollowUps(): FlowScreen[] {
       has('opt-cpt'),
       { helper: 'So we can label your job correctly' },
     ),
-    upload('opt-w2', 'W-2', 'Upload your W-2 from your OPT or CPT job', 'From your employer. One per employer', LATER, has('opt-cpt')),
+    upload('opt-w2', 'W-2', optW2Question, 'From your employer. One per employer', LATER, has('opt-cpt')),
     // On-campus job
     upload('campus-w2', 'W-2', 'Upload your W-2 from your on-campus job', 'From your university’s payroll office. One per job', LATER, has('on-campus-job')),
     // Scholarship (the "costs other than tuition" question waits for tax review)

@@ -301,7 +301,7 @@ and contract expenses, Donation, Child care.
 | /income/bank-upload | …and Yes | Upload your bank interest form | Upload · "I'll add it later" |
 | /income/bank-amount | …and No | How much bank interest did you earn in {year}? | Amount |
 | /income/opt-type | OPT or CPT | Was this work OPT, CPT, or both? | OPT / CPT / Both |
-| /income/opt-w2 | OPT or CPT | Upload your W-2 from your OPT or CPT job | Upload · "I'll add it later" |
+| /income/opt-w2 | OPT or CPT | Upload your W-2 from your OPT job / CPT job / Upload your W-2s from your OPT and CPT jobs (follows the answer to opt-type) | Upload · "I'll add it later" |
 | /income/campus-w2 | On-campus job | Upload your W-2 from your on-campus job | Upload · "I'll add it later" |
 | /income/scholarship-withheld | Scholarship | Did your university withhold tax from your scholarship? | Yes / No |
 | /income/scholarship-1042s | Scholarship | Upload your 1042-S for your scholarship | Upload · "I didn't get one" |
