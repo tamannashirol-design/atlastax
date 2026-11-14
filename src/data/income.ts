@@ -1,5 +1,6 @@
-// Income types for Q6 (see FLOW.md). Form codes are shown only where one form
-// clearly applies; the rest are left blank on purpose (to confirm with a tax expert).
+import { incomeCardForm } from '../flow/requiredDocuments'
+// Income types for Q6 (see FLOW.md). The form code under a card's label comes
+// from documents.config.ts (showOnIncomeCard), the one place tax rules live.
 // Illustrations: the designer's files in src/assets/illustrations/, matched by
 // filename. `npm run illustrations` trims and normalizes them (equal ~8% padding
 // in a 384px square) and exports 96/192/288px WebP copies, used here.
@@ -22,13 +23,13 @@ export type IncomeOption = { id: IncomeId; label: string; form?: string; art?: A
 /** Group 1: income. "No earnings" is last and has no illustration. */
 export const incomeOptions: IncomeOption[] = [
   { id: 'bank-interest', label: 'Bank interest', art: art('bank'), file: 'income-bank.png' },
-  { id: 'opt-cpt', label: 'OPT or CPT', form: 'W-2', art: art('optcpt'), file: 'income-optcpt.png.png' },
-  { id: 'on-campus-job', label: 'On-campus job', form: 'W-2', art: art('oncampusjob'), file: 'income-oncampusjob.png' },
-  { id: 'scholarship', label: 'Scholarship or fellowship', form: '1042-S', art: art('scholarship'), file: 'income-scholarship.png' },
-  { id: 'freelance', label: 'Freelance', form: '1099-NEC', art: art('freelance'), file: 'income-freelance.png' },
+  { id: 'opt-cpt', label: 'OPT or CPT', form: incomeCardForm('opt-cpt'), art: art('optcpt'), file: 'income-optcpt.png.png' },
+  { id: 'on-campus-job', label: 'On-campus job', form: incomeCardForm('on-campus-job'), art: art('oncampusjob'), file: 'income-oncampusjob.png' },
+  { id: 'scholarship', label: 'Scholarship or fellowship', form: incomeCardForm('scholarship'), art: art('scholarship'), file: 'income-scholarship.png' },
+  { id: 'freelance', label: 'Freelance', form: incomeCardForm('freelance'), art: art('freelance'), file: 'income-freelance.png' },
   { id: 'investments', label: 'Investments', art: art('investments'), file: 'income-investments.png' },
   { id: 'trading', label: 'Trading', art: art('trading'), file: 'income-trading.png' },
-  { id: 'contract-work', label: 'Contract work', form: '1099-NEC', art: art('contract'), file: 'income-contract.png' },
+  { id: 'contract-work', label: 'Contract work', form: incomeCardForm('contract-work'), art: art('contract'), file: 'income-contract.png' },
   { id: 'no-earnings', label: 'No earnings' },
 ]
 

@@ -10,6 +10,7 @@ import { UploadAnswer } from '../components/UploadAnswer'
 import type { IncomeId } from '../data/income'
 import { countries, usStates } from '../data/places'
 import { setAnswers, setDetail, type Answers } from './answers'
+import { ruleForUploadScreen, uploadScreenApplies, type SkipValue } from './requiredDocuments'
 import type { FlowPosition } from './sections'
 
 export type FlowScreen = {
@@ -23,8 +24,9 @@ export type FlowScreen = {
   isAnswered: (a: Answers) => boolean
   /** Show this screen only when this returns true (income follow-ups). */
   when?: (a: Answers) => boolean
-  /** Link under Continue that skips the question, e.g. "I'll add it later". */
-  skipLabel?: string
+  /** Link under Continue that skips the question: "I'll add it later" (value "later")
+   *  or "I didn't get one" (value "none"). Both count as deferred documents. */
+  skip?: { label: string; value: SkipValue }
   /** The answer control; must fit the fixed answer area unless answerArea is "auto". */
   answers: (a: Answers, labelledBy: string) => ReactNode
   answerArea?: 'fixed' | 'auto' | 'upload'
@@ -61,15 +63,18 @@ function tiles(id: string, question: string, options: TileOption<string>[], when
 
 // Every upload question uses the same control (folder UploadZone + real upload)
 // and the same taller answer area, so Continue sits in one place on all of them.
-function upload(id: string, docLabel: string, question: FlowScreen['question'], helper: string, skipLabel: string, when: When): FlowScreen {
+// It appears only when documents.config.ts says its document is needed (no
+// tax rule here): `id` is the rule's uploadScreen.
+function upload(id: string, docLabel: string, question: FlowScreen['question'], helper: string, skip: FlowScreen['skip']): FlowScreen {
+  ruleForUploadScreen(id) // fails loudly if the config has no rule for this screen
   return {
     id,
     path: `/income/${id}`,
     position: INCOME,
     question,
     helper,
-    skipLabel,
-    when,
+    skip,
+    when: (a) => uploadScreenApplies(id, a),
     answerArea: 'upload',
     isAnswered: (a) => Array.isArray(detail(a, id)) && (detail(a, id) as string[]).length > 0,
     answers: (a) => {
@@ -117,19 +122,21 @@ const yesNo: TileOption<string>[] = [
   { value: 'yes', code: 'Yes' },
   { value: 'no', code: 'No' },
 ]
-const LATER = "I'll add it later"
+const LATER: FlowScreen['skip'] = { label: "I'll add it later", value: 'later' }
+const NO_ONE: FlowScreen['skip'] = { label: 'I didn’t get one', value: 'none' }
+const NO_FORM: FlowScreen['skip'] = { label: 'I didn’t get a form', value: 'none' }
 
 function incomeFollowUps(): FlowScreen[] {
   // Freelance and contract work ask the same things
   const selfEmployed = (key: 'freelance' | 'contract-work', name: string, short: string) => [
     tiles(`${short}-form`, `Did you get a 1099-NEC for your ${name}?`, yesNo, has(key), { helper: 'If you did, we’ll read the amounts from it' }),
-    upload(`${short}-1099`, '1099-NEC', `Upload your 1099-NEC forms for ${name}`, 'From your clients. One per client', LATER, and(has(key), answered(`${short}-form`, 'yes'))),
+    upload(`${short}-1099`, '1099-NEC', `Upload your 1099-NEC forms for ${name}`, 'From your clients. One per client', LATER),
     amount(`${short}-amount`, (_, year) => `How much were you paid for ${name} in ${year}?`, 'Add up what every client paid you', and(has(key), answered(`${short}-form`, 'no'))),
   ]
   return [
     // Bank interest
     tiles('bank-form', 'Did you get a tax form for your bank interest?', yesNo, has('bank-interest'), { helper: 'If you did, we’ll read the amounts from it' }),
-    upload('bank-upload', 'bank form', 'Upload your bank interest form', 'From your bank, if they sent one', LATER, and(has('bank-interest'), answered('bank-form', 'yes'))),
+    upload('bank-upload', 'bank form', 'Upload your bank interest form', 'From your bank, if they sent one', LATER),
     amount('bank-amount', (_, year) => `How much bank interest did you earn in ${year}?`, 'Check your bank statements for the year', and(has('bank-interest'), answered('bank-form', 'no'))),
     // OPT or CPT
     tiles(
@@ -143,21 +150,21 @@ function incomeFollowUps(): FlowScreen[] {
       has('opt-cpt'),
       { helper: 'So we can label your job correctly' },
     ),
-    upload('opt-w2', 'W-2', optW2Question, 'From your employer. One per employer', LATER, has('opt-cpt')),
+    upload('opt-w2', 'W-2', optW2Question, 'From your employer. One per employer', LATER),
     // On-campus job
-    upload('campus-w2', 'W-2', 'Upload your W-2 from your on-campus job', 'From your university’s payroll office. One per job', LATER, has('on-campus-job')),
+    upload('campus-w2', 'W-2', 'Upload your W-2 from your on-campus job', 'From your university’s payroll office. One per job', LATER),
     // Scholarship (the "costs other than tuition" question waits for tax review)
     tiles('scholarship-withheld', 'Did your university withhold tax from your scholarship?', yesNo, has('scholarship'), {
       helper: 'To check refund eligibility',
       helpLabel: 'Not sure whether tax was withheld?',
     }),
-    upload('scholarship-1042s', '1042-S', 'Upload your 1042-S for your scholarship', 'From your university', 'I didn’t get one', has('scholarship')),
+    upload('scholarship-1042s', '1042-S', 'Upload your 1042-S for your scholarship', 'From your university', NO_ONE),
     // Freelance (expenses wait for tax review)
     ...selfEmployed('freelance', 'freelance work', 'freelance'),
     // Investments
-    upload('investments-upload', 'tax form', 'Upload your investment tax forms', 'From your brokerage or bank, such as a 1042-S or 1099-DIV', 'I didn’t get a form', has('investments')),
+    upload('investments-upload', 'tax form', 'Upload your investment tax forms', `From your brokerage or bank, such as a ${ruleForUploadScreen('investments-upload').form}`, NO_FORM),
     // Trading
-    upload('trading-upload', 'tax form', 'Upload your brokerage tax forms', 'Such as a 1099-B or 1042-S', 'I didn’t get a form', has('trading')),
+    upload('trading-upload', 'tax form', 'Upload your brokerage tax forms', `Such as a ${ruleForUploadScreen('trading-upload').form}`, NO_FORM),
     // Contract work (expenses wait for tax review)
     ...selfEmployed('contract-work', 'contract work', 'contract'),
     // No earnings: nothing to ask. Donation and Child care: on hold for tax review.
@@ -326,6 +333,7 @@ export const isFlowPath = (path: string) => flow.some((s) => s.path === path)
  */
 export function resumeScreen(a: Answers): FlowScreen {
   const applies = flow.filter((s) => !s.when || s.when(a))
-  const done = (s: FlowScreen) => (s.id === 'years' ? a.years === 'under5' : s.isAnswered(a) || detail(a, s.id) === 'later')
+  const skipped = (s: FlowScreen) => !!s.skip && detail(a, s.id) === s.skip.value
+  const done = (s: FlowScreen) => (s.id === 'years' ? a.years === 'under5' : s.isAnswered(a) || skipped(s))
   return applies.find((s) => !done(s)) ?? applies[applies.length - 1]
 }

@@ -113,6 +113,72 @@ To see it: log out with the /motion toggle (or ?auth=out) and open "/";
 or /motion → Intro, with a 390 / 820 / 1032 / 1280 width toggle and
 "Logged-out page" / "Replay" versions.
 
+## Required documents (step 1 of 3: built)
+
+- Rules: `src/documents.config.ts`, the ONLY place that says which income
+  needs which document. **TODO confirm with CPA:** all values are placeholders.
+
+  | Income | Document | Needed when |
+  |---|---|---|
+  | Bank interest | Bank interest form | "Did you get a tax form?" = Yes |
+  | OPT or CPT | W-2 | always |
+  | On-campus job | W-2 | always |
+  | Scholarship | 1042-S | always |
+  | Freelance | 1099-NEC | "Did you get a 1099-NEC?" = Yes |
+  | Investments | 1042-S or 1099-DIV | always |
+  | Trading | 1099-B or 1042-S | always |
+  | Contract work | 1099-NEC | "Did you get a 1099-NEC?" = Yes |
+
+- One function, `requiredDocuments(answers)` (`src/flow/requiredDocuments.ts`),
+  returns the documents with a status each: added, later ("I'll add it
+  later"), none ("I didn't get one / a form", i.e. "I don't have this") or
+  missing. later and none are deferred. `summarizeDocuments()` gives the
+  counts; done = nothing missing.
+- Everything calls it: the flow's upload questions (they appear only when
+  their document is needed), the form codes on the income cards, and next
+  the Documents page, the stepper and Home. `npm run check:documents` tests it.
+
+## Next steps (agreed order)
+
+2. **One Documents page** (the Documents tab). The flow's Documents step
+   opens the same page, with Continue only when arriving from the flow. The
+   stepper marks Documents done when every required document is added or
+   deferred. Each document has its own link address.
+3. **Logged-in Home**, to this brief (pasted by the designer):
+   - Focus only on the user's tax return. No deadlines, news, refund
+     estimates or promises about outcomes.
+   - Fake states for testing, switchable on /motion and with
+     ?home=new|progress|ready: new (nothing answered); progress (visa,
+     state and income answered, one document added); ready (everything
+     done, forms ready to download).
+   - Return card (hero): "2026 tax return" (TAX_YEAR), the 5-section
+     progress row from the stepper with the current section labelled, one
+     line of status ("Income: 2 of 3 answered" or "3 documents left"). One
+     cobalt button: "Start your return" (new), "Continue where you left off"
+     (progress), "Download your forms" (ready; the card then lists the
+     forms, each with Download). The only cobalt element.
+   - What's next: the next 2 or 3 steps computed from the state, each a
+     link; document steps link to that item on the Documents page.
+   - Documents summary row (not a card grid, no illustrations): "2 of 3
+     documents added", a thin navy progress bar, "View documents" link.
+     None required: "No documents needed yet", with a link explaining why.
+     Status as text, never color alone.
+   - Your answers: compact list (visa type, state, income types), each with
+     an Edit link to that question.
+   - Previous years: quiet row, years enabled in config.
+   - Privacy and storage: config-driven line, empty until confirmed.
+   - Help: "Not sure what applies?" and "Replay intro".
+   - Layout: phone one column in this order. iPad and laptop: main column
+     (return card, What's next, Documents summary) and a narrower side column
+     (Your answers, Previous years, Privacy, Help) on the 12-column grid.
+     Same radius and padding tokens on all cards; nothing floating.
+   - Motion (existing tokens): cards enter with the stagger; the progress
+     row fills on load. Reduced motion: fades only.
+   - Accessibility: headings in order, each card a labelled region, status
+     as text and an icon, visible focus rings, keyboard operable.
+   - All three states on /motion with a width toggle.
+   - After each step: test at 390, 820, 1280px, audit and contrast, commit, stop.
+
 ## Planned
 
 - **Intro scene: documents being deleted.** A scene showing documents being

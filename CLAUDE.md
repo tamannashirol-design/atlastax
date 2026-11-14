@@ -135,6 +135,12 @@ Rules:
   stacked tabs below 1024, split 5/7 columns from 1024). Modes: "page"
   (logo, who-it's-for, Get started, Log in, footer) and "replay" (Skip).
   /motion previews both; FormCard, StepDots, LaptopPreview, Logo on /styleguide.
+- Required documents: rules ONLY in `src/documents.config.ts` (TODO
+  confirm with CPA). Everything (flow upload questions, income card form
+  codes, Documents page, stepper, Home) reads them through
+  `requiredDocuments(answers)` in `src/flow/requiredDocuments.ts`. Skipped
+  uploads store "later" or "none"; both are deferred. Never write a tax rule
+  elsewhere. `npm run check:documents` tests the function.
 - Fake auth for testing only (`src/lib/auth.ts`): /motion toggle or
   ?auth=in / ?auth=out. No real authentication yet.
 - Home (`src/home/`): one primary (Start / Continue where you left off),

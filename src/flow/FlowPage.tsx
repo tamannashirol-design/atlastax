@@ -75,8 +75,8 @@ export default function FlowPage({ path }: { path: string }) {
         helper={screen.helper}
         help={
           // The skip link hides once the question is answered (it would discard the upload)
-          screen.skipLabel && !screen.isAnswered(answers)
-            ? { label: screen.skipLabel, icon: false, onClick: () => (setDetail(screen.id, 'later'), navigate(next)) }
+          screen.skip && !screen.isAnswered(answers)
+            ? { label: screen.skip.label, icon: false, onClick: () => (setDetail(screen.id, screen.skip!.value), navigate(next)) }
             : screen.helpLabel
               ? { label: screen.helpLabel }
               : undefined
