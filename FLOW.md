@@ -69,14 +69,33 @@ scenes made of the real components, with obviously generic data:
 | 2 | Add your documents | Upload forms like your W-2 as a PDF or a clear photo. | Upload zone: "W-2 · Example Employer.pdf" drops in, progress draws, check lands (scripted; nothing is uploaded) |
 | 3 | Get your forms, ready to file | We prepare Form 1040‑NR from your answers for you to download. | Form card settles in, "Example data" |
 
+Two compositions, same scenes, copy and components (chosen by the intro's
+own width, so /motion previews are exact):
+
+**Phone (below 768px):** full-screen scenes.
 - Next (secondary) / swipe / ← → move; auto-advance after 5s until the
   person touches anything; never with reduced motion (finished states, fades).
+
+**Wide / web intro (768px and up):**
+- 1024+: steps as a vertical tablist in columns 1–5 (active: heading +
+  sentence and a navy line that fills while it plays; others: heading only),
+  Get started + Skip at the bottom of the column. Columns 6–12: "Preview"
+  and the real laptop layout (stepper rail + question column) in a card.
+- 768–1023 (iPad portrait): the steps become a row of tabs above the demo.
+- Clicking a step jumps to it. Auto-advance after 6s, paused on hover or
+  focus, stopped for good by the first click or key press. Scenes cross-fade.
+- Demo hidden from screen readers and not clickable; the panel describes it
+  in text (e.g. "Preview of the visa question: F‑1 is selected…").
+
+Both:
 - Skip always visible (Escape too). Last scene: **Get started** (starts or
   resumes the current year) and "I already have an account".
 - **TODO confirm:** there are no accounts yet; "I already have an account"
   closes the intro like Skip.
 - To see it again: "Replay intro" on Home, /?intro=reset (forgets it was
-  seen), or the Intro scenes on /motion.
+  seen), or /motion (Intro, with a 390 / 820 / 1032 / 1280 width toggle).
+- **Open question:** on the wide intro's scene 1, the preview's enabled
+  Continue and Get started are both cobalt (two blue elements on screen).
 
 ## 1. Home (built: `src/home/HomePage.tsx`)
 

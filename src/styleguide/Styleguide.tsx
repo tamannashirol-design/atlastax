@@ -7,6 +7,8 @@ import { FlowStepper } from '../components/FlowStepper'
 import { FormCard } from '../components/FormCard'
 import { StepDots } from '../components/StepDots'
 import { Intro } from '../intro/Intro'
+import { LaptopPreview } from '../intro/LaptopPreview'
+import { VisaDemo } from '../intro/scenes'
 import { IncomeCard, IncomeRow, Illustration } from '../components/IncomeCard'
 import { extraOptions, incomeOptions } from '../data/income'
 import { SearchSelect } from '../components/SearchSelect'
@@ -194,8 +196,13 @@ function IntroDemo() {
             </span>
           ))}
         </div>
+        <span className="pt-4 text-body font-semibold">Laptop preview (wide intro)</span>
+        <Label>The real laptop layout (rail + question column) at full size, scaled into a card. Not a device frame. Decorative.</Label>
+        <LaptopPreview position={{ section: 0, step: 0 }} question="What is your visa type?" helper="To personalize the experience and show only visa‑relevant forms">
+          <VisaDemo play={0} fit="content" />
+        </LaptopPreview>
         <span className="pt-4 text-body font-semibold">Intro</span>
-        <Label>Full-screen dialog. Skip / Escape closes; ← → or swipe move; auto-advances after 5s until touched.</Label>
+        <Label>Full-screen dialog in two compositions: phone (below 768) and wide (steps + preview). Skip / Escape closes. Compare widths on /motion.</Label>
         <SecondaryButton onClick={() => setOpen(true)}>Open the intro</SecondaryButton>
       </div>
       <AnimatePresence>{open && <Intro onClose={() => setOpen(false)} />}</AnimatePresence>

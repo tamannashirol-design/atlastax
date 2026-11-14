@@ -127,9 +127,13 @@ Rules:
 
 ## Intro and Home
 - First-run intro (`src/intro/`): a modal dialog over Home, 3 scenes built
-  from real components (scene list + copy in `content.ts`). Seen-flag in
+  from real components (scene list + copy in `content.ts`). Two
+  compositions chosen by the intro's own width (`frame.ts`): phone below
+  768 (`IntroPhone`), wide 768+ (`IntroWide`: tablist + `LaptopPreview`;
+  stacked tabs below 1024, split 5/7 columns from 1024). Seen-flag in
   localStorage (`atlastax:intro-seen`); /?intro=reset shows it again.
-  Scenes replay on /motion; FormCard and StepDots are on /styleguide.
+  /motion previews both at 390/820/1032/1280; FormCard, StepDots and
+  LaptopPreview are on /styleguide.
 - Home (`src/home/`): one primary (Start / Continue where you left off),
   previous years from `PREVIOUS_TAX_YEARS`, privacy line from `PRIVACY_LINE`
   (empty until confirmed), Replay intro.

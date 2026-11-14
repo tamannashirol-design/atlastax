@@ -1,11 +1,11 @@
 import { MotionConfig } from 'framer-motion'
-import { useRef, useState, type ReactNode } from 'react'
+import { useLayoutEffect, useRef, useState, type ReactNode } from 'react'
 import { SecondaryButton } from '../components/SecondaryButton'
 import { Switch } from '../components/Switch'
 import { UploadZone, type Drag } from '../components/UploadZone'
 import { TAX_YEAR } from '../config'
 import { useUpload, type UploadState } from '../lib/upload'
-import { scenes } from '../intro/content'
+import { IntroContent } from '../intro/IntroContent'
 
 // /motion: play each state of the upload moment, scrub progress, and toggle
 // reduced motion. "Upload" and "Error" run REAL uploads to the dev endpoint
@@ -154,7 +154,7 @@ export default function MotionPage() {
               </div>
             </section>
 
-            <IntroScenes />
+            <IntroPreview />
           </div>
         </main>
       </div>
@@ -162,29 +162,90 @@ export default function MotionPage() {
   )
 }
 
-// Intro scenes: the same components the first-run intro plays. Replay each one
-// here (the Reduce motion switch above applies too: finished states, no movement).
-function IntroScenes() {
-  const [plays, setPlays] = useState(() => scenes.map(() => 0))
+// The intro in both compositions. The width toggle sets the device size; the
+// intro lays itself out from its own width, so each size shows exactly what
+// that device gets (phone below 768, stacked 768–1023, split 1024+). The
+// device frame is scaled down to fit this page. Reduce motion above applies.
+const DEVICES = [
+  { w: 390, h: 844, label: '390 phone' },
+  { w: 820, h: 1180, label: '820 iPad' },
+  { w: 1032, h: 768, label: '1032 iPad landscape' },
+  { w: 1280, h: 800, label: '1280 laptop' },
+]
+
+function IntroPreview() {
+  const [device, setDevice] = useState(DEVICES[3])
+  const [run, setRun] = useState(0)
+  const [closed, setClosed] = useState<string | null>(null)
+  const box = useRef<HTMLDivElement>(null)
+  const [avail, setAvail] = useState(0)
+  useLayoutEffect(() => {
+    const el = box.current
+    if (!el) return
+    const ro = new ResizeObserver(([e]) => setAvail(e.contentRect.width))
+    ro.observe(el)
+    return () => ro.disconnect()
+  }, [])
+  const scale = avail ? Math.min(1, avail / device.w) : 0
+  const restart = () => {
+    setClosed(null)
+    setRun((n) => n + 1)
+  }
   return (
-    <section className="flex flex-col gap-8 border-t border-border-decorative pt-12 mt-12">
+    <section className="mt-12 flex flex-col gap-6 border-t border-border-decorative pt-12">
       <header className="flex flex-col gap-2">
-        <h2 className="font-display text-display">Intro scenes</h2>
+        <h2 className="font-display text-display">Intro</h2>
         <p className="max-w-column text-body text-text-muted">
-          The first-run intro, one scene at a time. Replay plays the moment again; tapping a demo plays it too. To see the whole intro on Home
-          again, open /?intro=reset.
+          Phone and wide (web) compositions of the first-run intro: same scenes, copy and components. Pick a width; Restart plays it from the
+          start. On Home, /?intro=reset shows it again.
         </p>
       </header>
-      <div className="page-grid gap-y-12">
-        {scenes.map((s, i) => (
-          <div key={s.id} className="col-span-full flex flex-col gap-4 tablet:col-span-6 tablet:col-start-2 desktop:col-span-4 desktop:col-start-auto">
-            <s.Demo play={plays[i]} />
-            <h3 className="font-display text-title">{s.title}</h3>
-            <SecondaryButton onClick={() => setPlays((p) => p.map((n, j) => (j === i ? n + 1 : n)))}>Replay</SecondaryButton>
-          </div>
+      <div role="group" aria-label="Device width" className="flex flex-wrap gap-2">
+        {DEVICES.map((d) => (
+          <button
+            key={d.w}
+            type="button"
+            aria-pressed={d.w === device.w}
+            onClick={() => {
+              setDevice(d)
+              restart()
+            }}
+            className={`flex h-11 items-center rounded-sm border px-4 text-body font-semibold focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-text active:bg-sage-100 ${
+              d.w === device.w ? 'border-text bg-surface shadow-[inset_0_0_0_1px_var(--color-text)]' : 'border-border-strong bg-surface'
+            }`}
+          >
+            <span className="tabular-nums">{d.label}</span>
+          </button>
         ))}
+        <SecondaryButtonInline onClick={restart}>Restart</SecondaryButtonInline>
+      </div>
+      <div ref={box} className="w-full">
+        <div className="overflow-hidden rounded-lg border border-border-strong" style={{ width: device.w * scale, height: device.h * scale }}>
+          <div style={{ width: device.w, height: device.h, transform: `scale(${scale})`, transformOrigin: '0 0' }}>
+            {closed ? (
+              <div className="flex h-full flex-col items-center justify-center gap-4 bg-background p-8 text-center">
+                <p className="text-body">Intro closed: {closed}</p>
+                <SecondaryButtonInline onClick={restart}>Restart</SecondaryButtonInline>
+              </div>
+            ) : (
+              <IntroContent key={`${device.w}-${run}`} onClose={(how) => setClosed(how === 'start' ? 'Get started' : how === 'account' ? 'I already have an account' : 'Skip')} />
+            )}
+          </div>
+        </div>
       </div>
     </section>
+  )
+}
+
+function SecondaryButtonInline({ onClick, children }: { onClick: () => void; children: ReactNode }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className="flex h-11 items-center rounded-sm border border-border-strong bg-surface px-4 text-body font-semibold focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-text active:bg-sage-100"
+    >
+      {children}
+    </button>
   )
 }
 

@@ -241,6 +241,33 @@ if (!only || 'intro'.includes(only)) {
   await page.close()
 }
 
+// The wide (web) intro: steps as a tablist + preview
+if (!only || 'intro wide'.includes(only)) {
+  const where = 'intro (wide)'
+  const page = await browser.newPage({ viewport: { width: 1280, height: 800 } })
+  await page.goto(BASE + '/?intro=reset', { waitUntil: 'networkidle' })
+  await page.evaluate(watchBody)
+  await settle(page)
+  console.log(where)
+  await check(page, where, 'opened', { ring: false })
+  await page.keyboard.press('Tab')
+  await check(page, where, 'Tab → selected step', { focus: /^Answer a few simple questions/ })
+  await page.keyboard.press('ArrowDown')
+  await settle(page)
+  await check(page, where, '↓ next step', { focus: /^Add your documents/, live: /^Step 2 of 3: Add your documents$/ })
+  await page.keyboard.press('End')
+  await settle(page)
+  await check(page, where, 'End → last step', { focus: /^Get your forms, ready to file/, live: /^Step 3 of 3/ })
+  await page.keyboard.press('Tab')
+  await check(page, where, 'Tab → demo panel', { focus: /Preview of a finished Form/ })
+  await page.keyboard.press('Tab')
+  await check(page, where, 'Tab → Get started', { focus: /^Get started$/ })
+  await page.keyboard.press('Escape')
+  await settle(page)
+  await check(page, where, 'Escape leaves', { focus: /^Start your \d{4} return$/ })
+  await page.close()
+}
+
 await browser.close()
 console.log(`\n${checks} checks, ${failures.length} failed`)
 if (failures.length) {

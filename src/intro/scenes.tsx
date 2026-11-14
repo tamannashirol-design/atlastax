@@ -22,18 +22,21 @@ export type SceneProps = {
   play: number
   /** Called on any tap inside the demo (stops the intro's auto-advance) */
   onTouch?: () => void
+  /** "box" (phone intro): centered in the fixed 296 demo box. "content": top-aligned, own height (the laptop preview's answer area). */
+  fit?: 'box' | 'content'
 }
 
 /** Every demo sits in the same fixed box (the upload answer height), so text and buttons never move between scenes.
  *  onReplay: a tap on the demo (but not on one of its buttons, which play their own press) replays the moment. */
-function DemoBox({ children, onReplay }: { children: ReactNode; onReplay?: () => void }) {
+function DemoBox({ children, onReplay, fit = 'box' }: { children: ReactNode; onReplay?: () => void; fit?: SceneProps['fit'] }) {
   return (
     <div
       aria-hidden
       onClick={(e) => {
         if (onReplay && !(e.target as Element).closest('button')) onReplay()
       }}
-      className="flex h-(--answer-h-upload) w-full flex-col justify-center">
+      className={`flex w-full flex-col ${fit === 'box' ? 'h-(--answer-h-upload) justify-center' : ''}`}
+    >
       {children}
     </div>
   )
@@ -47,12 +50,12 @@ const VISAS = [
   { value: 'M-1', description: 'Vocational' },
 ]
 
-export function VisaDemo({ play, onTouch }: SceneProps) {
+export function VisaDemo({ play, onTouch, fit }: SceneProps) {
   // A new `play` remounts the run, so it starts from a clean state
-  return <VisaRun key={play} play={play} onTouch={onTouch} />
+  return <VisaRun key={play} play={play} onTouch={onTouch} fit={fit} />
 }
 
-function VisaRun({ play, onTouch }: SceneProps) {
+function VisaRun({ play, onTouch, fit }: SceneProps) {
   const reduce = useReducedMotionConfig() ?? false
   const [value, setValue] = useState<string | undefined>(reduce ? 'F-1' : undefined)
   const [pressed, setPressed] = useState<string | undefined>()
@@ -72,7 +75,7 @@ function VisaRun({ play, onTouch }: SceneProps) {
   }, [reduce])
 
   return (
-    <DemoBox>
+    <DemoBox fit={fit}>
       <div className="flex flex-col gap-8">
         <div className="grid grid-cols-3 gap-(--grid-gutter)">
           {VISAS.map((v, i) => (
@@ -111,16 +114,19 @@ function VisaRun({ play, onTouch }: SceneProps) {
 
 const DEMO_FILE: UploadFile = { name: 'W-2 · Example Employer.pdf', size: 240 * 1024 }
 
-export function UploadDemo({ play, onTouch }: SceneProps) {
+export function UploadDemo({ play, onTouch, fit }: SceneProps) {
   const [replay, setReplay] = useState(0)
   return (
     <DemoBox
+      fit={fit}
       onReplay={() => {
         onTouch?.()
         setReplay((n) => n + 1)
       }}
     >
-      <UploadRun key={`${play}-${replay}`} />
+      <div className={`flex flex-col ${fit === 'content' ? 'h-(--answer-h-upload)' : 'flex-1'}`}>
+        <UploadRun key={`${play}-${replay}`} />
+      </div>
     </DemoBox>
   )
 }
@@ -174,10 +180,11 @@ function UploadRun() {
 
 // ---------- 3. A finished form card settles in, ready to download ----------
 
-export function FormDemo({ play, onTouch }: SceneProps) {
+export function FormDemo({ play, onTouch, fit }: SceneProps) {
   const [replay, setReplay] = useState(0)
   return (
     <DemoBox
+      fit={fit}
       onReplay={() => {
         onTouch?.()
         setReplay((n) => n + 1)
