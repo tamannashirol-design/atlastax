@@ -1,5 +1,6 @@
 import { AnimatePresence, motion } from 'framer-motion'
 import { useEffect, useState, type ReactNode } from 'react'
+import { AmountField } from '../components/AmountField'
 import { AnswerTile } from '../components/AnswerTile'
 import { BottomSheet } from '../components/BottomSheet'
 import { FlowStepper } from '../components/FlowStepper'
@@ -9,6 +10,7 @@ import { SearchSelect } from '../components/SearchSelect'
 import { SecondaryButton } from '../components/SecondaryButton'
 import { SelectField } from '../components/SelectField'
 import { TileGroup } from '../components/TileGroup'
+import { UploadField } from '../components/UploadField'
 import { countries, usStates } from '../data/places'
 import { allSteps } from '../flow/sections'
 import { PrimaryButton } from '../components/PrimaryButton'
@@ -184,6 +186,8 @@ function FormControlsDemo() {
   const [state, setState] = useState<string>()
   const [country, setCountry] = useState<string>()
   const [sheet, setSheet] = useState(false)
+  const [files, setFiles] = useState<string[]>([])
+  const [amount, setAmount] = useState('')
   return (
     <>
       <div className="col-span-full flex flex-col gap-3 desktop:col-span-6">
@@ -216,6 +220,20 @@ function FormControlsDemo() {
         </span>
         <Label>Type to filter; accents don’t matter. ↑ ↓, Enter, Escape.</Label>
         <SearchSelect labelledBy="sg-search" options={countries()} value={country} onChange={setCountry} placeholder="Search countries" />
+      </div>
+      <div className="col-span-full flex flex-col gap-3 desktop:col-span-6">
+        <span className="text-body font-semibold">Upload field</span>
+        <Label>Document questions. Secondary style, so Continue stays the only blue. Fits the 88pt answer area.</Label>
+        <div className="flex h-(--answer-h) flex-col">
+          <UploadField files={files} onChange={setFiles} />
+        </div>
+      </div>
+      <div className="col-span-full flex flex-col gap-3 desktop:col-span-6">
+        <span id="sg-amount" className="text-body font-semibold">
+          Amount field
+        </span>
+        <Label>Dollar amounts. Number keypad on phones; tabular numerals.</Label>
+        <AmountField labelledBy="sg-amount" value={amount} onChange={setAmount} />
       </div>
       <div className="col-span-full flex flex-col gap-3 desktop:col-span-6">
         <span className="text-body font-semibold">Secondary button + bottom sheet</span>

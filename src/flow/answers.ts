@@ -12,6 +12,8 @@ export type Answers = {
   priorReturn?: 'skipped' | { fileName: string }
   citizenship?: string // two-letter region code
   income?: import('../data/income').IncomeId[]
+  /** Income follow-up answers, keyed by screen id: a choice, an amount, file names, or "later" (skipped). */
+  details?: Record<string, string | string[]>
 }
 
 const KEY = 'atlastax:answers'
@@ -35,6 +37,11 @@ export function setAnswers(patch: Partial<Answers>) {
     /* storage blocked: keep in memory */
   }
   listeners.forEach((l) => l())
+}
+
+/** Save one income follow-up answer. */
+export function setDetail(id: string, value: string | string[]) {
+  setAnswers({ details: { ...answers.details, [id]: value } })
 }
 
 export function useAnswers(): Answers {

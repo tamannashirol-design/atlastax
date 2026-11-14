@@ -44,7 +44,8 @@ type Props = {
   canContinue: boolean
   onContinue?: () => void
   helper?: string
-  help?: { label: string; onClick?: () => void }
+  /** Link under Continue. icon: false for action links like "I'll add it later". */
+  help?: { label: string; onClick?: () => void; icon?: boolean }
   onNavigate?: (section: number) => void
 }
 
@@ -100,7 +101,7 @@ export function QuestionLayout({ position, backHref, questionId, question, answe
                 onClick={help.onClick}
                 className={`flex min-h-12 items-center gap-2 self-start rounded-sm text-left text-body font-semibold underline underline-offset-4 ${focusRing}`}
               >
-                <QuestionIcon size={24} weight="regular" aria-hidden />
+                {help.icon !== false && <QuestionIcon size={24} weight="regular" aria-hidden />}
                 {help.label}
               </button>
             )}

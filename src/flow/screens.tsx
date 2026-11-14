@@ -1,12 +1,16 @@
 // Every simple question screen, in flow order. Copy comes from FLOW.md.
 // All of them render through the same QuestionLayout (see FlowPage).
 import type { ReactNode } from 'react'
+import { AmountField, parseAmount } from '../components/AmountField'
 import { IncomePicker } from '../components/IncomePicker'
 import { SearchSelect } from '../components/SearchSelect'
 import { SelectField } from '../components/SelectField'
-import { TileGroup } from '../components/TileGroup'
+import { TileGroup, type TileOption } from '../components/TileGroup'
+import { UploadField } from '../components/UploadField'
+import { TAX_YEAR } from '../config'
+import type { IncomeId } from '../data/income'
 import { countries, usStates } from '../data/places'
-import { setAnswers, type Answers } from './answers'
+import { setAnswers, setDetail, type Answers } from './answers'
 import type { FlowPosition } from './sections'
 
 export type FlowScreen = {
@@ -17,9 +21,124 @@ export type FlowScreen = {
   helper?: string
   helpLabel?: string
   isAnswered: (a: Answers) => boolean
+  /** Show this screen only when this returns true (income follow-ups). */
+  when?: (a: Answers) => boolean
+  /** Link under Continue that skips the question, e.g. "I'll add it later". */
+  skipLabel?: string
   /** The answer control; must fit the fixed answer area unless answerArea is "auto". */
   answers: (a: Answers, labelledBy: string) => ReactNode
   answerArea?: 'fixed' | 'auto'
+}
+
+// ---------- Income follow-ups (proposal in FLOW.md, approved) ----------
+// One question per screen, in income-card order. Screens appear only for the
+// income types selected, and branch on earlier answers. Items marked
+// "(tax review)" in FLOW.md are intentionally not built yet.
+
+const INCOME: FlowPosition = { section: 2, step: 0 } // Income has no "x of n"
+type When = (a: Answers) => boolean
+const has = (id: IncomeId): When => (a) => !!a.income?.includes(id)
+const answered = (screen: string, v: string): When => (a) => a.details?.[screen] === v
+const and = (...w: When[]): When => (a) => w.every((f) => f(a))
+const detail = (a: Answers, id: string) => a.details?.[id]
+
+function tiles(id: string, question: string, options: TileOption<string>[], when: When, more: Partial<FlowScreen> = {}): FlowScreen {
+  return {
+    id,
+    path: `/income/${id}`,
+    position: INCOME,
+    question,
+    when,
+    isAnswered: (a) => typeof detail(a, id) === 'string',
+    answers: (a, labelledBy) => (
+      <TileGroup labelledBy={labelledBy} value={detail(a, id) as string | undefined} onChange={(v) => setDetail(id, v)} options={options} />
+    ),
+    ...more,
+  }
+}
+
+function upload(id: string, question: string, helper: string, skipLabel: string, when: When): FlowScreen {
+  return {
+    id,
+    path: `/income/${id}`,
+    position: INCOME,
+    question,
+    helper,
+    skipLabel,
+    when,
+    isAnswered: (a) => Array.isArray(detail(a, id)) && (detail(a, id) as string[]).length > 0,
+    answers: (a) => {
+      const v = detail(a, id)
+      return <UploadField files={Array.isArray(v) ? v : []} onChange={(files) => setDetail(id, files)} />
+    },
+  }
+}
+
+function amount(id: string, question: string, helper: string, when: When): FlowScreen {
+  return {
+    id,
+    path: `/income/${id}`,
+    position: INCOME,
+    question,
+    helper,
+    when,
+    isAnswered: (a) => parseAmount(detail(a, id) as string | undefined) > 0,
+    answers: (a, labelledBy) => (
+      <AmountField labelledBy={labelledBy} value={(detail(a, id) as string | undefined) ?? ''} onChange={(v) => setDetail(id, v)} />
+    ),
+  }
+}
+
+const yesNo: TileOption<string>[] = [
+  { value: 'yes', code: 'Yes' },
+  { value: 'no', code: 'No' },
+]
+const LATER = "I'll add it later"
+const PHOTO = 'A PDF or a clear photo works'
+
+function incomeFollowUps(): FlowScreen[] {
+  // Freelance and contract work ask the same things
+  const selfEmployed = (key: 'freelance' | 'contract-work', name: string, short: string) => [
+    tiles(`${short}-form`, `Did you get a 1099-NEC for your ${name}?`, yesNo, has(key), { helper: 'If you did, we’ll read the amounts from it' }),
+    upload(`${short}-1099`, `Upload your 1099-NEC forms for ${name}`, 'One per client. A PDF or a clear photo works', LATER, and(has(key), answered(`${short}-form`, 'yes'))),
+    amount(`${short}-amount`, `How much were you paid for ${name} in ${TAX_YEAR}?`, 'Add up what every client paid you', and(has(key), answered(`${short}-form`, 'no'))),
+  ]
+  return [
+    // Bank interest
+    tiles('bank-form', 'Did you get a tax form for your bank interest?', yesNo, has('bank-interest'), { helper: 'If you did, we’ll read the amounts from it' }),
+    upload('bank-upload', 'Upload your bank interest form', PHOTO, LATER, and(has('bank-interest'), answered('bank-form', 'yes'))),
+    amount('bank-amount', `How much bank interest did you earn in ${TAX_YEAR}?`, 'Check your bank statements for the year', and(has('bank-interest'), answered('bank-form', 'no'))),
+    // OPT or CPT
+    tiles(
+      'opt-type',
+      'Was this work OPT, CPT, or both?',
+      [
+        { value: 'opt', code: 'OPT' },
+        { value: 'cpt', code: 'CPT' },
+        { value: 'both', code: 'Both' },
+      ],
+      has('opt-cpt'),
+      { helper: 'So we can label your job correctly' },
+    ),
+    upload('opt-w2', 'Upload your W-2 from your OPT or CPT job', 'One per employer. A PDF or a clear photo works', LATER, has('opt-cpt')),
+    // On-campus job
+    upload('campus-w2', 'Upload your W-2 from your on-campus job', 'One per employer. A PDF or a clear photo works', LATER, has('on-campus-job')),
+    // Scholarship (the "costs other than tuition" question waits for tax review)
+    tiles('scholarship-withheld', 'Did your university withhold tax from your scholarship?', yesNo, has('scholarship'), {
+      helper: 'To check refund eligibility',
+      helpLabel: 'Not sure whether tax was withheld?',
+    }),
+    upload('scholarship-1042s', 'Upload your 1042-S for your scholarship', PHOTO, 'I didn’t get one', has('scholarship')),
+    // Freelance (expenses wait for tax review)
+    ...selfEmployed('freelance', 'freelance work', 'freelance'),
+    // Investments
+    upload('investments-upload', 'Upload your investment tax forms', 'From your brokerage or bank, such as a 1042-S or 1099-DIV', 'I didn’t get a form', has('investments')),
+    // Trading
+    upload('trading-upload', 'Upload your brokerage tax forms', 'Such as a 1099-B or 1042-S', 'I didn’t get a form', has('trading')),
+    // Contract work (expenses wait for tax review)
+    ...selfEmployed('contract-work', 'contract work', 'contract'),
+    // No earnings: nothing to ask. Donation and Child care: on hold for tax review.
+  ]
 }
 
 // Non-breaking hyphens (‑) keep words like "visa‑relevant" on one line.
@@ -147,9 +266,10 @@ export const flow: FlowScreen[] = [
     answerArea: 'auto',
     answers: (a, id) => <IncomePicker labelledBy={id} value={a.income ?? []} onChange={(income) => setAnswers({ income })} />,
   },
+  ...incomeFollowUps(),
 ]
 
-/** Where Continue goes after the last built screen (income follow-ups aren't built yet). */
-export const AFTER_FLOW = '/income/details'
+/** Where Continue goes after the last question (Documents isn't built yet). */
+export const AFTER_FLOW = '/documents'
 
 export const isFlowPath = (path: string) => flow.some((s) => s.path === path)

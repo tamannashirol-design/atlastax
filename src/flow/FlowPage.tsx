@@ -6,7 +6,7 @@ import { QuestionLayout } from '../components/QuestionLayout'
 import { SecondaryButton } from '../components/SecondaryButton'
 import { DebugStack, useUrlFlag } from '../lib/debug'
 import { navigate } from '../lib/router'
-import { setAnswers, useAnswers } from './answers'
+import { setAnswers, setDetail, useAnswers } from './answers'
 import { AFTER_FLOW, flow } from './screens'
 
 // One page for the whole question flow. Because it stays mounted while the
@@ -15,8 +15,12 @@ export default function FlowPage({ path }: { path: string }) {
   const answers = useAnswers()
   const index = flow.findIndex((s) => s.path === path)
   const screen = flow[index]
-  const back = index > 0 ? flow[index - 1].path : '/'
-  const next = index < flow.length - 1 ? flow[index + 1].path : AFTER_FLOW
+  // Back/Continue skip screens that don't apply to these answers (income follow-ups)
+  const applies = (i: number) => !flow[i].when || flow[i].when!(answers)
+  const before = flow.slice(0, index).map((_, i) => i).filter(applies).pop()
+  const after = flow.map((_, i) => i).find((i) => i > index && applies(i))
+  const back = before !== undefined ? flow[before].path : '/'
+  const next = after !== undefined ? flow[after].path : AFTER_FLOW
   const [sheet, setSheet] = useState(false)
   const fileInput = useRef<HTMLInputElement>(null)
   const firstRender = useRef(true)
@@ -50,7 +54,13 @@ export default function FlowPage({ path }: { path: string }) {
         questionId={questionId}
         question={screen.question}
         helper={screen.helper}
-        help={screen.helpLabel ? { label: screen.helpLabel } : undefined}
+        help={
+          screen.skipLabel
+            ? { label: screen.skipLabel, icon: false, onClick: () => (setDetail(screen.id, 'later'), navigate(next)) }
+            : screen.helpLabel
+              ? { label: screen.helpLabel }
+              : undefined
+        }
         canContinue={screen.isAnswered(answers)}
         onContinue={onContinue}
         onNavigate={(section) => navigate(flow.find((s) => s.position.section === section)!.path)}

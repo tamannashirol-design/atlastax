@@ -230,7 +230,7 @@ no real PDF yet.)*
 - Group 2 "Anything else that applies?": Donation, Child care.
 - Continue goes to /income/details (follow-ups, not built yet).
 
-## Proposal: income follow-ups (to confirm before building)
+## Income follow-ups (proposal approved; v1 built)
 
 Each selected type gets a short follow-up (the old flow showed a sheet: "You
 selected On-Campus Job. We just need a few more details."). The proposal below
@@ -252,10 +252,34 @@ before we write questions for them.
 | Donation | Organization name · Amount · Upload the receipt | The receipt and amount are what any claim would rely on **(tax review)** for whether nonresident filers can use it |
 | Child care | Hold: no questions until a tax professional confirms whether and how this applies to nonresident filers **(tax review)** | Avoids asking for information we may not be able to use |
 
-Open questions for this proposal:
-1. One follow-up screen per selected type, or one combined "details" screen?
-2. Should uploads be required, or can people skip and add documents later in
-   the Documents section?
+### What's built (v1)
+
+Defaults chosen (to confirm): one question per screen, in income-card order;
+uploads can be skipped ("I'll add it later" / "I didn't get one"), to be
+collected later in Documents. The old "You selected …" interstitial sheet is
+not used. Items marked (tax review) are not built: scholarship costs, freelance
+and contract expenses, Donation, Child care.
+
+| Route | Shown when | Question | Answer |
+|---|---|---|---|
+| /income/bank-form | Bank interest | Did you get a tax form for your bank interest? | Yes / No |
+| /income/bank-upload | …and Yes | Upload your bank interest form | Upload · "I'll add it later" |
+| /income/bank-amount | …and No | How much bank interest did you earn in {year}? | Amount |
+| /income/opt-type | OPT or CPT | Was this work OPT, CPT, or both? | OPT / CPT / Both |
+| /income/opt-w2 | OPT or CPT | Upload your W-2 from your OPT or CPT job | Upload · "I'll add it later" |
+| /income/campus-w2 | On-campus job | Upload your W-2 from your on-campus job | Upload · "I'll add it later" |
+| /income/scholarship-withheld | Scholarship | Did your university withhold tax from your scholarship? | Yes / No |
+| /income/scholarship-1042s | Scholarship | Upload your 1042-S for your scholarship | Upload · "I didn't get one" |
+| /income/freelance-form | Freelance | Did you get a 1099-NEC for your freelance work? | Yes / No |
+| /income/freelance-1099 | …and Yes | Upload your 1099-NEC forms for freelance work | Upload · "I'll add it later" |
+| /income/freelance-amount | …and No | How much were you paid for freelance work in {year}? | Amount |
+| /income/investments-upload | Investments | Upload your investment tax forms | Upload · "I didn't get a form" |
+| /income/trading-upload | Trading | Upload your brokerage tax forms | Upload · "I didn't get a form" |
+| /income/contract-form, -1099, -amount | Contract work | Same as Freelance, for contract work | |
+
+After the last follow-up, Continue goes to /documents (not built yet).
+The scholarship question is shortened from the old copy ("Did your university
+withhold any tax…") so it fits 3 lines on a phone.
 
 ## Open questions
 1. **Q6 follow-ups:** which follow-up questions belong to each income type?
