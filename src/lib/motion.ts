@@ -1,12 +1,15 @@
-// Motion tokens. One easing family: springs. Durations stay in 200–400ms.
-// Low bounce keeps things calm. Under "Reduce motion", Framer Motion skips
-// movement (scale/position) automatically via <MotionConfig reducedMotion="user">
-// in main.tsx; color fades stay, because they're calm and still useful.
+// Motion tokens. One easing family: springs. Durations 150 / 250 / 400ms.
+// Under "Reduce motion", movement is replaced by `fade` (see MotionConfig in
+// main.tsx and useReducedMotionConfig in components).
 export const spring = {
-  /** Things appearing or settling: check marks, progress. 400ms, gentle. */
+  /** Things appearing or settling: drag-over, cards settling in. 400ms, gentle (bounce 0.15). */
   soft: { type: 'spring', duration: 0.4, bounce: 0.15 },
-  /** Direct feedback to a touch: press and release. 250ms, no bounce. */
+  /** Direct feedback: press/release, text cross-fades, progress following. 250ms, no bounce. ("snappy" in briefs) */
   quick: { type: 'spring', duration: 0.25, bounce: 0 },
+  /** Small celebratory pop: the upload check only. 250ms, ~6% overshoot (measured 6.1–6.3%). */
+  pop: { type: 'spring', duration: 0.25, bounce: 0.34 },
+  /** Reduced-motion replacement for any movement: a 150ms fade. */
+  fade: { type: 'spring', duration: 0.15, bounce: 0 },
 } as const
 
 /** How far things shrink while pressed. */

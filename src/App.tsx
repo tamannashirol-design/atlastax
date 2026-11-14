@@ -1,6 +1,7 @@
 import FlowPage from './flow/FlowPage'
 import { isFlowPath } from './flow/screens'
 import { Link, usePath } from './lib/router'
+import MotionPage from './motion/MotionPage'
 import Styleguide from './styleguide/Styleguide'
 
 // Picks a page from the address bar. Flow screens share one FlowPage so the
@@ -8,6 +9,7 @@ import Styleguide from './styleguide/Styleguide'
 export default function App() {
   const path = usePath()
   if (path === '/styleguide') return <Styleguide />
+  if (path === '/motion') return <MotionPage />
   if (isFlowPath(path)) return <FlowPage path={path} />
 
   return (

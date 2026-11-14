@@ -1,4 +1,4 @@
-import { AnimatePresence, motion } from 'framer-motion'
+import { AnimatePresence } from 'framer-motion'
 import { useEffect, useState, type ReactNode } from 'react'
 import { AmountField } from '../components/AmountField'
 import { AnswerTile } from '../components/AnswerTile'
@@ -8,6 +8,7 @@ import { IncomeCard, Illustration } from '../components/IncomeCard'
 import { extraOptions, incomeOptions } from '../data/income'
 import { SearchSelect } from '../components/SearchSelect'
 import { SecondaryButton } from '../components/SecondaryButton'
+import { Switch } from '../components/Switch'
 import { SelectField } from '../components/SelectField'
 import { TileGroup } from '../components/TileGroup'
 import { UploadField } from '../components/UploadField'
@@ -18,7 +19,6 @@ import { PrimaryButton } from '../components/PrimaryButton'
 import cssText from '../index.css?raw'
 import { contrastRatio } from '../lib/contrast'
 import { DebugStack, useUrlFlag } from '../lib/debug'
-import { spring } from '../lib/motion'
 import { parseColors } from '../tokens/colors'
 import { pairs, thresholds, type Pair } from '../tokens/pairs'
 import { grids, icons, palette, radii, shadows, spacing, typeScale, type GridSpec } from './tokens'
@@ -45,23 +45,6 @@ function deviceFor(width: number) {
 }
 
 // ---------- building blocks ----------
-
-function Toggle({ label, on, onChange }: { label: string; on: boolean; onChange: (v: boolean) => void }) {
-  return (
-    <button
-      type="button"
-      role="switch"
-      aria-checked={on}
-      onClick={() => onChange(!on)}
-      className="flex h-11 shrink-0 items-center gap-2 rounded-full text-body focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-text"
-    >
-      {label}
-      <span className={`flex h-8 w-12 rounded-full p-1 transition-colors ${on ? 'justify-end bg-text' : 'justify-start bg-border-strong'}`}>
-        <motion.span layout transition={spring.quick} className="size-6 rounded-full bg-surface shadow-1" />
-      </span>
-    </button>
-  )
-}
 
 function Section({ title, description, children }: { title: string; description: string; children: ReactNode }) {
   return (
@@ -271,8 +254,8 @@ export default function Styleguide() {
             <span className="font-semibold text-text">{deviceFor(width)}</span> · {width}px
           </p>
           <div className="flex items-center gap-4">
-            <Toggle label="Grid" on={showGrid} onChange={setShowGrid} />
-            <Toggle label="Outlines" on={showOutlines} onChange={setShowOutlines} />
+            <Switch label="Grid" on={showGrid} onChange={setShowGrid} />
+            <Switch label="Outlines" on={showOutlines} onChange={setShowOutlines} />
           </div>
         </div>
       </div>

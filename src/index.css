@@ -121,6 +121,7 @@
 
   /* Stroke widths for inline SVG (match Tailwind's border / border-2) */
   --stroke-1: 1px;
+  --stroke-1-5: 1.5px; /* thin progress lines and check marks */
   --stroke-2: 2px;
 }
 @media (width >= 768px) {

@@ -134,27 +134,25 @@ Rules:
   navy, success token, error token. No hex values anywhere.
 - Radii, stroke widths (`--stroke-1/2`) and shadows from tokens; 4pt grid.
 - Cobalt stays reserved for the primary action button.
-- Component: `UploadFolder` (static states on /styleguide, approve before
-  animating). Register every new pair in `src/tokens/pairs.ts`.
+- Built: `UploadZone` (src/components) with choreography from
+  MOTION-upload.md; play every state on /motion. Progress always comes from a
+  real upload (`useUpload`, XHR progress events); in dev, `/api/upload` is a
+  throttled test endpoint. `UploadFolder` (static folder drawing) is unused.
+  Register every new pair in `src/tokens/pairs.ts`.
 
 ## Motion
-- Relaxing, not busy: soft springs, 200 to 400ms, one easing family
-  (springs).
-- Respect prefers-reduced-motion with calm static fallbacks.
-
-## Filing flow
-- Sections and steps live in `src/flow/sections.ts` (see FLOW.md).
-- Country of citizenship sits in Tax details (designer confirming it's in
-  the flow).
-- Stepper shows "x of n" only for sections with more than one step.
-- Compact stepper: the current section's bar segment fills halfway through
-  the current step (e.g. step 1 of 3 = 1/6 filled), so it reads "in progress".
-- Rail at ≥1024px (laptop, iPad landscape); compact below.
-
-## Tax year
-- One constant: `TAX_YEAR` in `src/config.ts` (currently 2025, to confirm:
-  2025 or 2026). Every place a year appears (stepper rail, Home, previous
-  years, forms, deadlines) reads it from there. Never hard-code a year.
+- Relaxing, not busy: springs only, durations 150 / 250 / 400ms. Tokens in
+  `src/lib/motion.ts`, used everywhere (never hard-code a spring):
+  | Token | Spring | Use |
+  |---|---|---|
+  | `quick` | 250ms, no bounce | Press/release, text cross-fades, progress following. Called "snappy" in briefs: same thing, keep the name `quick` |
+  | `soft` | 400ms, bounce 0.15 | Things settling: drag-over, cards entering, stepper marker |
+  | `pop` | 250ms, bounce 0.34 (≈6% overshoot) | Upload check only |
+  | `fade` | 150ms, no bounce | Reduced-motion replacement for any movement |
+- Animate transform and opacity only (colors switch by fading layers).
+  Animations must be interruptible.
+- prefers-reduced-motion: movement becomes a `fade`; status text stays.
+  Components read it with `useReducedMotionConfig()`.
 
 ## Tech stack
 React + TypeScript + Tailwind CSS + Framer Motion, built with Vite.
