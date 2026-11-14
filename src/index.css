@@ -119,6 +119,15 @@
   --stepper-h: 56px; /* compact stepper row, below 1024px */
   --answer-h: 88px; /* fixed answer area: fits 3 tiles or the state dropdown */
 
+  /* Folder illustration (upload). Mixed from color roles only, no hex.
+     Each panel: two close tones, ~6–10% apart in luminance (checked on /styleguide). */
+  --folder-back-top: var(--color-sage-100);
+  --folder-back-bottom: color-mix(in oklch, var(--color-sage-100), var(--color-border-decorative) 30%);
+  --folder-front-top: color-mix(in srgb, var(--color-sage-100), var(--color-surface) 60%); /* srgb: mixing with white in oklch drifts pink */
+  --folder-front-bottom: var(--color-primary-tint);
+  --folder-highlight: var(--color-surface);
+  --folder-shadow: var(--color-text);
+
   /* Stroke widths for inline SVG (match Tailwind's border / border-2) */
   --stroke-1: 1px;
   --stroke-1-5: 1.5px; /* thin progress lines and check marks */

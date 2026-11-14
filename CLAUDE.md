@@ -137,7 +137,8 @@ Rules:
 - Built: `UploadZone` (src/components) with choreography from
   MOTION-upload.md; play every state on /motion. Progress always comes from a
   real upload (`useUpload`, XHR progress events); in dev, `/api/upload` is a
-  throttled test endpoint. `UploadFolder` (static folder drawing) is unused.
+  throttled test endpoint. `Folder` (src/components): three-layer folder
+  illustration, fills only, awaiting approval before it's animated in the zone.
   Register every new pair in `src/tokens/pairs.ts`.
 
 ## Motion

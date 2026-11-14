@@ -12,7 +12,7 @@ import { Switch } from '../components/Switch'
 import { SelectField } from '../components/SelectField'
 import { TileGroup } from '../components/TileGroup'
 import { UploadField } from '../components/UploadField'
-import { UploadFolder, type UploadState } from '../components/UploadFolder'
+import { Folder } from '../components/Folder'
 import { countries, usStates } from '../data/places'
 import { allSteps } from '../flow/sections'
 import { PrimaryButton } from '../components/PrimaryButton'
@@ -235,6 +235,37 @@ function FormControlsDemo() {
         </AnimatePresence>
       </div>
     </>
+  )
+}
+
+// Measures the folder's gradient tones in the browser (after color-mix resolves)
+// and shows how far apart each pair is in luminance.
+function FolderToneCheck() {
+  const [rows, setRows] = useState<string[]>([])
+  useEffect(() => {
+    const lum = (v: string) => {
+      const probe = document.createElement('div')
+      probe.style.color = `var(${v})`
+      document.body.appendChild(probe)
+      const css = getComputedStyle(probe).color
+      probe.remove()
+      const c = document.createElement('canvas').getContext('2d')!
+      c.fillStyle = css
+      c.fillRect(0, 0, 1, 1)
+      const [r, g, b] = c.getImageData(0, 0, 1, 1).data
+      const ch = (x: number) => ((x /= 255) <= 0.03928 ? x / 12.92 : ((x + 0.055) / 1.055) ** 2.4)
+      return 0.2126 * ch(r) + 0.7152 * ch(g) + 0.0722 * ch(b)
+    }
+    const diff = (a: string, b: string) => `${(((lum(a) - lum(b)) / lum(a)) * 100).toFixed(1)}%`
+    setRows([
+      `Back panel: ${diff('--folder-back-top', '--folder-back-bottom')} apart`,
+      `Front panel: ${diff('--folder-front-top', '--folder-front-bottom')} apart`,
+    ])
+  }, [])
+  return (
+    <p data-tone-check className="col-span-full text-small text-text-muted tabular-nums">
+      Tone check (luminance, top vs bottom): {rows.join(' · ')}
+    </p>
   )
 }
 
@@ -500,24 +531,22 @@ export default function Styleguide() {
           </Section>
 
           <Section
-            title="Upload folder (for approval)"
-            description="Static drawing for the upload animation; nothing moves yet. Inline SVG built only from tokens: body primary-tint, outline border-strong (2px), file surface with navy details, progress navy, success and error badges in their tokens. All text is real HTML."
+            title="Folder (for approval)"
+            description="Original folder for the upload moment, not animated yet. Three layers (back with tab, sheet, front), fills only, no strokes; two-tone vertical gradients mixed from our color roles; continuous corners; soft 12% shadow; 1px highlight on the front panel."
           >
-            {(
-              [
-                { state: 'idle', progress: 0, text: 'Drop your file here or choose one', tone: 'text-text text-body' },
-                { state: 'uploading', progress: 0.6, text: 'Uploading… 60%', tone: 'text-text-muted text-small tabular-nums' },
-                { state: 'success', progress: 1, text: 'W-2 added', tone: 'text-success text-small' },
-                { state: 'error', progress: 0, text: 'That file didn’t upload. Try again.', tone: 'text-error text-small' },
-              ] as { state: UploadState; progress: number; text: string; tone: string }[]
-            ).map((v) => (
-              <figure key={v.state} className="col-span-2 flex flex-col items-center gap-3 tablet:col-span-2 desktop:col-span-3">
-                <div className="flex h-32 w-full items-center justify-center rounded-md border border-border-decorative bg-background">
-                  <UploadFolder state={v.state} progress={v.progress} />
+            <FolderToneCheck />
+            {[
+              { scale: 1, bg: 'bg-surface', name: '1x on surface' },
+              { scale: 1, bg: 'bg-background', name: '1x on background' },
+              { scale: 2, bg: 'bg-surface', name: '2x on surface' },
+              { scale: 2, bg: 'bg-background', name: '2x on background' },
+            ].map((v) => (
+              <figure key={v.name} className={`col-span-full flex flex-col gap-2 ${v.scale === 1 ? 'tablet:col-span-4 desktop:col-span-6' : 'desktop:col-span-6'}`}>
+                <div className={`flex items-center justify-center rounded-md border border-border-decorative ${v.bg} ${v.scale === 1 ? 'h-48' : 'h-80'}`}>
+                  <Folder scale={v.scale} />
                 </div>
-                <figcaption className="flex flex-col items-center gap-1 text-center">
-                  <span className={v.tone}>{v.text}</span>
-                  <Label>{v.state}</Label>
+                <figcaption>
+                  <Label>{v.name}</Label>
                 </figcaption>
               </figure>
             ))}
