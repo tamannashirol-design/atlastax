@@ -1,5 +1,5 @@
 // Keyboard-only focus audit for every upload (the 8 income upload screens and
-// the previous-return sheet) and the first-run intro. Uses only Tab, Enter,
+// the previous-return sheet), the logged-out intro page and the intro replay. Uses only Tab, Enter,
 // Escape and arrow keys: no mouse.
 //
 // After every state change (upload started, done, removed, failed, retried,
@@ -41,11 +41,15 @@ let checks = 0
 const pdf = (name) => ({ name, mimeType: 'application/pdf', buffer: Buffer.from('%PDF-1.4 ' + 'x'.repeat(4000)) })
 const txt = (name) => ({ name, mimeType: 'text/plain', buffer: Buffer.from('not a tax form') })
 
-/** Watch every frame for focus on the body; read and reset with takeBodyDrops(). */
+/** Watch every frame for focus falling back to the body. Counting starts once
+ *  something has had focus (right after a page load, nothing is focused yet). */
 const watchBody = () => {
   window.__bodyDrops = 0
+  let started = false
   const tick = () => {
-    if (!document.activeElement || document.activeElement === document.body) window.__bodyDrops++
+    const onBody = !document.activeElement || document.activeElement === document.body
+    if (!onBody) started = true
+    else if (started) window.__bodyDrops++
     requestAnimationFrame(tick)
   }
   requestAnimationFrame(tick)
@@ -198,17 +202,19 @@ if (!only || 'previous-return sheet'.includes(only)) {
   await page.close()
 }
 
-// The first-run intro (dialog over Home)
-if (!only || 'intro'.includes(only)) {
-  const where = 'intro'
+// The intro replayed from Help on Home (logged in; a dialog)
+if (!only || 'intro replay'.includes(only)) {
+  const where = 'intro replay'
   const page = await browser.newPage({ viewport: { width: 390, height: 844 } })
-  await page.goto(BASE + '/?intro=reset', { waitUntil: 'networkidle' })
+  await page.goto(BASE + '/?auth=in', { waitUntil: 'networkidle' })
   await page.evaluate(() => sessionStorage.clear())
   await page.evaluate(watchBody)
-  await settle(page)
   console.log(where)
-  // On open, the dialog itself has focus (no ring by design; its label is the scene heading)
-  await check(page, where, 'opened', { focus: /Skip/, ring: false })
+  await tabTo(page, /^Replay intro$/)
+  await page.keyboard.press('Enter')
+  await settle(page)
+  // On open, the intro's root has focus (no ring by design; the dialog's label and description are read)
+  await check(page, where, 'opened', { ring: false })
   await page.keyboard.press('ArrowRight')
   await settle(page)
   await check(page, where, '→ scene 2', { ring: false, live: /^Step 2 of 3: Add your documents$/ })
@@ -221,13 +227,7 @@ if (!only || 'intro'.includes(only)) {
   await check(page, where, '← back to scene 2', { focus: /^Next$/, live: /^Step 2 of 3/ })
   await page.keyboard.press('Escape')
   await settle(page)
-  await check(page, where, 'Escape skips', { focus: /^Start your \d{4} return$/ })
-  await tabTo(page, /^Replay intro$/)
-  await page.keyboard.press('Enter')
-  await settle(page)
-  await page.keyboard.press('Escape')
-  await settle(page)
-  await check(page, where, 'replay → Escape', { focus: /^Replay intro$/ })
+  await check(page, where, 'Escape → Replay intro', { focus: /^Replay intro$/ })
   await page.keyboard.press('Enter')
   await settle(page)
   await page.keyboard.press('ArrowRight')
@@ -241,15 +241,32 @@ if (!only || 'intro'.includes(only)) {
   await page.close()
 }
 
-// The wide (web) intro: steps as a tablist + preview
-if (!only || 'intro wide'.includes(only)) {
-  const where = 'intro (wide)'
-  const page = await browser.newPage({ viewport: { width: 1280, height: 800 } })
-  await page.goto(BASE + '/?intro=reset', { waitUntil: 'networkidle' })
+// The logged-out page, phone composition
+if (!only || 'landing'.includes(only)) {
+  const where = 'logged-out page (phone)'
+  const page = await browser.newPage({ viewport: { width: 390, height: 844 } })
+  await page.goto(BASE + '/?auth=out', { waitUntil: 'networkidle' })
   await page.evaluate(watchBody)
-  await settle(page)
   console.log(where)
-  await check(page, where, 'opened', { ring: false })
+  await tabTo(page, /^Get started$/)
+  await check(page, where, 'Tab → Get started', { focus: /^Get started$/ })
+  await page.keyboard.press('ArrowRight')
+  await settle(page)
+  await check(page, where, '→ scene 2 (focus stays)', { focus: /^Get started$/, live: /^Step 2 of 3/ })
+  await page.keyboard.press('Tab')
+  await check(page, where, 'Tab → Log in', { focus: /^Log in$/ })
+  await page.keyboard.press('Tab')
+  await check(page, where, 'Tab → Privacy', { focus: /^Privacy$/ })
+  await page.close()
+}
+
+// The logged-out page, wide composition: steps as a tablist + preview
+if (!only || 'landing wide'.includes(only)) {
+  const where = 'logged-out page (wide)'
+  const page = await browser.newPage({ viewport: { width: 1280, height: 800 } })
+  await page.goto(BASE + '/?auth=out', { waitUntil: 'networkidle' })
+  await page.evaluate(watchBody)
+  console.log(where)
   await page.keyboard.press('Tab')
   await check(page, where, 'Tab → selected step', { focus: /^Answer a few simple questions/ })
   await page.keyboard.press('ArrowDown')
@@ -262,9 +279,10 @@ if (!only || 'intro wide'.includes(only)) {
   await check(page, where, 'Tab → demo panel', { focus: /Preview of a finished Form/ })
   await page.keyboard.press('Tab')
   await check(page, where, 'Tab → Get started', { focus: /^Get started$/ })
-  await page.keyboard.press('Escape')
-  await settle(page)
-  await check(page, where, 'Escape leaves', { focus: /^Start your \d{4} return$/ })
+  await page.keyboard.press('Tab')
+  await check(page, where, 'Tab → Log in', { focus: /^Log in$/ })
+  await page.keyboard.press('Tab')
+  await check(page, where, 'Tab → Privacy', { focus: /^Privacy$/ })
   await page.close()
 }
 

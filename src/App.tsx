@@ -1,6 +1,10 @@
 import FlowPage from './flow/FlowPage'
 import { isFlowPath } from './flow/screens'
 import HomePage from './home/HomePage'
+import LandingPage from './landing/LandingPage'
+import { useLoggedIn } from './lib/auth'
+import PlaceholderPage from './pages/PlaceholderPage'
+import { isPlaceholderPath } from './pages/placeholders'
 import { Link, usePath } from './lib/router'
 import MotionPage from './motion/MotionPage'
 import Styleguide from './styleguide/Styleguide'
@@ -9,10 +13,13 @@ import Styleguide from './styleguide/Styleguide'
 // shell and stepper stay mounted as you move between questions.
 export default function App() {
   const path = usePath()
+  const loggedIn = useLoggedIn()
   if (path === '/styleguide') return <Styleguide />
   if (path === '/motion') return <MotionPage />
   if (isFlowPath(path)) return <FlowPage path={path} />
-  if (path === '/') return <HomePage />
+  // Logged out: the intro is the entry page. Logged in: Home (fake auth, see lib/auth)
+  if (path === '/') return loggedIn ? <HomePage /> : <LandingPage />
+  if (isPlaceholderPath(path)) return <PlaceholderPage path={path} />
 
   return (
     <main className="flex min-h-dvh flex-col items-center justify-center gap-2 p-4">

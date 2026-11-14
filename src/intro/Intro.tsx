@@ -3,8 +3,9 @@ import { useEffect, useRef } from 'react'
 import { spring } from '../lib/motion'
 import { IntroContent } from './IntroContent'
 
-// First-run intro, full screen: a modal <dialog> over Home (traps focus, the
-// page behind is inert). Two compositions from the same scenes, copy and
+// The intro replayed from Help on Home (logged in), full screen: a modal
+// <dialog> (traps focus, the page behind is inert). Logged-out people see the
+// intro as the "/" page itself (LandingPage). Two compositions from the same scenes, copy and
 // components, chosen by width (IntroContent):
 //   below 768  phone: full-screen scenes (IntroPhone)
 //   768 and up wide: steps + live laptop preview (IntroWide)
@@ -13,7 +14,7 @@ import { IntroContent } from './IntroContent'
 // hear "Welcome to AtlasTax" and the current step, keys work at once, and no
 // ring flashes on a button nobody pressed.
 
-export type IntroExit = 'skip' | 'start' | 'account'
+export type IntroExit = 'skip' | 'start' | 'login'
 
 export function Intro({ onClose }: { onClose: (how: IntroExit) => void }) {
   const ref = useRef<HTMLDialogElement>(null)
@@ -48,7 +49,7 @@ export function Intro({ onClose }: { onClose: (how: IntroExit) => void }) {
       transition={reduce ? spring.fade : spring.quick}
       className="m-0 size-full max-h-none max-w-none bg-background p-0 text-text outline-none backdrop:bg-transparent"
     >
-      <IntroContent onClose={onClose} />
+      <IntroContent mode="replay" onClose={onClose} />
     </motion.dialog>
   )
 }

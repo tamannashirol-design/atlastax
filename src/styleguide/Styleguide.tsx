@@ -5,6 +5,7 @@ import { AnswerTile } from '../components/AnswerTile'
 import { BottomSheet } from '../components/BottomSheet'
 import { FlowStepper } from '../components/FlowStepper'
 import { FormCard } from '../components/FormCard'
+import { Logo } from '../components/Logo'
 import { StepDots } from '../components/StepDots'
 import { Intro } from '../intro/Intro'
 import { LaptopPreview } from '../intro/LaptopPreview'
@@ -175,7 +176,12 @@ function IntroDemo() {
   return (
     <>
       <div className="col-span-full flex flex-col gap-3 desktop:col-span-6">
-        <span className="text-body font-semibold">Form card</span>
+        <span className="text-body font-semibold">Logo</span>
+        <Label>Wordmark (Fraunces, Title). On the logged-in Home it settles in once per session (soft, ~600ms); never under reduced motion.</Label>
+        <div className="flex h-11 items-center">
+          <Logo />
+        </div>
+        <span className="pt-4 text-body font-semibold">Form card</span>
         <Label>A finished form, ready to download. Settles in with the soft spring. Never blue.</Label>
         <FormCard form="Form 1040‑NR" title="U.S. Nonresident Alien Income Tax Return · 2026" note="Example data" />
       </div>
@@ -198,11 +204,14 @@ function IntroDemo() {
         </div>
         <span className="pt-4 text-body font-semibold">Laptop preview (wide intro)</span>
         <Label>The real laptop layout (rail + question column) at full size, scaled into a card. Not a device frame. Decorative.</Label>
-        <LaptopPreview position={{ section: 0, step: 0 }} question="What is your visa type?" helper="To personalize the experience and show only visa‑relevant forms">
-          <VisaDemo play={0} fit="content" />
-        </LaptopPreview>
+        {/* inert, as in the intro: a scaled preview isn't clickable */}
+        <div inert>
+          <LaptopPreview position={{ section: 0, step: 0 }}>
+            <VisaDemo play={0} fit="content" />
+          </LaptopPreview>
+        </div>
         <span className="pt-4 text-body font-semibold">Intro</span>
-        <Label>Full-screen dialog in two compositions: phone (below 768) and wide (steps + preview). Skip / Escape closes. Compare widths on /motion.</Label>
+        <Label>Logged out, the intro is the “/” page. Logged in, Help on Home replays it in this dialog (Skip / Escape closes). Compare widths on /motion.</Label>
         <SecondaryButton onClick={() => setOpen(true)}>Open the intro</SecondaryButton>
       </div>
       <AnimatePresence>{open && <Intro onClose={() => setOpen(false)} />}</AnimatePresence>

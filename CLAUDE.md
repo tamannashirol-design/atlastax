@@ -126,17 +126,21 @@ Rules:
   every build. Register new pairs in `src/tokens/pairs.ts`.
 
 ## Intro and Home
-- First-run intro (`src/intro/`): a modal dialog over Home, 3 scenes built
-  from real components (scene list + copy in `content.ts`). Two
-  compositions chosen by the intro's own width (`frame.ts`): phone below
+- Intro (`src/intro/`): the logged-out entry page ("/" while logged out,
+  `src/landing/`); logged-in people get Home and can replay it from Help
+  (dialog). Scenes are a data array (`content.ts`): add one there, layouts
+  follow. Each scene moves on 1s (`SCENE_GAP_MS`) after its moment ends.
+  Two compositions chosen by the intro's own width (`frame.ts`): phone below
   768 (`IntroPhone`), wide 768+ (`IntroWide`: tablist + `LaptopPreview`;
-  stacked tabs below 1024, split 5/7 columns from 1024). Seen-flag in
-  localStorage (`atlastax:intro-seen`); /?intro=reset shows it again.
-  /motion previews both at 390/820/1032/1280; FormCard, StepDots and
-  LaptopPreview are on /styleguide.
+  stacked tabs below 1024, split 5/7 columns from 1024). Modes: "page"
+  (logo, who-it's-for, Get started, Log in, footer) and "replay" (Skip).
+  /motion previews both; FormCard, StepDots, LaptopPreview, Logo on /styleguide.
+- Fake auth for testing only (`src/lib/auth.ts`): /motion toggle or
+  ?auth=in / ?auth=out. No real authentication yet.
 - Home (`src/home/`): one primary (Start / Continue where you left off),
   previous years from `PREVIOUS_TAX_YEARS`, privacy line from `PRIVACY_LINE`
-  (empty until confirmed), Replay intro.
+  (empty until confirmed), Help → Replay intro. The logo settles in once per
+  session (Logo `settle`), only here, never under reduced motion.
 - Answers are saved per tax year (`useFilingYear`, `setFilingYear` in
   flow/answers). Never hard-code a year: use the filing year.
 - Copy: no promises (refunds, speed, savings, "free"), no invented numbers;

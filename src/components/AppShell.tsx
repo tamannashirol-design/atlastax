@@ -19,7 +19,7 @@ const tabs: { id: Tab; href: string; label: string; Icon: Icon }[] = [
 
 const focusRing = 'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-text'
 
-type Props = { title: string; backHref?: string; activeTab: Tab; children: ReactNode }
+type Props = { title: ReactNode; backHref?: string; activeTab: Tab; children: ReactNode }
 
 export function AppShell({ title, backHref, activeTab, children }: Props) {
   return (
@@ -35,7 +35,7 @@ export function AppShell({ title, backHref, activeTab, children }: Props) {
           ) : (
             <span aria-hidden />
           )}
-          <p className="truncate text-center text-body font-semibold">{title}</p>
+          <div className="flex min-w-0 justify-center truncate text-center text-body font-semibold">{title}</div>
           <span aria-hidden />
         </div>
       </header>

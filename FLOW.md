@@ -9,7 +9,7 @@ help link, and Continue.
 
 ## Order at a glance
 
-0. First-run intro (once, over Home)
+0. Intro: the logged-out entry page ("/" while logged out)
 1. Home
 2. Q1: Visa type
    - Enrolled at a U.S. university or college? (added by the designer)
@@ -58,44 +58,68 @@ Documents/Scan, Profile), a menu button, and a security/trust badge.
 
 ---
 
-## 0. First-run intro (built: `src/intro/`)
+## 0. Intro: the logged-out entry page (built: `src/intro/`, `src/landing/`)
 
-Shown once, the first time Home opens (remembered in this browser). Three
-scenes made of the real components, with obviously generic data:
+Audience: logged-out people. "/" while logged out IS the intro page.
+Logged-in people skip it and land on Home; they can replay it from Help on
+Home (in a dialog). No real sign-in yet: a fake switch for testing (the
+"Logged in (fake)" toggle on /motion, or ?auth=in / ?auth=out).
+
+The page:
+- AtlasTax logo (static here; it only animates on the logged-in Home).
+- "For students on F‑1, J‑1 and M‑1 visas filing U.S. taxes."
+  (**TODO confirm**; audience only, no outcome promises).
+- The scenes (below), **Get started** (the one cobalt button; starts the
+  current year's return; **TODO confirm:** account creation will come first
+  once accounts exist) and a quiet **Log in** link (placeholder page).
+- Footer: Privacy, Terms, Contact (placeholder pages, **TODO confirm**).
+- No testimonials, counts or unverified claims.
+
+Scenes are a data array (`src/intro/content.ts`): a fourth can be added
+there without layout changes (dots, tabs, timing and announcements all come
+from the array). Generic data only:
 
 | # | Heading (from the brief) | Text (TODO confirm: draft) | Demo |
 |---|---|---|---|
-| 1 | Answer a few simple questions | One question at a time, about your visa, your studies and your income. | Visa tiles; F-1 selects itself, Continue enables |
+| 1 | Answer a few simple questions | One question at a time, about your visa, your studies and your income. | Two questions in a row, each with its answer tiles and one tile picked: visa type (F‑1), then years on the visa (less than 5). No Continue button |
 | 2 | Add your documents | Upload forms like your W-2 as a PDF or a clear photo. | Upload zone: "W-2 · Example Employer.pdf" drops in, progress draws, check lands (scripted; nothing is uploaded) |
 | 3 | Get your forms, ready to file | We prepare Form 1040‑NR from your answers for you to download. | Form card settles in, "Example data" |
+
+Timing: each scene moves on 1s after its moment ends (scene 1 ≈ 4.4s,
+scene 2 ≈ 4.4s), until the person takes over. Never with reduced motion
+(then: finished states, 150ms fades, no movement).
 
 Two compositions, same scenes, copy and components (chosen by the intro's
 own width, so /motion previews are exact):
 
-**Phone (below 768px):** full-screen scenes.
-- Next (secondary) / swipe / ← → move; auto-advance after 5s until the
-  person touches anything; never with reduced motion (finished states, fades).
+**Phone (below 768px):** full-screen scenes; swipe or ← → to move; auto-
+advance stops once the person touches anything.
 
 **Wide / web intro (768px and up):**
 - 1024+: steps as a vertical tablist in columns 1–5 (active: heading +
   sentence and a navy line that fills while it plays; others: heading only),
-  Get started + Skip at the bottom of the column. Columns 6–12: "Preview"
+  Get started + Log in at the bottom of the column. Columns 6–12: "Preview"
   and the real laptop layout (stepper rail + question column) in a card.
 - 768–1023 (iPad portrait): the steps become a row of tabs above the demo.
-- Clicking a step jumps to it. Auto-advance after 6s, paused on hover or
-  focus, stopped for good by the first click or key press. Scenes cross-fade.
+- Clicking a step jumps to it. Auto-advance pauses on hover or focus and
+  stops for good after the first click or key press. Scenes cross-fade.
 - Demo hidden from screen readers and not clickable; the panel describes it
-  in text (e.g. "Preview of the visa question: F‑1 is selected…").
+  in text.
 
-Both:
-- Skip always visible (Escape too). Last scene: **Get started** (starts or
-  resumes the current year) and "I already have an account".
-- **TODO confirm:** there are no accounts yet; "I already have an account"
-  closes the intro like Skip.
-- To see it again: "Replay intro" on Home, /?intro=reset (forgets it was
-  seen), or /motion (Intro, with a 390 / 820 / 1032 / 1280 width toggle).
-- **Open question:** on the wide intro's scene 1, the preview's enabled
-  Continue and Get started are both cobalt (two blue elements on screen).
+Replay (from Help on Home): same intro in a dialog, with Skip (and Escape)
+instead of Log in and the footer; phone has Next, then Get started.
+
+To see it: log out with the /motion toggle (or ?auth=out) and open "/";
+or /motion → Intro, with a 390 / 820 / 1032 / 1280 width toggle and
+"Logged-out page" / "Replay" versions.
+
+## Planned
+
+- **Intro scene: documents being deleted.** A scene showing documents being
+  deleted, using the interaction at
+  https://designeer.xyz/finds/heydamir-2109679416494391746 (timing and
+  behaviour only; visuals from our design system). Add it only after the
+  delete-documents feature exists in the app. Not built.
 
 ## 1. Home (built: `src/home/HomePage.tsx`)
 
@@ -110,7 +134,12 @@ Both:
   A year with answers shows "In progress".
 - Privacy line: PRIVACY_LINE in config, empty (hidden) until confirmed.
   **TODO confirm** what we can promise.
-- "Replay intro". No how-it-works, deadlines or news.
+- Help: "Replay intro" (opens the intro in a dialog). No how-it-works,
+  deadlines or news.
+- Logo in the top bar settles in on the first load of each session (rise 4
+  + fade, soft spring after a 200ms beat, ~600ms). Not under reduced motion,
+  nowhere else.
+- Home is for logged-in people (fake switch for now, see the intro above).
 
 ## 1 (old). Home, from the reference
 **Source:** `Homepage.png`

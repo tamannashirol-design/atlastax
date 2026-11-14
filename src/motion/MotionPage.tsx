@@ -5,6 +5,8 @@ import { Switch } from '../components/Switch'
 import { UploadZone, type Drag } from '../components/UploadZone'
 import { TAX_YEAR } from '../config'
 import { useUpload, type UploadState } from '../lib/upload'
+import { setLoggedIn, useLoggedIn } from '../lib/auth'
+import type { IntroMode } from '../intro/chrome'
 import { IntroContent } from '../intro/IntroContent'
 
 // /motion: play each state of the upload moment, scrub progress, and toggle
@@ -21,6 +23,7 @@ type Scene = { state: UploadState; drag?: Drag; label: string }
 
 export default function MotionPage() {
   const [reduced, setReduced] = useState(false)
+  const loggedIn = useLoggedIn()
   const upload = useUpload()
   // A scene overrides the live upload (for idle/drag/static states and scrubbing)
   const [scene, setScene] = useState<Scene | null>({ state: { status: 'idle', progress: 0 }, label: 'Idle' })
@@ -68,7 +71,11 @@ export default function MotionPage() {
         <div className="sticky top-0 z-10 bg-background/90 pt-(--safe-top) page-x shadow-[inset_0_-1px_0_var(--color-border-decorative)] backdrop-blur">
           <div className="flex min-h-14 page-content flex-wrap items-center justify-between gap-x-4 py-1">
             <p className="text-body font-semibold">Motion</p>
-            <Switch label="Reduce motion" on={reduced} onChange={setReduced} />
+            <div className="flex flex-wrap items-center gap-x-6">
+              {/* Testing only: fake sign-in. Logged out → "/" is the intro page; logged in → Home */}
+              <Switch label="Logged in (fake)" on={loggedIn} onChange={setLoggedIn} />
+              <Switch label="Reduce motion" on={reduced} onChange={setReduced} />
+            </div>
           </div>
         </div>
 
@@ -175,6 +182,7 @@ const DEVICES = [
 
 function IntroPreview() {
   const [device, setDevice] = useState(DEVICES[3])
+  const [mode, setMode] = useState<IntroMode>('page')
   const [run, setRun] = useState(0)
   const [closed, setClosed] = useState<string | null>(null)
   const box = useRef<HTMLDivElement>(null)
@@ -196,8 +204,8 @@ function IntroPreview() {
       <header className="flex flex-col gap-2">
         <h2 className="font-display text-display">Intro</h2>
         <p className="max-w-column text-body text-text-muted">
-          Phone and wide (web) compositions of the first-run intro: same scenes, copy and components. Pick a width; Restart plays it from the
-          start. On Home, /?intro=reset shows it again.
+          Phone and wide (web) compositions of the intro: same scenes, copy and components. “Logged-out page” is what “/” shows while logged
+          out; “Replay” is the version opened from Help on Home. Pick a width; Restart plays it from the start.
         </p>
       </header>
       <div role="group" aria-label="Device width" className="flex flex-wrap gap-2">
@@ -219,6 +227,24 @@ function IntroPreview() {
         ))}
         <SecondaryButtonInline onClick={restart}>Restart</SecondaryButtonInline>
       </div>
+      <div role="group" aria-label="Intro version" className="flex flex-wrap gap-2">
+        {(['page', 'replay'] as const).map((m) => (
+          <button
+            key={m}
+            type="button"
+            aria-pressed={m === mode}
+            onClick={() => {
+              setMode(m)
+              restart()
+            }}
+            className={`flex h-11 items-center rounded-sm border px-4 text-body font-semibold focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-text active:bg-sage-100 ${
+              m === mode ? 'border-text bg-surface shadow-[inset_0_0_0_1px_var(--color-text)]' : 'border-border-strong bg-surface'
+            }`}
+          >
+            {m === 'page' ? 'Logged-out page' : 'Replay (from Help)'}
+          </button>
+        ))}
+      </div>
       <div ref={box} className="w-full">
         <div className="overflow-hidden rounded-lg border border-border-strong" style={{ width: device.w * scale, height: device.h * scale }}>
           <div style={{ width: device.w, height: device.h, transform: `scale(${scale})`, transformOrigin: '0 0' }}>
@@ -228,7 +254,11 @@ function IntroPreview() {
                 <SecondaryButtonInline onClick={restart}>Restart</SecondaryButtonInline>
               </div>
             ) : (
-              <IntroContent key={`${device.w}-${run}`} onClose={(how) => setClosed(how === 'start' ? 'Get started' : how === 'account' ? 'I already have an account' : 'Skip')} />
+              <IntroContent
+                key={`${device.w}-${mode}-${run}`}
+                mode={mode}
+                onClose={(how) => setClosed(how === 'start' ? 'Get started' : how === 'login' ? 'Log in' : 'Skip')}
+              />
             )}
           </div>
         </div>
