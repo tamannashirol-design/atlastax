@@ -35,6 +35,9 @@ export function BottomSheet({ title, onClose, children }: Props) {
       ref={ref}
       aria-labelledby={titleId}
       onCancel={(e) => {
+        // A sheet opened inside this one (e.g. "Remove file?" over the previous-return
+        // sheet) handles its own Escape; don't close this one as well.
+        if (e.target !== e.currentTarget) return
         e.preventDefault() // let the exit animation run first
         onClose()
       }}

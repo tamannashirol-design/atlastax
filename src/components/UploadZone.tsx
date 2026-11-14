@@ -27,6 +27,8 @@ type Props = {
   progress: number
   file?: UploadFile
   error?: string
+  /** false: the failed file can't be sent again (wrong type), so offer "Choose another file" instead of "Try again" */
+  retryable?: boolean
   onFiles: (files: File[]) => void
   onRetry: () => void
   /** /motion only: show a drag state without a real drag */
@@ -35,9 +37,11 @@ type Props = {
   allowAnother?: boolean
   /** Files uploaded so far on this question (shown in the done status) */
   count?: number
+  /** The parent moves focus and makes its own announcements (UploadAnswer), so the zone stays quiet */
+  managed?: boolean
 }
 
-export function UploadZone({ docLabel, status, progress, file, error, onFiles, onRetry, forceDrag, allowAnother, count = 1 }: Props) {
+export function UploadZone({ docLabel, status, progress, file, error, retryable = true, onFiles, onRetry, forceDrag, allowAnother, count = 1, managed = false }: Props) {
   const reduce = useReducedMotionConfig() ?? false
   const t = (s: (typeof spring)[keyof typeof spring]) => (reduce ? spring.fade : s)
   const drag = useDragState(forceDrag)
@@ -61,7 +65,7 @@ export function UploadZone({ docLabel, status, progress, file, error, onFiles, o
             ? (error ?? `${docLabel} didn’t upload. Check your connection and try again.`)
             : ''
   // Screen readers hear the moments, not every percent
-  const announce = status === 'accepted' || status === 'uploading' ? `Uploading ${docLabel}` : status === 'done' ? 'Uploaded' : status === 'error' ? statusText : ''
+  const announce = managed ? '' : status === 'accepted' || status === 'uploading' ? `Uploading ${docLabel}` : status === 'done' ? 'Uploaded' : status === 'error' ? statusText : ''
 
   return (
     <motion.div
@@ -120,7 +124,13 @@ export function UploadZone({ docLabel, status, progress, file, error, onFiles, o
 
           <View show={!idle} transition={t(spring.quick)}>
             <div className="flex flex-col items-center gap-3 text-center">
-              <div className="flex max-w-full flex-col">
+              {/* The status message. Focusable (tabIndex -1) so UploadAnswer can move focus here
+                  while uploading and on errors, when the button that started it has gone. */}
+              <div
+                data-upload-message
+                tabIndex={idle ? undefined : -1}
+                className="flex max-w-full flex-col rounded-sm focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-text"
+              >
                 <span className="truncate text-body">{file?.name ?? docLabel}</span>
                 <span className={`text-small ${status === 'error' ? 'text-error' : status === 'done' ? 'text-success' : 'text-text-muted'}`}>
                   {statusText ?? (
@@ -144,10 +154,11 @@ export function UploadZone({ docLabel, status, progress, file, error, onFiles, o
               {status === 'error' && (
                 <button
                   type="button"
-                  onClick={onRetry}
+                  data-upload-action={retryable ? undefined : true}
+                  onClick={retryable ? onRetry : () => input.current?.click()}
                   className="flex h-11 shrink-0 items-center rounded-sm border border-border-strong bg-surface px-4 text-body font-semibold focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-text active:bg-sage-100"
                 >
-                  Try again
+                  {retryable ? 'Try again' : 'Choose another file'}
                 </button>
               )}
             </div>

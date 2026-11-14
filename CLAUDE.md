@@ -151,6 +151,13 @@ Rules:
   file"), announces "Removed <file>. N files left." and moves focus to the
   next Remove button or back to the zone. Removing the last file empties the
   zone and locks Continue again.
+  Focus is moved on purpose, never left on the body: upload starts → the
+  zone's status message; done → the new file row (tabindex -1), live region
+  "<file> uploaded"; failed → the error message (then "Try again", or
+  "Choose another file" for a wrong file type); removed → "Choose a file"
+  (or "Add another file" if files remain), "<file> removed". Visible focus
+  ring on all of them. `npm run audit:focus` (dev server running) checks
+  this keyboard-only on all 8 upload screens and the sheet.
   Register every new pair in `src/tokens/pairs.ts`.
 
 ## Motion

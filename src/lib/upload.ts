@@ -9,7 +9,8 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 export type UploadStatus = 'idle' | 'accepted' | 'uploading' | 'done' | 'error'
 /** size is unknown for files remembered from an earlier visit */
 export type UploadFile = { name: string; size?: number }
-export type UploadState = { status: UploadStatus; progress: number; file?: UploadFile; error?: string }
+/** retryable: the same file can be sent again (network/server failure), not for a file type we can't take */
+export type UploadState = { status: UploadStatus; progress: number; file?: UploadFile; error?: string; retryable?: boolean }
 
 const ACCEPTED = /^(application\/pdf|image\/)/
 
@@ -22,7 +23,7 @@ export function useUpload(endpoint = '/api/upload') {
     (file: File, query = '') => {
       xhr.current?.abort()
       if (!ACCEPTED.test(file.type)) {
-        setState({ status: 'error', progress: 0, file: { name: file.name, size: file.size }, error: 'That file type isn’t supported. Use a PDF or a photo.' })
+        setState({ status: 'error', progress: 0, file: { name: file.name, size: file.size }, error: 'That file type isn’t supported. Use a PDF or a photo.', retryable: false })
         return
       }
       last.current = { file, query }
@@ -33,8 +34,8 @@ export function useUpload(endpoint = '/api/upload') {
         if (e.lengthComputable) setState((s) => ({ ...s, status: 'uploading', progress: e.loaded / e.total }))
       }
       req.onload = () =>
-        setState((s) => (req.status >= 200 && req.status < 300 ? { ...s, status: 'done', progress: 1 } : { ...s, status: 'error', error: undefined }))
-      req.onerror = () => setState((s) => ({ ...s, status: 'error', error: undefined }))
+        setState((s) => (req.status >= 200 && req.status < 300 ? { ...s, status: 'done', progress: 1 } : { ...s, status: 'error', error: undefined, retryable: true }))
+      req.onerror = () => setState((s) => ({ ...s, status: 'error', error: undefined, retryable: true }))
       req.open('POST', endpoint + query)
       req.send(file)
     },
