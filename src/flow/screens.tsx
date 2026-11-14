@@ -179,9 +179,29 @@ export const flow: FlowScreen[] = [
     ),
   },
   {
+    // Added by the designer; helper wording to confirm with a tax professional (FLOW.md)
+    id: 'enrolled',
+    path: '/enrolled',
+    position: { section: 0, step: 1 },
+    question: 'Are you currently enrolled at a U.S. university or college?',
+    helper: 'To check your student status for the right forms',
+    isAnswered: (a) => !!a.enrolled,
+    answers: (a, id) => (
+      <TileGroup
+        labelledBy={id}
+        value={a.enrolled}
+        onChange={(enrolled) => setAnswers({ enrolled })}
+        options={[
+          { value: 'yes', code: 'Yes' },
+          { value: 'no', code: 'No' },
+        ]}
+      />
+    ),
+  },
+  {
     id: 'years',
     path: '/years',
-    position: { section: 0, step: 1 },
+    position: { section: 0, step: 2 },
     question: 'How many years have you been on this visa?',
     // FLOW.md wording (wins over the brief, which dropped "- substantial presence")
     helper: 'To determine residency status for correct tax forms ‑ substantial presence',
@@ -203,7 +223,7 @@ export const flow: FlowScreen[] = [
   {
     id: 'state',
     path: '/state',
-    position: { section: 0, step: 2 },
+    position: { section: 0, step: 3 },
     question: 'What U.S. state do you currently live or study in?',
     helper: 'To identify if a state tax return is required',
     isAnswered: (a) => !!a.state,

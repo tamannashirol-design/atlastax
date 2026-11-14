@@ -2,7 +2,7 @@
 export type Section = { id: string; label: string; steps: string[] }
 
 export const sections: Section[] = [
-  { id: 'about', label: 'About you', steps: ['Visa type', 'Years on this visa', 'State'] },
+  { id: 'about', label: 'About you', steps: ['Visa type', 'Enrolled', 'Years on this visa', 'State'] },
   // Citizenship placed here (tax-treaty check); to confirm with design.
   { id: 'tax', label: 'Tax details', steps: ['SSN or ITIN', 'Filed before', 'Country of citizenship'] },
   { id: 'income', label: 'Income', steps: ['Income sources'] },

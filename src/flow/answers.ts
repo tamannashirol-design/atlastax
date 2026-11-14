@@ -5,6 +5,7 @@ import { useSyncExternalStore } from 'react'
 
 export type Answers = {
   visa?: 'F-1' | 'J-1' | 'M-1'
+  enrolled?: 'yes' | 'no'
   years?: 'under5' | '5plus'
   state?: string // two-letter code
   taxId?: 'ssn' | 'itin' | 'none'

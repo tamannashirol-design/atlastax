@@ -11,6 +11,7 @@ help link, and Continue.
 
 1. Home
 2. Q1: Visa type
+   - Enrolled at a U.S. university or college? (added by the designer)
 3. Q2: Years on this visa
 4. Q3: State
 5. Q4: SSN / ITIN
@@ -26,6 +27,7 @@ help link, and Continue.
 | Route | Screen | Answer control |
 |---|---|---|
 | /visa | Q1 Visa type | Tiles F-1 / J-1 / M-1 |
+| /enrolled | Enrolled at a U.S. university or college? | Tiles Yes / No |
 | /years | Q2 Years on this visa | Tiles "< 5" (Less than 5 years) / "5+" (5 years or more) |
 | /state | Q3 State | Dropdown: phone picker below 600px, custom list above |
 | /tax-id | Q4 SSN / ITIN | Tiles SSN / ITIN / N/A |
@@ -41,7 +43,7 @@ The flow is grouped into 5 sections for the stepper (`src/flow/sections.ts`):
 
 | # | Section | Steps |
 |---|---|---|
-| 1 | About you | Visa type, Years on this visa, State |
+| 1 | About you | Visa type, Enrolled, Years on this visa, State |
 | 2 | Tax details | SSN or ITIN, Filed before, Country of citizenship* |
 | 3 | Income | Income sources (+ follow-ups) |
 | 4 | Documents | Document checklist |
@@ -83,6 +85,19 @@ exact same flow; only the tax year changes.
 **Why we ask:** "To personalize the experience and show only visa-relevant forms"
 **Help link:** "Not sure about your visa type?"
 **Action:** Continue (disabled until an answer is picked)
+
+## 2b. Enrolled (About you, step 2 of 4)
+**Source:** Designer (no reference screen)
+**Question:** "Are you currently enrolled at a U.S. university or college?"
+**Answers (single choice):** Yes, No
+**Why we ask:** "To check your student status for the right forms"
+**Help link:** None
+**Action:** Continue. Both answers go on to Years on this visa; nothing
+branches on it yet.
+
+> ⚠️ **Flag for tax review:** confirm the helper wording, and what (if
+> anything) "No" should change: for example, students on OPT after
+> graduation are no longer enrolled.
 
 ## 3. Q2: Years on this visa (step 2)
 **Source:** Designer (no reference screen)
