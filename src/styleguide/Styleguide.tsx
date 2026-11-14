@@ -11,7 +11,7 @@ import { SecondaryButton } from '../components/SecondaryButton'
 import { Switch } from '../components/Switch'
 import { SelectField } from '../components/SelectField'
 import { TileGroup } from '../components/TileGroup'
-import { UploadField } from '../components/UploadField'
+import { UploadAnswer } from '../components/UploadAnswer'
 import { Folder } from '../components/Folder'
 import { countries, usStates } from '../data/places'
 import { allSteps } from '../flow/sections'
@@ -206,10 +206,10 @@ function FormControlsDemo() {
         <SearchSelect labelledBy="sg-search" options={countries()} value={country} onChange={setCountry} placeholder="Search countries" />
       </div>
       <div className="col-span-full flex flex-col gap-3 desktop:col-span-6">
-        <span className="text-body font-semibold">Upload field</span>
-        <Label>Document questions. Secondary style, so Continue stays the only blue. Fits the 88pt answer area.</Label>
-        <div className="flex h-(--answer-h) flex-col">
-          <UploadField files={files} onChange={setFiles} />
+        <span className="text-body font-semibold">Upload (every upload question)</span>
+        <Label>Folder upload zone with a real upload; fills the 296pt upload answer area. Full choreography on /motion.</Label>
+        <div className="flex h-(--answer-h-upload) flex-col">
+          <UploadAnswer docLabel="W-2" uploaded={files} allowAnother onUploaded={(name) => setFiles((f) => [...f, name])} />
         </div>
       </div>
       <div className="col-span-full flex flex-col gap-3 desktop:col-span-6">

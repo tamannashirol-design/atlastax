@@ -6,7 +6,7 @@ import { IncomePicker } from '../components/IncomePicker'
 import { SearchSelect } from '../components/SearchSelect'
 import { SelectField } from '../components/SelectField'
 import { TileGroup, type TileOption } from '../components/TileGroup'
-import { UploadField } from '../components/UploadField'
+import { UploadAnswer } from '../components/UploadAnswer'
 import { TAX_YEAR } from '../config'
 import type { IncomeId } from '../data/income'
 import { countries, usStates } from '../data/places'
@@ -27,7 +27,7 @@ export type FlowScreen = {
   skipLabel?: string
   /** The answer control; must fit the fixed answer area unless answerArea is "auto". */
   answers: (a: Answers, labelledBy: string) => ReactNode
-  answerArea?: 'fixed' | 'auto'
+  answerArea?: 'fixed' | 'auto' | 'upload'
 }
 
 // ---------- Income follow-ups (proposal in FLOW.md, approved) ----------
@@ -57,7 +57,9 @@ function tiles(id: string, question: string, options: TileOption<string>[], when
   }
 }
 
-function upload(id: string, question: string, helper: string, skipLabel: string, when: When): FlowScreen {
+// Every upload question uses the same control (folder UploadZone + real upload)
+// and the same taller answer area, so Continue sits in one place on all of them.
+function upload(id: string, docLabel: string, question: string, helper: string, skipLabel: string, when: When): FlowScreen {
   return {
     id,
     path: `/income/${id}`,
@@ -66,10 +68,12 @@ function upload(id: string, question: string, helper: string, skipLabel: string,
     helper,
     skipLabel,
     when,
+    answerArea: 'upload',
     isAnswered: (a) => Array.isArray(detail(a, id)) && (detail(a, id) as string[]).length > 0,
     answers: (a) => {
       const v = detail(a, id)
-      return <UploadField files={Array.isArray(v) ? v : []} onChange={(files) => setDetail(id, files)} />
+      const files = Array.isArray(v) ? v : []
+      return <UploadAnswer key={id} docLabel={docLabel} uploaded={files} allowAnother onUploaded={(name) => setDetail(id, [...files, name])} />
     },
   }
 }
@@ -94,19 +98,18 @@ const yesNo: TileOption<string>[] = [
   { value: 'no', code: 'No' },
 ]
 const LATER = "I'll add it later"
-const PHOTO = 'A PDF or a clear photo works'
 
 function incomeFollowUps(): FlowScreen[] {
   // Freelance and contract work ask the same things
   const selfEmployed = (key: 'freelance' | 'contract-work', name: string, short: string) => [
     tiles(`${short}-form`, `Did you get a 1099-NEC for your ${name}?`, yesNo, has(key), { helper: 'If you did, we’ll read the amounts from it' }),
-    upload(`${short}-1099`, `Upload your 1099-NEC forms for ${name}`, 'One per client. A PDF or a clear photo works', LATER, and(has(key), answered(`${short}-form`, 'yes'))),
+    upload(`${short}-1099`, '1099-NEC', `Upload your 1099-NEC forms for ${name}`, 'From your clients. One per client', LATER, and(has(key), answered(`${short}-form`, 'yes'))),
     amount(`${short}-amount`, `How much were you paid for ${name} in ${TAX_YEAR}?`, 'Add up what every client paid you', and(has(key), answered(`${short}-form`, 'no'))),
   ]
   return [
     // Bank interest
     tiles('bank-form', 'Did you get a tax form for your bank interest?', yesNo, has('bank-interest'), { helper: 'If you did, we’ll read the amounts from it' }),
-    upload('bank-upload', 'Upload your bank interest form', PHOTO, LATER, and(has('bank-interest'), answered('bank-form', 'yes'))),
+    upload('bank-upload', 'bank form', 'Upload your bank interest form', 'From your bank, if they sent one', LATER, and(has('bank-interest'), answered('bank-form', 'yes'))),
     amount('bank-amount', `How much bank interest did you earn in ${TAX_YEAR}?`, 'Check your bank statements for the year', and(has('bank-interest'), answered('bank-form', 'no'))),
     // OPT or CPT
     tiles(
@@ -120,21 +123,21 @@ function incomeFollowUps(): FlowScreen[] {
       has('opt-cpt'),
       { helper: 'So we can label your job correctly' },
     ),
-    upload('opt-w2', 'Upload your W-2 from your OPT or CPT job', 'One per employer. A PDF or a clear photo works', LATER, has('opt-cpt')),
+    upload('opt-w2', 'W-2', 'Upload your W-2 from your OPT or CPT job', 'From your employer. One per employer', LATER, has('opt-cpt')),
     // On-campus job
-    upload('campus-w2', 'Upload your W-2 from your on-campus job', 'One per employer. A PDF or a clear photo works', LATER, has('on-campus-job')),
+    upload('campus-w2', 'W-2', 'Upload your W-2 from your on-campus job', 'From your university’s payroll office. One per job', LATER, has('on-campus-job')),
     // Scholarship (the "costs other than tuition" question waits for tax review)
     tiles('scholarship-withheld', 'Did your university withhold tax from your scholarship?', yesNo, has('scholarship'), {
       helper: 'To check refund eligibility',
       helpLabel: 'Not sure whether tax was withheld?',
     }),
-    upload('scholarship-1042s', 'Upload your 1042-S for your scholarship', PHOTO, 'I didn’t get one', has('scholarship')),
+    upload('scholarship-1042s', '1042-S', 'Upload your 1042-S for your scholarship', 'From your university', 'I didn’t get one', has('scholarship')),
     // Freelance (expenses wait for tax review)
     ...selfEmployed('freelance', 'freelance work', 'freelance'),
     // Investments
-    upload('investments-upload', 'Upload your investment tax forms', 'From your brokerage or bank, such as a 1042-S or 1099-DIV', 'I didn’t get a form', has('investments')),
+    upload('investments-upload', 'tax form', 'Upload your investment tax forms', 'From your brokerage or bank, such as a 1042-S or 1099-DIV', 'I didn’t get a form', has('investments')),
     // Trading
-    upload('trading-upload', 'Upload your brokerage tax forms', 'Such as a 1099-B or 1042-S', 'I didn’t get a form', has('trading')),
+    upload('trading-upload', 'tax form', 'Upload your brokerage tax forms', 'Such as a 1099-B or 1042-S', 'I didn’t get a form', has('trading')),
     // Contract work (expenses wait for tax review)
     ...selfEmployed('contract-work', 'contract work', 'contract'),
     // No earnings: nothing to ask. Donation and Child care: on hold for tax review.

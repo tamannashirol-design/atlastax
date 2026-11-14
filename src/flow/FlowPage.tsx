@@ -4,6 +4,7 @@ import { BottomSheet } from '../components/BottomSheet'
 import { PrimaryButton } from '../components/PrimaryButton'
 import { QuestionLayout } from '../components/QuestionLayout'
 import { SecondaryButton } from '../components/SecondaryButton'
+import { UploadAnswer } from '../components/UploadAnswer'
 import { DebugStack, useUrlFlag } from '../lib/debug'
 import { navigate } from '../lib/router'
 import { setAnswers, setDetail, useAnswers } from './answers'
@@ -22,7 +23,7 @@ export default function FlowPage({ path }: { path: string }) {
   const back = before !== undefined ? flow[before].path : '/'
   const next = after !== undefined ? flow[after].path : AFTER_FLOW
   const [sheet, setSheet] = useState(false)
-  const fileInput = useRef<HTMLInputElement>(null)
+  const [priorFiles, setPriorFiles] = useState<string[]>(() => (typeof answers.priorReturn === 'object' ? [answers.priorReturn.fileName] : []))
   const firstRender = useRef(true)
   const [grid] = useUrlFlag('grid')
   const [outlines] = useUrlFlag('outlines')
@@ -55,7 +56,8 @@ export default function FlowPage({ path }: { path: string }) {
         question={screen.question}
         helper={screen.helper}
         help={
-          screen.skipLabel
+          // The skip link hides once the question is answered (it would discard the upload)
+          screen.skipLabel && !screen.isAnswered(answers)
             ? { label: screen.skipLabel, icon: false, onClick: () => (setDetail(screen.id, 'later'), navigate(next)) }
             : screen.helpLabel
               ? { label: screen.helpLabel }
@@ -72,21 +74,18 @@ export default function FlowPage({ path }: { path: string }) {
         {sheet && (
           <BottomSheet title="To continue, we’ll ask for your previous tax return." onClose={() => setSheet(false)}>
             <p className="text-body text-text-muted">This is optional, but uploading it will save you time and reduce errors.</p>
-            <div className="flex flex-col gap-2 pt-6">
-              <PrimaryButton onClick={() => fileInput.current?.click()}>Upload file</PrimaryButton>
+            {/* Same upload control and height as every upload question */}
+            <div className="pt-6">
+              <div className="flex h-(--answer-h-upload) flex-col">
+                <UploadAnswer docLabel="previous return" uploaded={priorFiles} onUploaded={(name) => setPriorFiles([name])} />
+              </div>
+            </div>
+            <div className="flex flex-col gap-2 pt-8">
+              <PrimaryButton disabled={!priorFiles.length} onClick={() => finishSheet({ fileName: priorFiles[0] })}>
+                Continue
+              </PrimaryButton>
               <SecondaryButton onClick={() => finishSheet('skipped')}>Skip for now</SecondaryButton>
             </div>
-            {/* Placeholder: the file is only remembered by name for now */}
-            <input
-              ref={fileInput}
-              type="file"
-              accept=".pdf,image/*"
-              className="hidden"
-              onChange={(e) => {
-                const file = e.target.files?.[0]
-                if (file) finishSheet({ fileName: file.name })
-              }}
-            />
           </BottomSheet>
         )}
       </AnimatePresence>

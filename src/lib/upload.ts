@@ -7,7 +7,8 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 
 export type UploadStatus = 'idle' | 'accepted' | 'uploading' | 'done' | 'error'
-export type UploadFile = { name: string; size: number }
+/** size is unknown for files remembered from an earlier visit */
+export type UploadFile = { name: string; size?: number }
 export type UploadState = { status: UploadStatus; progress: number; file?: UploadFile; error?: string }
 
 const ACCEPTED = /^(application\/pdf|image\/)/

@@ -39,8 +39,8 @@ type Props = {
   question: string
   /** Must fit the fixed answer area, unless answerArea is "auto". */
   answers: ReactNode
-  /** "auto": the answer area grows with its content (multi-select card grids). */
-  answerArea?: 'fixed' | 'auto'
+  /** "auto": grows with its content (card grids). "upload": the taller fixed height shared by every upload question. */
+  answerArea?: 'fixed' | 'auto' | 'upload'
   canContinue: boolean
   onContinue?: () => void
   helper?: string
@@ -88,7 +88,7 @@ export function QuestionLayout({ position, backHref, questionId, question, answe
             {helper && <p className="text-small text-text-muted">{helper}</p>}
           </div>
 
-          <div className={`row-start-3 mt-10 flex flex-col ${answerArea === 'fixed' ? 'h-(--answer-h)' : ''} ${column}`}>{answers}</div>
+          <div className={`row-start-3 mt-10 flex flex-col ${answerArea === 'fixed' ? 'h-(--answer-h)' : answerArea === 'upload' ? 'h-(--answer-h-upload)' : ''} ${column}`}>{answers}</div>
 
           {/* Fixed height = Continue 56 + 8 + link 48, even when there's no link */}
           <div className={`row-start-4 mt-8 flex min-h-28 flex-col gap-2 ${column}`}>

@@ -43,7 +43,8 @@ elements floating over each other. The flow is documented in FLOW.md.
   (only part that scrolls), tab bar (phone only, below 768px). Content never
   sits under a bar.
 - Tokens in index.css: `--top-bar-h` 56, `--tab-bar-h` 56 (0 at 768px+),
-  `--stepper-h` 56, `--answer-h` 88, `--safe-top` / `--safe-bottom`.
+  `--stepper-h` 56, `--answer-h` 88, `--answer-h-upload` 296 (every upload
+  question and the previous-return sheet), `--safe-top` / `--safe-bottom`.
 - Question screens (`QuestionLayout`): one block =
   header (question reserves 3 lines on phone, 2 at 600px+; helper 8 below
   it, reserving 2 lines on phone, 1 at 600px+), 40 gap, fixed-height answer
@@ -141,6 +142,9 @@ Rules:
   folder (fills only) inside the zone: the sheet slides in behind the front
   panel and the folder lifts on drop, the check draws on the front panel when
   done, and the sheet slides back out on error.
+  Everywhere a file can be uploaded uses `UploadAnswer` (zone + real upload):
+  the 8 income upload questions (answerArea "upload", "Add another file")
+  and the previous-return sheet. Continue unlocks only after a real upload.
   Register every new pair in `src/tokens/pairs.ts`.
 
 ## Motion

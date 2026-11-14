@@ -31,9 +31,13 @@ type Props = {
   onRetry: () => void
   /** /motion only: show a drag state without a real drag */
   forceDrag?: Drag
+  /** After an upload, offer "Add another file" (forms that come one per employer/client) */
+  allowAnother?: boolean
+  /** Files uploaded so far on this question (shown in the done status) */
+  count?: number
 }
 
-export function UploadZone({ docLabel, status, progress, file, error, onFiles, onRetry, forceDrag }: Props) {
+export function UploadZone({ docLabel, status, progress, file, error, onFiles, onRetry, forceDrag, allowAnother, count = 1 }: Props) {
   const reduce = useReducedMotionConfig() ?? false
   const t = (s: (typeof spring)[keyof typeof spring]) => (reduce ? spring.fade : s)
   const drag = useDragState(forceDrag)
@@ -50,7 +54,9 @@ export function UploadZone({ docLabel, status, progress, file, error, onFiles, o
           ? `Finishing ${docLabel}…`
           : null // rendered below, so only the number gets tabular figures
         : status === 'done'
-          ? 'Uploaded'
+          ? count > 1
+            ? `Uploaded · ${count} files`
+            : 'Uploaded'
           : status === 'error'
             ? (error ?? `${docLabel} didn’t upload. Check your connection and try again.`)
             : ''
@@ -71,7 +77,7 @@ export function UploadZone({ docLabel, status, progress, file, error, onFiles, o
       // Drag-over: the zone grows 1% with the soft spring (no scale under reduced motion)
       animate={{ scale: over && !reduce ? 1.01 : 1 }}
       transition={spring.soft}
-      className="grid w-full"
+      className="grid w-full flex-1"
     >
       <div className="rounded-md border border-dashed border-border-strong bg-surface [grid-area:1/1]" />
       <Layer show={idle && drag.state === 'page'} opacity={0.4} transition={t(spring.quick)} className="hidden border-dashed border-text tablet:block" />
@@ -82,7 +88,7 @@ export function UploadZone({ docLabel, status, progress, file, error, onFiles, o
 
       {/* Content: the folder (always present, so it animates between states)
           and below it three text views stacked; hidden ones are inert. */}
-      <div className="flex flex-col items-center gap-4 p-6 [grid-area:1/1]">
+      <div className="flex flex-col items-center justify-center gap-4 p-6 [grid-area:1/1]">
         <Folder
           sheetIn={status === 'accepted' || status === 'uploading' || status === 'done'}
           lifted={status === 'accepted' || status === 'uploading'}
@@ -121,9 +127,18 @@ export function UploadZone({ docLabel, status, progress, file, error, onFiles, o
                       Uploading {docLabel}, <span className="tabular-nums">{pct}%</span>
                     </>
                   )}
-                  {file && status !== 'error' && <span className="text-text-muted tabular-nums"> · {formatSize(file.size)}</span>}
+                  {file?.size !== undefined && status !== 'error' && status !== 'done' && <span className="text-text-muted tabular-nums"> · {formatSize(file.size)}</span>}
                 </span>
               </div>
+              {status === 'done' && allowAnother && (
+                <button
+                  type="button"
+                  onClick={() => input.current?.click()}
+                  className="flex h-11 shrink-0 items-center rounded-sm border border-border-strong bg-surface px-4 text-body font-semibold focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-text active:bg-sage-100"
+                >
+                  Add another file
+                </button>
+              )}
               {status === 'error' && (
                 <button
                   type="button"

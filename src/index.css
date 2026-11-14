@@ -118,6 +118,7 @@
   --tab-bar-h: 56px; /* phone only; 0 at 768px+ */
   --stepper-h: 56px; /* compact stepper row, below 1024px */
   --answer-h: 88px; /* fixed answer area: fits 3 tiles or the state dropdown */
+  --answer-h-upload: 296px; /* fixed answer area on every upload question: the folder upload zone */
 
   /* Folder illustration (upload). Mixed from color roles only, no hex.
      Each panel: two close tones, ~6–10% apart in luminance (checked on /styleguide). */
