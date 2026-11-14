@@ -138,9 +138,12 @@ Rules:
 - Required documents: rules ONLY in `src/documents.config.ts` (TODO
   confirm with CPA). Everything (flow upload questions, income card form
   codes, Documents page, stepper, Home) reads them through
-  `requiredDocuments(answers)` in `src/flow/requiredDocuments.ts`. Skipped
-  uploads store "later" or "none"; both are deferred. Never write a tax rule
-  elsewhere. `npm run check:documents` tests the function.
+  `requiredItems(answers)` in `src/flow/requiredDocuments.ts`: documents
+  (form expected) and self-reported income items (no form, where
+  `reportableWithoutForm`). Skipped uploads store "later" or "none"; both are
+  deferred. Counts via `summarizeItems`, words via `documentsLine` /
+  `incomeItemsLine`. Never write a tax rule elsewhere; components never
+  decide reportability. `npm run check:documents` tests the function.
 - Fake auth for testing only (`src/lib/auth.ts`): /motion toggle or
   ?auth=in / ?auth=out. No real authentication yet.
 - Home (`src/home/`): one primary (Start / Continue where you left off),

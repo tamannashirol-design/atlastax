@@ -116,27 +116,44 @@ or /motion → Intro, with a 390 / 820 / 1032 / 1280 width toggle and
 ## Required documents (step 1 of 3: built)
 
 - Rules: `src/documents.config.ts`, the ONLY place that says which income
-  needs which document. **TODO confirm with CPA:** all values are placeholders.
+  needs which document. **TODO confirm with CPA:** all values are placeholders,
+  including `reportableWithoutForm` and what to collect for self-reported items.
 
-  | Income | Document | Needed when |
-  |---|---|---|
-  | Bank interest | Bank interest form | "Did you get a tax form?" = Yes |
-  | OPT or CPT | W-2 | always |
-  | On-campus job | W-2 | always |
-  | Scholarship | 1042-S | always |
-  | Freelance | 1099-NEC | "Did you get a 1099-NEC?" = Yes |
-  | Investments | 1042-S or 1099-DIV | always |
-  | Trading | 1099-B or 1042-S | always |
-  | Contract work | 1099-NEC | "Did you get a 1099-NEC?" = Yes |
+  | Income | Document | Form question | reportableWithoutForm | If "No, I didn't get one" |
+  |---|---|---|---|---|
+  | Bank interest | 1099-INT | "Did you get a tax form?" | yes | self-reported item, "Details needed" |
+  | OPT or CPT job | W-2 | — | no | — |
+  | On-campus job | W-2 | — | no | — |
+  | Scholarship | 1042-S | — | no | — |
+  | Freelance | 1099-NEC | "Did you get a 1099-NEC?" | yes | self-reported item, "Details needed" |
+  | Investments | 1042-S or 1099-DIV | — | no | — |
+  | Trading | 1099-B or 1042-S | — | no | — |
+  | Contract work | 1099-NEC | "Did you get a 1099-NEC?" | no | still a document (form expected) |
 
-- One function, `requiredDocuments(answers)` (`src/flow/requiredDocuments.ts`),
-  returns the documents with a status each: added, later ("I'll add it
-  later"), none ("I didn't get one / a form", i.e. "I don't have this") or
-  missing. later and none are deferred. `summarizeDocuments()` gives the
-  counts; done = nothing missing.
-- Everything calls it: the flow's upload questions (they appear only when
-  their document is needed), the form codes on the income cards, and next
-  the Documents page, the stepper and Home. `npm run check:documents` tests it.
+- Picking an income card registers the income, whatever the form answer.
+- One function, `requiredItems(answers)` (`src/flow/requiredDocuments.ts`),
+  returns two kinds of items:
+  - **documents** (a form is expected): added, later ("I'll add it later"),
+    none ("I didn't get one / a form") or missing. later and none are deferred.
+    Before the form question is answered, a form is expected.
+  - **self-reported income items** (income registered, no form): "Details
+    needed", or later if deferred.
+- Counts (same words everywhere, from `documentsLine` / `incomeItemsLine`):
+  "2 of 3 documents added" counts documents only; a separate line says
+  "1 income item needs details". The Documents step is done when no
+  document is missing and no self-reported item still needs details (unless
+  deferred with "I'll add it later").
+- Documents page (step 2): self-reported items in their own small group with
+  "You told us you had this income. We'll ask for the details here." No tax
+  advice, amounts or thresholds; what to collect is TODO confirm with CPA.
+- Everything calls the function: the flow's upload questions (they appear
+  only when a form is expected), the income cards' form codes, and next the
+  Documents page, the stepper and Home. `npm run check:documents` prints the
+  table and runs 12 cases.
+- **Open question:** contract work asks "Did you get a 1099-NEC?", but its
+  flag is false, so "No" still expects a 1099-NEC: the flow now shows the
+  upload question and then the amount question. Either set the flag to true
+  (like freelance) or drop that question for contract work.
 
 ## Next steps (agreed order)
 

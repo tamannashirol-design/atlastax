@@ -1,43 +1,113 @@
-// Checks requiredDocuments(): the one function that turns income answers into
-// required documents (rules: src/documents.config.ts). Run: npm run check:documents
+// Checks requiredItems(): the one function that turns income answers into
+// documents and self-reported income items (rules: src/documents.config.ts).
+// Prints the rules table from the config, then the cases.
+// Run: npm run check:documents
+import { DOCUMENT_RULES } from '../src/documents.config.ts'
 import type { Answers } from '../src/flow/answers.ts'
-import { requiredDocuments, summarizeDocuments } from '../src/flow/requiredDocuments.ts'
+import { documentsLine, incomeItemsLine, requiredItems, summarizeItems } from '../src/flow/requiredDocuments.ts'
 
+// ---- the table, straight from the config ----
+const rows = DOCUMENT_RULES.map((r) => [
+  r.incomeLabel,
+  r.form,
+  r.formQuestion ? `asks "${r.formQuestion}"` : 'always',
+  r.reportableWithoutForm ? 'yes' : 'no',
+  r.formQuestion ? (r.reportableWithoutForm ? 'self-reported item, "Details needed"' : 'still a document (form expected)') : '—',
+])
+const head = ['Income', 'Document', 'Form question', 'reportableWithoutForm', 'If "No, I didn\'t get one"']
+const widths = head.map((h, i) => Math.max(h.length, ...rows.map((r) => r[i].length)))
+const line = (cells: string[]) => '| ' + cells.map((c, i) => c.padEnd(widths[i])).join(' | ') + ' |'
+console.log('Rules (src/documents.config.ts, TODO confirm with CPA)\n')
+console.log(line(head))
+console.log('|' + widths.map((w) => '-'.repeat(w + 2)).join('|') + '|')
+rows.forEach((r) => console.log(line(r)))
+console.log('')
+
+// ---- cases ----
 let failed = 0
-function expect(name: string, a: Answers, ids: string[], summary?: Partial<ReturnType<typeof summarizeDocuments>>, statuses?: Record<string, string>) {
-  const docs = requiredDocuments(a)
-  const got = docs.map((d) => d.id)
-  const s = summarizeDocuments(docs)
+type Expect = { items: string[]; documents?: string; incomeLine?: string | null; done?: boolean }
+
+function check(name: string, a: Answers, e: Expect) {
+  const items = requiredItems(a)
+  const s = summarizeItems(items)
+  const got = items.map((i) => `${i.id}:${i.kind}:${i.status}`)
   const problems: string[] = []
-  if (got.join() !== ids.join()) problems.push(`documents [${got}] ≠ [${ids}]`)
-  for (const [k, v] of Object.entries(summary ?? {})) if ((s as Record<string, unknown>)[k] !== v) problems.push(`${k} ${(s as Record<string, unknown>)[k]} ≠ ${v}`)
-  for (const [id, st] of Object.entries(statuses ?? {})) {
-    const d = docs.find((x) => x.id === id)
-    if (d?.status !== st) problems.push(`${id} status ${d?.status} ≠ ${st}`)
+  if (got.join() !== e.items.join()) problems.push(`items [${got.join(', ')}] ≠ [${e.items.join(', ')}]`)
+  if (e.documents !== undefined && documentsLine(s) !== e.documents) problems.push(`"${documentsLine(s)}" ≠ "${e.documents}"`)
+  if (e.incomeLine !== undefined && incomeItemsLine(s) !== e.incomeLine) problems.push(`"${incomeItemsLine(s)}" ≠ "${e.incomeLine}"`)
+  if (e.done !== undefined && s.done !== e.done) problems.push(`done ${s.done} ≠ ${e.done}`)
+  console.log(`${problems.length ? '✗' : '✓'} ${name}`)
+  console.log(`    items: ${got.length ? got.join(', ') : '(none)'}`)
+  console.log(`    "${documentsLine(s)}"${incomeItemsLine(s) ? ` · "${incomeItemsLine(s)}"` : ''} · Documents step done: ${s.done}`)
+  if (problems.length) {
+    console.log('    ✗ ' + problems.join('\n    ✗ '))
+    failed++
   }
-  console.log(`${problems.length ? '✗' : '✓'} ${name}${problems.length ? '  ' + problems.join('; ') : ''}`)
-  if (problems.length) failed++
 }
 
-expect('nothing answered', {}, [], { total: 0, done: true })
-expect('no earnings', { income: ['no-earnings'] }, [], { total: 0 })
-expect('OPT/CPT + scholarship', { income: ['opt-cpt', 'scholarship'] }, ['w2-opt-cpt', '1042s-scholarship'], { total: 2, missing: 2, done: false })
-expect('freelance, 1099 question not answered yet', { income: ['freelance'] }, [], { total: 0 })
-expect('freelance, got a 1099-NEC', { income: ['freelance'], details: { 'freelance-form': 'yes' } }, ['1099nec-freelance'])
-expect('freelance, no 1099-NEC (amount instead)', { income: ['freelance'], details: { 'freelance-form': 'no' } }, [])
-expect('bank interest needs "yes" first', { income: ['bank-interest'], details: { 'bank-form': 'no' } }, [])
-expect(
-  'one added, one later, one none',
-  { income: ['opt-cpt', 'on-campus-job', 'scholarship'], details: { 'opt-w2': ['w2.pdf'], 'campus-w2': 'later', 'scholarship-1042s': 'none' } },
-  ['w2-opt-cpt', 'w2-on-campus', '1042s-scholarship'],
-  { total: 3, added: 1, deferred: 2, missing: 0, done: true },
-  { 'w2-opt-cpt': 'added', 'w2-on-campus': 'later', '1042s-scholarship': 'none' },
-)
-expect('empty upload list is still missing', { income: ['trading'], details: { 'trading-upload': [] } }, ['brokerage-forms'], { missing: 1, done: false })
-expect('all eight income documents', {
-  income: ['bank-interest', 'opt-cpt', 'on-campus-job', 'scholarship', 'freelance', 'investments', 'trading', 'contract-work'],
-  details: { 'bank-form': 'yes', 'freelance-form': 'yes', 'contract-form': 'yes' },
-}, ['bank-interest-form', 'w2-opt-cpt', 'w2-on-campus', '1042s-scholarship', '1099nec-freelance', 'investment-forms', 'brokerage-forms', '1099nec-contract'], { total: 8 })
+check('1. Nothing answered', {}, { items: [], documents: 'No documents needed yet', incomeLine: null, done: true })
+check('2. No earnings', { income: ['no-earnings'] }, { items: [], documents: 'No documents needed yet', done: true })
+check('3. OPT/CPT + scholarship, nothing uploaded', { income: ['opt-cpt', 'scholarship'] }, {
+  items: ['opt-cpt:document:missing', 'scholarship:document:missing'],
+  documents: '0 of 2 documents added',
+  done: false,
+})
+check('4. One added, one "I\'ll add it later", one "I didn\'t get one"', {
+  income: ['opt-cpt', 'on-campus-job', 'scholarship'],
+  details: { 'opt-w2': ['w2.pdf'], 'campus-w2': 'later', 'scholarship-1042s': 'none' },
+}, {
+  items: ['opt-cpt:document:added', 'on-campus-job:document:later', 'scholarship:document:none'],
+  documents: '1 of 3 documents added',
+  incomeLine: null,
+  done: true,
+})
+check('5. Freelance, "Yes, I got one" (1099-NEC uploaded)', { income: ['freelance'], details: { 'freelance-form': 'yes', 'freelance-1099': ['nec.pdf'] } }, {
+  items: ['freelance:document:added'],
+  documents: '1 of 1 document added',
+  done: true,
+})
+check('6. Freelance, form question not answered yet', { income: ['freelance'] }, {
+  items: ['freelance:document:missing'],
+  documents: '0 of 1 document added',
+  done: false,
+})
+check('7. Bank interest, "Yes, I got one" (1099-INT not uploaded yet)', { income: ['bank-interest'], details: { 'bank-form': 'yes' } }, {
+  items: ['bank-interest:document:missing'],
+  documents: '0 of 1 document added',
+  done: false,
+})
+
+console.log('\nNew cases')
+check('8. Freelance, "No, I didn\'t get one"', { income: ['freelance'], details: { 'freelance-form': 'no' } }, {
+  items: ['freelance:income:details-needed'],
+  documents: 'No documents needed yet',
+  incomeLine: '1 income item needs details',
+  done: false,
+})
+check('9. Bank interest, "No, I didn\'t get one"', { income: ['bank-interest'], details: { 'bank-form': 'no' } }, {
+  items: ['bank-interest:income:details-needed'],
+  documents: 'No documents needed yet',
+  incomeLine: '1 income item needs details',
+  done: false,
+})
+check('10. Mixed: 2 of 3 documents + freelance with no form', {
+  income: ['opt-cpt', 'on-campus-job', 'scholarship', 'freelance'],
+  details: { 'opt-w2': ['a.pdf'], 'campus-w2': ['b.pdf'], 'freelance-form': 'no' },
+}, {
+  items: ['opt-cpt:document:added', 'on-campus-job:document:added', 'scholarship:document:missing', 'freelance:income:details-needed'],
+  documents: '2 of 3 documents added',
+  incomeLine: '1 income item needs details',
+  done: false,
+})
+check('11. Self-reported item deferred with "I\'ll add it later" → step done', {
+  income: ['bank-interest'],
+  details: { 'bank-form': 'no', 'self-report:bank-interest': 'later' },
+}, { items: ['bank-interest:income:later'], incomeLine: null, done: true })
+check('12. Contract work, "No" (reportableWithoutForm = false)', { income: ['contract-work'], details: { 'contract-form': 'no' } }, {
+  items: ['contract-work:document:missing'],
+  documents: '0 of 1 document added',
+  done: false,
+})
 
 console.log(failed ? `\n${failed} failed` : '\nAll checks pass.')
 process.exit(failed ? 1 : 0)

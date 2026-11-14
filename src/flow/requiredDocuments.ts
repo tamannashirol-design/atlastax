@@ -1,50 +1,91 @@
-// The ONE function that turns the income answers into the documents someone
-// needs. Home, the Documents page, the stepper and the flow's upload questions
-// all call this; the rules themselves live in src/documents.config.ts.
+// The ONE function that turns the income answers into what someone needs to
+// provide. Home, the Documents page, the stepper and the flow's upload
+// questions all call it; the rules live in src/documents.config.ts.
 // Pure (no React), so scripts/check-documents.ts can test it.
+//
+// Two kinds of items:
+//   document  a form is expected (upload it, or defer: "I'll add it later" /
+//             "I didn't get one")
+//   income    self-reported: the income is registered but no form came
+//             ("No, I didn't get one" where the config allows it). Needs
+//             details, unless deferred with "I'll add it later".
+// Picking an income card always registers the income, whatever the form answer.
 import { DOCUMENT_RULES, type DocumentRule } from '../documents.config.ts'
 import type { IncomeId } from '../data/income.ts'
 import type { Answers } from './answers.ts'
 
-/**
- * added   at least one file uploaded
- * later   "I'll add it later" (deferred)
- * none    "I didn't get one" / "I didn't get a form" (deferred: "I don't have this")
- * missing nothing yet
- */
+/** added · later ("I'll add it later") · none ("I didn't get one / a form") · missing. later and none are deferred. */
 export type DocumentStatus = 'added' | 'later' | 'none' | 'missing'
-export type RequiredDocument = DocumentRule & { status: DocumentStatus; files: string[] }
+/** details-needed · later ("I'll add it later") · provided (once details collection exists; TODO confirm with CPA) */
+export type IncomeItemStatus = 'details-needed' | 'later' | 'provided'
+
+export type DocumentItem = DocumentRule & { kind: 'document'; status: DocumentStatus; files: string[] }
+export type IncomeItem = DocumentRule & { kind: 'income'; status: IncomeItemStatus }
+export type RequiredItem = DocumentItem | IncomeItem
 
 /** Answer stored when an upload question is skipped */
 export type SkipValue = 'later' | 'none'
 
-const ruleApplies = (r: DocumentRule, a: Answers) => !!a.income?.includes(r.income) && (!r.onlyIf || a.details?.[r.onlyIf.screen] === r.onlyIf.answer)
+/** Where a self-reported item's state is saved (answers.details), e.g. "self-report:freelance" = "later" */
+export const selfReportKey = (ruleId: string) => `self-report:${ruleId}`
 
-/** The documents these answers call for, in income-card order, each with its status. */
-export function requiredDocuments(a: Answers): RequiredDocument[] {
-  return DOCUMENT_RULES.filter((r) => ruleApplies(r, a)).map((r) => {
+/** Everything these answers call for, in income-card order. */
+export function requiredItems(a: Answers): RequiredItem[] {
+  return DOCUMENT_RULES.filter((r) => a.income?.includes(r.income)).map((r): RequiredItem => {
+    const saidNoForm = !!r.formQuestion && a.details?.[r.formQuestion] === 'no'
+    if (saidNoForm && r.reportableWithoutForm) {
+      const v = a.details?.[selfReportKey(r.id)]
+      return { ...r, kind: 'income', status: v === 'later' ? 'later' : v === 'provided' ? 'provided' : 'details-needed' }
+    }
+    // A form is expected (including before the form question is answered)
     const v = a.details?.[r.uploadScreen]
     const files = Array.isArray(v) ? v : []
     const status: DocumentStatus = files.length ? 'added' : v === 'later' ? 'later' : v === 'none' ? 'none' : 'missing'
-    return { ...r, status, files }
+    return { ...r, kind: 'document', status, files }
   })
 }
 
-export const isDeferred = (s: DocumentStatus) => s === 'later' || s === 'none'
+export const isDeferred = (s: DocumentStatus | IncomeItemStatus) => s === 'later' || s === 'none'
 
-export type DocumentsSummary = { total: number; added: number; deferred: number; missing: number; done: boolean }
-
-/** Counts for Home and the stepper. done = nothing missing (every document added or deferred). */
-export function summarizeDocuments(docs: RequiredDocument[]): DocumentsSummary {
-  const added = docs.filter((d) => d.status === 'added').length
-  const deferred = docs.filter((d) => isDeferred(d.status)).length
-  const missing = docs.length - added - deferred
-  return { total: docs.length, added, deferred, missing, done: missing === 0 }
+export type ItemsSummary = {
+  documents: { total: number; added: number; deferred: number; missing: number }
+  income: { total: number; needsDetails: number; deferred: number; provided: number }
+  /** Nothing outstanding: every document added or deferred, every self-reported item provided or deferred */
+  done: boolean
 }
 
-/** Is the document behind this upload screen needed? (The flow shows the upload question only then.) */
+/** Counts for Home, the Documents page and the stepper (documents and income items counted separately). */
+export function summarizeItems(items: RequiredItem[]): ItemsSummary {
+  const docs = items.filter((i): i is DocumentItem => i.kind === 'document')
+  const income = items.filter((i): i is IncomeItem => i.kind === 'income')
+  const added = docs.filter((d) => d.status === 'added').length
+  const docDeferred = docs.filter((d) => isDeferred(d.status)).length
+  const needsDetails = income.filter((i) => i.status === 'details-needed').length
+  const incomeDeferred = income.filter((i) => i.status === 'later').length
+  const missing = docs.length - added - docDeferred
+  return {
+    documents: { total: docs.length, added, deferred: docDeferred, missing },
+    income: { total: income.length, needsDetails, deferred: incomeDeferred, provided: income.length - needsDetails - incomeDeferred },
+    done: missing === 0 && needsDetails === 0,
+  }
+}
+
+/** "2 of 3 documents added" (documents only), or "No documents needed yet". Same words everywhere. */
+export function documentsLine(s: ItemsSummary): string {
+  const { total, added } = s.documents
+  if (total === 0) return 'No documents needed yet'
+  return `${added} of ${total} ${total === 1 ? 'document' : 'documents'} added`
+}
+
+/** "1 income item needs details", or null when none do. */
+export function incomeItemsLine(s: ItemsSummary): string | null {
+  const n = s.income.needsDetails
+  return n === 0 ? null : `${n} income ${n === 1 ? 'item needs' : 'items need'} details`
+}
+
+/** Does the flow show this upload question? Only when a form is expected for it. */
 export function uploadScreenApplies(uploadScreen: string, a: Answers): boolean {
-  return DOCUMENT_RULES.some((r) => r.uploadScreen === uploadScreen && ruleApplies(r, a))
+  return requiredItems(a).some((i) => i.kind === 'document' && i.uploadScreen === uploadScreen)
 }
 
 /** The rule behind an upload screen (the flow uses its form name). */

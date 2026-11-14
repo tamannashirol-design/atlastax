@@ -11,20 +11,29 @@
 import type { IncomeId } from './data/income.ts'
 
 export type DocumentRule = {
-  /** Stable id, also used in links to the document on the Documents page */
+  /** Stable id, also used in links to the item on the Documents page */
   id: string
-  /** The income type that needs it */
+  /** The income type. Picking its card registers the income, whatever the form answer. */
   income: IncomeId
   /** Short form name, e.g. "W-2" */
   form: string
-  /** What it is, in plain words */
+  /** The document, in plain words */
   label: string
-  /** Who sends it */
+  /** The income, in plain words (used for self-reported items) */
+  incomeLabel: string
+  /** Who sends the form */
   source: string
-  /** The flow screen where it's uploaded; its answer holds the file names, or "later" / "none" */
+  /** The flow screen where the form is uploaded; its answer holds the file names, or "later" / "none" */
   uploadScreen: string
-  /** Only needed when an earlier answer says so (e.g. "Did you get a 1099-NEC?" → Yes) */
-  onlyIf?: { screen: string; answer: string }
+  /** The "Did you get a form?" question, if the flow asks one (its answer: "yes" / "no") */
+  formQuestion?: string
+  /**
+   * TODO confirm with CPA. true: if they say they didn't get a form, the
+   * income is still registered, as a self-reported item that needs details
+   * (no document). false: a form is always expected.
+   * Components never decide this; they read requiredItems().
+   */
+  reportableWithoutForm: boolean
   /** Show the form code under the income card's label (only where one form clearly applies) */
   showOnIncomeCard?: boolean
 }
@@ -32,37 +41,49 @@ export type DocumentRule = {
 // Order = the order of the income cards (and of the flow's follow-ups).
 export const DOCUMENT_RULES: DocumentRule[] = [
   {
-    id: 'bank-interest-form',
+    id: 'bank-interest',
     income: 'bank-interest',
-    form: 'Bank interest form',
-    label: 'Bank interest form',
-    source: 'From your bank, if they sent one',
+    form: '1099-INT',
+    label: '1099-INT for bank interest',
+    incomeLabel: 'Bank interest',
+    source: 'From your bank',
     uploadScreen: 'bank-upload',
-    onlyIf: { screen: 'bank-form', answer: 'yes' },
+    formQuestion: 'bank-form',
+    reportableWithoutForm: true,
   },
-  { id: 'w2-opt-cpt', income: 'opt-cpt', form: 'W-2', label: 'W-2 for your OPT or CPT job', source: 'From your employer', uploadScreen: 'opt-w2', showOnIncomeCard: true },
-  { id: 'w2-on-campus', income: 'on-campus-job', form: 'W-2', label: 'W-2 for your on-campus job', source: 'From your university’s payroll office', uploadScreen: 'campus-w2', showOnIncomeCard: true },
-  { id: '1042s-scholarship', income: 'scholarship', form: '1042-S', label: '1042-S for your scholarship', source: 'From your university', uploadScreen: 'scholarship-1042s', showOnIncomeCard: true },
+  { id: 'opt-cpt', income: 'opt-cpt', form: 'W-2', label: 'W-2 for your OPT or CPT job', incomeLabel: 'OPT or CPT job', source: 'From your employer', uploadScreen: 'opt-w2', reportableWithoutForm: false, showOnIncomeCard: true },
+  { id: 'on-campus-job', income: 'on-campus-job', form: 'W-2', label: 'W-2 for your on-campus job', incomeLabel: 'On-campus job', source: 'From your university’s payroll office', uploadScreen: 'campus-w2', reportableWithoutForm: false, showOnIncomeCard: true },
+  { id: 'scholarship', income: 'scholarship', form: '1042-S', label: '1042-S for your scholarship', incomeLabel: 'Scholarship or fellowship', source: 'From your university', uploadScreen: 'scholarship-1042s', reportableWithoutForm: false, showOnIncomeCard: true },
   {
-    id: '1099nec-freelance',
+    id: 'freelance',
     income: 'freelance',
     form: '1099-NEC',
     label: '1099-NEC for freelance work',
+    incomeLabel: 'Freelance income',
     source: 'From your clients',
     uploadScreen: 'freelance-1099',
-    onlyIf: { screen: 'freelance-form', answer: 'yes' },
+    formQuestion: 'freelance-form',
+    reportableWithoutForm: true,
     showOnIncomeCard: true,
   },
-  { id: 'investment-forms', income: 'investments', form: '1042-S or 1099-DIV', label: 'Investment tax forms', source: 'From your brokerage or bank', uploadScreen: 'investments-upload' },
-  { id: 'brokerage-forms', income: 'trading', form: '1099-B or 1042-S', label: 'Brokerage tax forms', source: 'From your brokerage', uploadScreen: 'trading-upload' },
+  { id: 'investments', income: 'investments', form: '1042-S or 1099-DIV', label: 'Investment tax forms', incomeLabel: 'Investments', source: 'From your brokerage or bank', uploadScreen: 'investments-upload', reportableWithoutForm: false },
+  { id: 'trading', income: 'trading', form: '1099-B or 1042-S', label: 'Brokerage tax forms', incomeLabel: 'Trading', source: 'From your brokerage', uploadScreen: 'trading-upload', reportableWithoutForm: false },
   {
-    id: '1099nec-contract',
+    id: 'contract-work',
     income: 'contract-work',
     form: '1099-NEC',
     label: '1099-NEC for contract work',
+    incomeLabel: 'Contract work income',
     source: 'From your clients',
     uploadScreen: 'contract-1099',
-    onlyIf: { screen: 'contract-form', answer: 'yes' },
+    formQuestion: 'contract-form',
+    reportableWithoutForm: false,
     showOnIncomeCard: true,
   },
 ]
+
+/** Shown above self-reported items on the Documents page. Neutral: no tax advice, amounts or thresholds. */
+export const SELF_REPORTED_INTRO = 'You told us you had this income. We’ll ask for the details here.'
+
+/** What to collect for a self-reported item. TODO confirm with CPA: nothing is collected until confirmed. */
+export const SELF_REPORTED_DETAILS: string[] = []
