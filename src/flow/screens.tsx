@@ -7,7 +7,6 @@ import { SearchSelect } from '../components/SearchSelect'
 import { SelectField } from '../components/SelectField'
 import { TileGroup, type TileOption } from '../components/TileGroup'
 import { UploadAnswer } from '../components/UploadAnswer'
-import { TAX_YEAR } from '../config'
 import type { IncomeId } from '../data/income'
 import { countries, usStates } from '../data/places'
 import { setAnswers, setDetail, type Answers } from './answers'
@@ -17,8 +16,8 @@ export type FlowScreen = {
   id: string
   path: string
   position: FlowPosition
-  /** Fixed text, or text that depends on earlier answers (e.g. OPT vs CPT) */
-  question: string | ((a: Answers) => string)
+  /** Fixed text, or text that depends on earlier answers (OPT vs CPT) or the tax year being filed */
+  question: string | ((a: Answers, year: number) => string)
   helper?: string
   helpLabel?: string
   isAnswered: (a: Answers) => boolean
@@ -90,7 +89,7 @@ function upload(id: string, docLabel: string, question: FlowScreen['question'], 
   }
 }
 
-function amount(id: string, question: string, helper: string, when: When): FlowScreen {
+function amount(id: string, question: FlowScreen['question'], helper: string, when: When): FlowScreen {
   return {
     id,
     path: `/income/${id}`,
@@ -125,13 +124,13 @@ function incomeFollowUps(): FlowScreen[] {
   const selfEmployed = (key: 'freelance' | 'contract-work', name: string, short: string) => [
     tiles(`${short}-form`, `Did you get a 1099-NEC for your ${name}?`, yesNo, has(key), { helper: 'If you did, we’ll read the amounts from it' }),
     upload(`${short}-1099`, '1099-NEC', `Upload your 1099-NEC forms for ${name}`, 'From your clients. One per client', LATER, and(has(key), answered(`${short}-form`, 'yes'))),
-    amount(`${short}-amount`, `How much were you paid for ${name} in ${TAX_YEAR}?`, 'Add up what every client paid you', and(has(key), answered(`${short}-form`, 'no'))),
+    amount(`${short}-amount`, (_, year) => `How much were you paid for ${name} in ${year}?`, 'Add up what every client paid you', and(has(key), answered(`${short}-form`, 'no'))),
   ]
   return [
     // Bank interest
     tiles('bank-form', 'Did you get a tax form for your bank interest?', yesNo, has('bank-interest'), { helper: 'If you did, we’ll read the amounts from it' }),
     upload('bank-upload', 'bank form', 'Upload your bank interest form', 'From your bank, if they sent one', LATER, and(has('bank-interest'), answered('bank-form', 'yes'))),
-    amount('bank-amount', `How much bank interest did you earn in ${TAX_YEAR}?`, 'Check your bank statements for the year', and(has('bank-interest'), answered('bank-form', 'no'))),
+    amount('bank-amount', (_, year) => `How much bank interest did you earn in ${year}?`, 'Check your bank statements for the year', and(has('bank-interest'), answered('bank-form', 'no'))),
     // OPT or CPT
     tiles(
       'opt-type',
@@ -318,3 +317,15 @@ export const flow: FlowScreen[] = [
 export const AFTER_FLOW = '/documents'
 
 export const isFlowPath = (path: string) => flow.some((s) => s.path === path)
+
+/**
+ * Where "Continue where you left off" goes: the first screen that applies to
+ * these answers and isn't done yet. Skipped uploads ("I'll add it later")
+ * count as done. "5 years or more" stays on its screen: we can't file that
+ * return (see ResidentSheet). Everything done → the last screen that applies.
+ */
+export function resumeScreen(a: Answers): FlowScreen {
+  const applies = flow.filter((s) => !s.when || s.when(a))
+  const done = (s: FlowScreen) => (s.id === 'years' ? a.years === 'under5' : s.isAnswered(a) || detail(a, s.id) === 'later')
+  return applies.find((s) => !done(s)) ?? applies[applies.length - 1]
+}

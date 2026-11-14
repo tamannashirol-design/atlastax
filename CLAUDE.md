@@ -125,6 +125,19 @@ Rules:
   fails if text is under 4.5:1 or UI components under 3:1. It runs before
   every build. Register new pairs in `src/tokens/pairs.ts`.
 
+## Intro and Home
+- First-run intro (`src/intro/`): a modal dialog over Home, 3 scenes built
+  from real components (scene list + copy in `content.ts`). Seen-flag in
+  localStorage (`atlastax:intro-seen`); /?intro=reset shows it again.
+  Scenes replay on /motion; FormCard and StepDots are on /styleguide.
+- Home (`src/home/`): one primary (Start / Continue where you left off),
+  previous years from `PREVIOUS_TAX_YEARS`, privacy line from `PRIVACY_LINE`
+  (empty until confirmed), Replay intro.
+- Answers are saved per tax year (`useFilingYear`, `setFilingYear` in
+  flow/answers). Never hard-code a year: use the filing year.
+- Copy: no promises (refunds, speed, savings, "free"), no invented numbers;
+  unconfirmed claims are marked "TODO confirm" in code and FLOW.md.
+
 ## Upload animation (rules)
 - Any reference is for timing, sequence and behavior only; rebuild all visuals
   from this design system (no copied colors, fonts, shapes or icon style).

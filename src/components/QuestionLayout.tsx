@@ -1,6 +1,5 @@
 import { QuestionIcon } from '@phosphor-icons/react'
 import type { ReactNode } from 'react'
-import { TAX_YEAR } from '../config'
 import type { FlowPosition } from '../flow/sections'
 import { AppShell } from './AppShell'
 import { FlowStepper } from './FlowStepper'
@@ -31,6 +30,8 @@ import { PrimaryButton } from './PrimaryButton'
 // "Slightly above" = spacers above and below in a 2:3 ratio.
 
 type Props = {
+  /** The tax year being filed (top bar title) */
+  year: number
   position: FlowPosition
   /** Where the back arrow goes (the previous question, or Home) */
   backHref: string
@@ -62,10 +63,10 @@ const wideColumn = `${column} desktop:col-span-8`
 // word joiner on each side of the hyphen stops the browser breaking there.
 const keepHyphensTogether = (text: string) => text.replace(/(\S)-(?=\S)/g, '$1\u2060-\u2060')
 
-export function QuestionLayout({ position, backHref, questionId, question, answers, answerArea = 'fixed', wide = false, canContinue, onContinue, helper, help, onNavigate }: Props) {
+export function QuestionLayout({ year, position, backHref, questionId, question, answers, answerArea = 'fixed', wide = false, canContinue, onContinue, helper, help, onNavigate }: Props) {
   const block = wide ? wideColumn : column
   return (
-    <AppShell title={`${TAX_YEAR} tax return`} backHref={backHref} activeTab="home">
+    <AppShell title={`${year} tax return`} backHref={backHref} activeTab="home">
       <div className="flex flex-1 flex-col page-x">
         {/* Phone + iPad portrait: compact stepper, directly under the top bar */}
         <div className="page-content page-grid desktop:hidden">

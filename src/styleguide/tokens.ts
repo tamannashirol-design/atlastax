@@ -114,7 +114,7 @@ export const icons: { name: string; Icon: Icon; reason: string }[] = [
   { name: 'Check', Icon: CheckIcon, reason: 'Selected answer, done section, uploaded doc' },
   { name: 'CaretDown', Icon: CaretDownIcon, reason: 'Opens a list: stepper sheet, dropdowns' },
   { name: 'UploadSimple', Icon: UploadSimpleIcon, reason: 'Upload a document' },
-  { name: 'DownloadSimple', Icon: DownloadSimpleIcon, reason: 'Download checklist PDF' },
+  { name: 'DownloadSimple', Icon: DownloadSimpleIcon, reason: 'Download a form or the checklist PDF' },
   { name: 'X', Icon: XIcon, reason: 'Close a bottom sheet' },
   { name: 'MagnifyingGlass', Icon: MagnifyingGlassIcon, reason: 'Search field (country)' },
   { name: 'ArrowSquareOut', Icon: ArrowSquareOutIcon, reason: 'Link opens another website in a new tab (other ways to file)' },

@@ -1,5 +1,6 @@
 // Keyboard-only focus audit for every upload (the 8 income upload screens and
-// the previous-return sheet). Uses only Tab, Enter and Escape: no mouse.
+// the previous-return sheet) and the first-run intro. Uses only Tab, Enter,
+// Escape and arrow keys: no mouse.
 //
 // After every state change (upload started, done, removed, failed, retried,
 // confirm opened/kept) it checks that focus:
@@ -70,7 +71,7 @@ async function check(page, where, step, expect) {
   const problems = []
   if (f.body) problems.push('focus is on the body')
   if (f.drops) problems.push(`focus fell to the body for ${f.drops} frame(s) during this step`)
-  if (!f.ring) problems.push(`no visible focus ring on <${f.tag}> "${f.text}"`)
+  if (!f.ring && expect.ring !== false) problems.push(`no visible focus ring on <${f.tag}> "${f.text}"`)
   if (expect.focus && !expect.focus.test(f.text)) problems.push(`expected focus on ${expect.focus}, got <${f.tag}> "${f.text}"`)
   if (expect.live && !f.live.some((t) => expect.live.test(t))) problems.push(`expected live region ${expect.live}, got [${f.live.join(' | ')}]`)
   const ok = problems.length === 0
@@ -194,6 +195,49 @@ if (!only || 'previous-return sheet'.includes(only)) {
   await settle(page)
   await check(page, where, 'sheet opened', {})
   await uploadFlow(page, where)
+  await page.close()
+}
+
+// The first-run intro (dialog over Home)
+if (!only || 'intro'.includes(only)) {
+  const where = 'intro'
+  const page = await browser.newPage({ viewport: { width: 390, height: 844 } })
+  await page.goto(BASE + '/?intro=reset', { waitUntil: 'networkidle' })
+  await page.evaluate(() => sessionStorage.clear())
+  await page.evaluate(watchBody)
+  await settle(page)
+  console.log(where)
+  // On open, the dialog itself has focus (no ring by design; its label is the scene heading)
+  await check(page, where, 'opened', { focus: /Skip/, ring: false })
+  await page.keyboard.press('ArrowRight')
+  await settle(page)
+  await check(page, where, '→ scene 2', { ring: false, live: /^Step 2 of 3: Add your documents$/ })
+  await tabTo(page, /^Next$/)
+  await page.keyboard.press('Enter')
+  await settle(page)
+  await check(page, where, 'Next → scene 3', { focus: /^Get started$/, live: /^Step 3 of 3/ })
+  await page.keyboard.press('ArrowLeft')
+  await settle(page)
+  await check(page, where, '← back to scene 2', { focus: /^Next$/, live: /^Step 2 of 3/ })
+  await page.keyboard.press('Escape')
+  await settle(page)
+  await check(page, where, 'Escape skips', { focus: /^Start your \d{4} return$/ })
+  await tabTo(page, /^Replay intro$/)
+  await page.keyboard.press('Enter')
+  await settle(page)
+  await page.keyboard.press('Escape')
+  await settle(page)
+  await check(page, where, 'replay → Escape', { focus: /^Replay intro$/ })
+  await page.keyboard.press('Enter')
+  await settle(page)
+  await page.keyboard.press('ArrowRight')
+  await page.keyboard.press('ArrowRight')
+  await settle(page)
+  await tabTo(page, /^Get started$/)
+  await page.keyboard.press('Enter')
+  await settle(page)
+  // The question heading takes focus (headings have no ring by design)
+  await check(page, where, 'Get started → first question', { focus: /^What is your visa type\?$/, ring: false })
   await page.close()
 }
 

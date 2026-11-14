@@ -4,6 +4,9 @@ import { AmountField } from '../components/AmountField'
 import { AnswerTile } from '../components/AnswerTile'
 import { BottomSheet } from '../components/BottomSheet'
 import { FlowStepper } from '../components/FlowStepper'
+import { FormCard } from '../components/FormCard'
+import { StepDots } from '../components/StepDots'
+import { Intro } from '../intro/Intro'
 import { IncomeCard, IncomeRow, Illustration } from '../components/IncomeCard'
 import { extraOptions, incomeOptions } from '../data/income'
 import { SearchSelect } from '../components/SearchSelect'
@@ -160,6 +163,42 @@ function StepperDemo() {
           Step {index + 1} of {allSteps.length} overall
         </Label>
       </div>
+    </>
+  )
+}
+
+function IntroDemo() {
+  const [step, setStep] = useState(0)
+  const [open, setOpen] = useState(false)
+  return (
+    <>
+      <div className="col-span-full flex flex-col gap-3 desktop:col-span-6">
+        <span className="text-body font-semibold">Form card</span>
+        <Label>A finished form, ready to download. Settles in with the soft spring. Never blue.</Label>
+        <FormCard form="Form 1040‑NR" title="U.S. Nonresident Alien Income Tax Return · 2026" note="Example data" />
+      </div>
+      <div className="col-span-full flex flex-col gap-3 desktop:col-span-6">
+        <span className="text-body font-semibold">Step dots</span>
+        <Label>Quiet 3-step indicator for the intro. Hidden from screen readers (the intro announces the step).</Label>
+        <div className="flex h-11 items-center">
+          <StepDots current={step} total={3} />
+        </div>
+        <SecondaryButton onClick={() => setStep((s) => (s + 1) % 3)}>Next step</SecondaryButton>
+        <span className="pt-4 text-body font-semibold">Previous-year button (Home)</span>
+        <Label>Quiet secondary row; only years enabled in config. Shows “In progress” once that year has answers.</Label>
+        <div className="flex flex-wrap gap-2">
+          {['2025', '2024'].map((y, i) => (
+            <span key={y} className="flex h-11 items-center gap-2 rounded-sm border border-border-strong bg-surface px-4 text-body font-semibold">
+              <span className="tabular-nums">{y}</span>
+              {i === 0 && <span className="text-small font-normal text-text-muted">In progress</span>}
+            </span>
+          ))}
+        </div>
+        <span className="pt-4 text-body font-semibold">Intro</span>
+        <Label>Full-screen dialog. Skip / Escape closes; ← → or swipe move; auto-advances after 5s until touched.</Label>
+        <SecondaryButton onClick={() => setOpen(true)}>Open the intro</SecondaryButton>
+      </div>
+      <AnimatePresence>{open && <Intro onClose={() => setOpen(false)} />}</AnimatePresence>
     </>
   )
 }
@@ -476,6 +515,13 @@ export default function Styleguide() {
             description="One component, two presentations. Navy marks progress; Continue stays the only blue element. Use the buttons to watch the marker glide, the check draw in and the connector fill."
           >
             <StepperDemo />
+          </Section>
+
+          <Section
+            title="Intro and Home"
+            description="Pieces of the first-run intro and Home. The intro plays its three scenes from the real components; replay single scenes on /motion."
+          >
+            <IntroDemo />
           </Section>
 
           <Section

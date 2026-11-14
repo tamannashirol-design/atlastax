@@ -5,6 +5,7 @@ import { Switch } from '../components/Switch'
 import { UploadZone, type Drag } from '../components/UploadZone'
 import { TAX_YEAR } from '../config'
 import { useUpload, type UploadState } from '../lib/upload'
+import { scenes } from '../intro/content'
 
 // /motion: play each state of the upload moment, scrub progress, and toggle
 // reduced motion. "Upload" and "Error" run REAL uploads to the dev endpoint
@@ -152,10 +153,38 @@ export default function MotionPage() {
                 </Group>
               </div>
             </section>
+
+            <IntroScenes />
           </div>
         </main>
       </div>
     </MotionConfig>
+  )
+}
+
+// Intro scenes: the same components the first-run intro plays. Replay each one
+// here (the Reduce motion switch above applies too: finished states, no movement).
+function IntroScenes() {
+  const [plays, setPlays] = useState(() => scenes.map(() => 0))
+  return (
+    <section className="flex flex-col gap-8 border-t border-border-decorative pt-12 mt-12">
+      <header className="flex flex-col gap-2">
+        <h2 className="font-display text-display">Intro scenes</h2>
+        <p className="max-w-column text-body text-text-muted">
+          The first-run intro, one scene at a time. Replay plays the moment again; tapping a demo plays it too. To see the whole intro on Home
+          again, open /?intro=reset.
+        </p>
+      </header>
+      <div className="page-grid gap-y-12">
+        {scenes.map((s, i) => (
+          <div key={s.id} className="col-span-full flex flex-col gap-4 tablet:col-span-6 tablet:col-start-2 desktop:col-span-4 desktop:col-start-auto">
+            <s.Demo play={plays[i]} />
+            <h3 className="font-display text-title">{s.title}</h3>
+            <SecondaryButton onClick={() => setPlays((p) => p.map((n, j) => (j === i ? n + 1 : n)))}>Replay</SecondaryButton>
+          </div>
+        ))}
+      </div>
+    </section>
   )
 }
 

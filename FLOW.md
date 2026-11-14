@@ -9,6 +9,7 @@ help link, and Continue.
 
 ## Order at a glance
 
+0. First-run intro (once, over Home)
 1. Home
 2. Q1: Visa type
    - Enrolled at a U.S. university or college? (added by the designer)
@@ -57,7 +58,42 @@ Documents/Scan, Profile), a menu button, and a security/trust badge.
 
 ---
 
-## 1. Home
+## 0. First-run intro (built: `src/intro/`)
+
+Shown once, the first time Home opens (remembered in this browser). Three
+scenes made of the real components, with obviously generic data:
+
+| # | Heading (from the brief) | Text (TODO confirm: draft) | Demo |
+|---|---|---|---|
+| 1 | Answer a few simple questions | One question at a time, about your visa, your studies and your income. | Visa tiles; F-1 selects itself, Continue enables |
+| 2 | Add your documents | Upload forms like your W-2 as a PDF or a clear photo. | Upload zone: "W-2 · Example Employer.pdf" drops in, progress draws, check lands (scripted; nothing is uploaded) |
+| 3 | Get your forms, ready to file | We prepare Form 1040‑NR from your answers for you to download. | Form card settles in, "Example data" |
+
+- Next (secondary) / swipe / ← → move; auto-advance after 5s until the
+  person touches anything; never with reduced motion (finished states, fades).
+- Skip always visible (Escape too). Last scene: **Get started** (starts or
+  resumes the current year) and "I already have an account".
+- **TODO confirm:** there are no accounts yet; "I already have an account"
+  closes the intro like Skip.
+- To see it again: "Replay intro" on Home, /?intro=reset (forgets it was
+  seen), or the Intro scenes on /motion.
+
+## 1. Home (built: `src/home/HomePage.tsx`)
+
+- Title "Your 2026 tax return" (TAX_YEAR in config) and "For students on an
+  F‑1, J‑1 or M‑1 visa filing Form 1040‑NR." (**TODO confirm**).
+- One primary action: **Start your 2026 return**, or once anything is
+  answered, **Continue where you left off** (goes to the first unfinished
+  screen) with the compact stepper showing their section.
+- "File for a previous year": quiet buttons for the years in
+  PREVIOUS_TAX_YEARS (config; now 2025, 2024, 2023). Each year runs the same
+  flow with its own saved answers; the year shows in titles and questions.
+  A year with answers shows "In progress".
+- Privacy line: PRIVACY_LINE in config, empty (hidden) until confirmed.
+  **TODO confirm** what we can promise.
+- "Replay intro". No how-it-works, deadlines or news.
+
+## 1 (old). Home, from the reference
 **Source:** `Homepage.png`
 **Purpose:** Start or resume a return.
 

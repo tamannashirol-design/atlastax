@@ -7,7 +7,7 @@ import { SecondaryButton } from '../components/SecondaryButton'
 import { UploadAnswer } from '../components/UploadAnswer'
 import { DebugStack, useUrlFlag } from '../lib/debug'
 import { navigate } from '../lib/router'
-import { setAnswers, setDetail, useAnswers } from './answers'
+import { setAnswers, setDetail, useAnswers, useFilingYear } from './answers'
 import { ResidentSheet } from './ResidentSheet'
 import { AFTER_FLOW, flow } from './screens'
 
@@ -30,15 +30,22 @@ export default function FlowPage({ path }: { path: string }) {
   const [grid] = useUrlFlag('grid')
   const [outlines] = useUrlFlag('outlines')
   const questionId = `q-${screen.id}`
-  const question = typeof screen.question === 'function' ? screen.question(answers) : screen.question
+  const year = useFilingYear()
+  const question = typeof screen.question === 'function' ? screen.question(answers, year) : screen.question
 
   // New screen: update the tab title, scroll to top, and move focus to the
   // question so screen-reader users hear where they are.
   useEffect(() => {
     document.title = `${question} · AtlasTax`
     document.querySelector('main')?.scrollTo(0, 0)
-    if (firstRender.current) firstRender.current = false
-    else document.getElementById(questionId)?.focus({ preventScroll: true })
+    // First screen after a page load: leave focus alone, unless nothing has
+    // focus (e.g. arriving from Home or the intro, whose button just went away)
+    const nothingFocused = !document.activeElement || document.activeElement === document.body
+    if (firstRender.current && !nothingFocused) firstRender.current = false
+    else {
+      firstRender.current = false
+      document.getElementById(questionId)?.focus({ preventScroll: true })
+    }
   }, [question, questionId])
 
   // Filed before → Yes: ask for the previous return first.
@@ -60,6 +67,7 @@ export default function FlowPage({ path }: { path: string }) {
   return (
     <DebugStack grid={grid} outlines={outlines}>
       <QuestionLayout
+        year={year}
         position={screen.position}
         backHref={back}
         questionId={questionId}
