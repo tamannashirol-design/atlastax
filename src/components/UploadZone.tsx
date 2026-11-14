@@ -1,8 +1,8 @@
-import { UploadSimpleIcon } from '@phosphor-icons/react'
 import { motion, useMotionValue, useReducedMotionConfig, useSpring, useTransform, type MotionValue } from 'framer-motion'
-import { useEffect, useId, useLayoutEffect, useRef, useState, type DragEvent } from 'react'
+import { useEffect, useLayoutEffect, useRef, useState, type DragEvent } from 'react'
 import { formatSize, type UploadFile, type UploadStatus } from '../lib/upload'
 import { spring } from '../lib/motion'
+import { Folder } from './Folder'
 
 // The upload moment, built from interface elements and tokens only (see
 // MOTION-upload.md for the choreography taken from the reference).
@@ -15,7 +15,8 @@ import { spring } from '../lib/motion'
 //   done       1px success border                               (after the check pops)
 //   error      1px error border                                 (failed)
 //   progress   1.5px navy line around the edge, clockwise from top center, real progress
-//   content    prompt · "Drop to upload" · document card + status
+//   content    folder (sheet slides in, lifts, check on the front panel) + text:
+//              prompt · "Drop to upload" · file name, status, size
 
 export type Drag = 'none' | 'page' | 'zone'
 
@@ -70,7 +71,7 @@ export function UploadZone({ docLabel, status, progress, file, error, onFiles, o
       // Drag-over: the zone grows 1% with the soft spring (no scale under reduced motion)
       animate={{ scale: over && !reduce ? 1.01 : 1 }}
       transition={spring.soft}
-      className="grid min-h-60 w-full"
+      className="grid w-full"
     >
       <div className="rounded-md border border-dashed border-border-strong bg-surface [grid-area:1/1]" />
       <Layer show={idle && drag.state === 'page'} opacity={0.4} transition={t(spring.quick)} className="hidden border-dashed border-text tablet:block" />
@@ -79,58 +80,50 @@ export function UploadZone({ docLabel, status, progress, file, error, onFiles, o
       <Layer show={status === 'error'} transition={t(spring.quick)} className="border-error" />
       <ProgressEdge progress={progress} show={status === 'uploading' || status === 'accepted'} handOff={status === 'done'} reduce={reduce} />
 
-      {/* Content: three views stacked; hidden ones are inert so they can't be focused */}
-      <div className="grid p-6 [grid-area:1/1]" data-stack>
-        <View show={idle && !over} transition={t(spring.quick)}>
-          <div className="flex flex-col items-center justify-center gap-3 text-center">
-            <UploadSimpleIcon size={24} weight="regular" aria-hidden className="text-text-muted" />
-            <div className="flex flex-col">
-              <span className="text-body font-semibold">Drag your {docLabel} here</span>
-              <span className="text-small text-text-muted">A PDF or a clear photo</span>
+      {/* Content: the folder (always present, so it animates between states)
+          and below it three text views stacked; hidden ones are inert. */}
+      <div className="flex flex-col items-center gap-4 p-6 [grid-area:1/1]">
+        <Folder
+          sheetIn={status === 'accepted' || status === 'uploading' || status === 'done'}
+          lifted={status === 'accepted' || status === 'uploading'}
+          check={status === 'done'}
+          reduce={reduce}
+        />
+
+        <div className="grid w-full" data-stack>
+          <View show={idle && !over} transition={t(spring.quick)}>
+            <div className="flex flex-col items-center gap-3 text-center">
+              <div className="flex flex-col">
+                <span className="text-body font-semibold">Drag your {docLabel} here</span>
+                <span className="text-small text-text-muted">A PDF or a clear photo</span>
+              </div>
+              <button
+                type="button"
+                onClick={() => input.current?.click()}
+                className="flex h-11 items-center rounded-sm border border-border-strong bg-surface px-4 text-body font-semibold focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-text active:bg-sage-100"
+              >
+                Choose a file
+              </button>
             </div>
-            <button
-              type="button"
-              onClick={() => input.current?.click()}
-              className="flex h-11 items-center rounded-sm border border-border-strong bg-surface px-4 text-body font-semibold focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-text active:bg-sage-100"
-            >
-              Choose a file
-            </button>
-          </div>
-        </View>
+          </View>
 
-        <View show={over} transition={t(spring.quick)}>
-          <span className="self-center text-center text-body font-semibold">Drop to upload</span>
-        </View>
+          <View show={over} transition={t(spring.quick)}>
+            <span className="text-center text-body font-semibold">Drop to upload</span>
+          </View>
 
-        <View show={!idle} transition={t(spring.quick)}>
-          <div className="flex flex-col justify-center gap-3">
-            {/* Document card settles in: 4px rise with the soft spring */}
-            <motion.div
-              initial={false}
-              animate={!idle ? { opacity: 1, y: 0 } : { opacity: 0, y: reduce ? 0 : 4 }}
-              transition={t(spring.soft)}
-              className="flex flex-col gap-3 rounded-sm border border-border-decorative bg-surface p-4 shadow-1"
-            >
-              <div className="flex items-start gap-3">
-                <div className="flex min-w-0 flex-1 flex-col">
-                  <span className="truncate text-body">{file?.name ?? docLabel}</span>
-                  <span className="text-small text-text-muted tabular-nums">{file ? formatSize(file.size) : ' '}</span>
-                </div>
-                <CheckBadge show={status === 'done'} reduce={reduce} />
+          <View show={!idle} transition={t(spring.quick)}>
+            <div className="flex flex-col items-center gap-3 text-center">
+              <div className="flex max-w-full flex-col">
+                <span className="truncate text-body">{file?.name ?? docLabel}</span>
+                <span className={`text-small ${status === 'error' ? 'text-error' : status === 'done' ? 'text-success' : 'text-text-muted'}`}>
+                  {statusText ?? (
+                    <>
+                      Uploading {docLabel}, <span className="tabular-nums">{pct}%</span>
+                    </>
+                  )}
+                  {file && status !== 'error' && <span className="text-text-muted tabular-nums"> · {formatSize(file.size)}</span>}
+                </span>
               </div>
-              <div aria-hidden className="flex flex-col gap-2">
-                <span className="h-1 w-full rounded-full bg-border-decorative" />
-                <span className="h-1 w-2/3 rounded-full bg-border-decorative" />
-              </div>
-            </motion.div>
-            <div className="flex min-h-11 items-center justify-between gap-3">
-              <span className={`text-small ${status === 'error' ? 'text-error' : status === 'done' ? 'text-success' : 'text-text-muted'}`}>
-                {statusText ?? (
-                  <>
-                    Uploading {docLabel}, <span className="tabular-nums">{pct}%</span>
-                  </>
-                )}
-              </span>
               {status === 'error' && (
                 <button
                   type="button"
@@ -141,8 +134,8 @@ export function UploadZone({ docLabel, status, progress, file, error, onFiles, o
                 </button>
               )}
             </div>
-          </div>
-        </View>
+          </View>
+        </div>
       </div>
 
       <span className="sr-only" aria-live="polite">
@@ -189,50 +182,6 @@ function View({ show, transition, children }: { show: boolean; transition: objec
     >
       {children}
     </motion.div>
-  )
-}
-
-/** Outline check badge in the success token: pops with `pop`, the check draws in over 250ms. */
-function CheckBadge({ show, reduce }: { show: boolean; reduce: boolean }) {
-  const clip = `check-${useId().replace(/:/g, '')}`
-  return (
-    <motion.svg
-      width={32}
-      height={32}
-      viewBox="0 0 32 32"
-      aria-hidden
-      data-check
-      className="shrink-0 overflow-visible"
-      initial={false}
-      animate={show ? { opacity: 1, scale: 1 } : { opacity: 0, scale: reduce ? 1 : 0 }}
-      transition={reduce ? spring.fade : { scale: spring.pop, opacity: spring.fade }}
-    >
-      <defs>
-        <clipPath id={clip}>
-          {/* The check is revealed left to right by scaling this rectangle (transform only) */}
-          <motion.rect
-            x={0}
-            y={0}
-            width={32}
-            height={32}
-            style={{ originX: 0 }}
-            initial={false}
-            animate={{ scaleX: show || reduce ? 1 : 0 }}
-            transition={reduce ? { duration: 0 } : { ...spring.quick, delay: show ? 0.06 : 0 }}
-          />
-        </clipPath>
-      </defs>
-      <circle cx={16} cy={16} r={15.25} fill="none" className="stroke-success" style={{ strokeWidth: 'var(--stroke-1)' }} />
-      <path
-        d="M10 16.5 L14 20.5 L22 12"
-        fill="none"
-        clipPath={`url(#${clip})`}
-        className="stroke-success"
-        style={{ strokeWidth: 'var(--stroke-1-5)' }}
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-    </motion.svg>
   )
 }
 

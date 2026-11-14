@@ -5,6 +5,11 @@ Decisions: `pop` and `fade` tokens added; name `quick` kept; approach hint on
 iPad/laptop only (faint border); progress = line around the edge, clockwise
 from top center, with a live percentage; no auto-reset; no rising document;
 red only for errors.
+Update: the approved `Folder` now sits in the zone. On drop the sheet slides
+down behind the front panel (soft) and the folder lifts 4px; while uploading,
+the line draws around the zone edge; on done, the check pops on the front panel
+(pop, draws in 250ms) and the folder settles; on error the sheet slides back
+out. The earlier document card is replaced by the folder plus status text.
 
 Source: `references/motion/upload-documents.mov` (13.8s, 1444×948, recorded at
 ~30fps, so timings are ±33ms). Measured from 785 captured frames: motion energy
