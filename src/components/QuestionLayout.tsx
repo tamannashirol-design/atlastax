@@ -39,7 +39,8 @@ type Props = {
   question: string
   /** Must fit the fixed answer area, unless answerArea is "auto". */
   answers: ReactNode
-  /** "auto": grows with its content (card grids). "upload": the taller fixed height shared by every upload question. */
+  /** "auto": grows with its content (card grids). "upload": at least the upload zone's height (--answer-h-upload),
+   *  the same on every upload question; the list of uploaded files below the zone adds to it. */
   answerArea?: 'fixed' | 'auto' | 'upload'
   /** Card grids only: at 1024px+ the question and answers span 8 columns
    *  (cols 4–11) instead of 6, so a 4th card fits at the same size. Continue
@@ -57,6 +58,9 @@ const focusRing = 'focus-visible:outline-2 focus-visible:outline-offset-2 focus-
 // The 6-column question column (all 4 columns on phone)
 const column = 'col-span-full tablet:col-span-6 tablet:col-start-2 desktop:col-start-4'
 const wideColumn = `${column} desktop:col-span-8`
+// Keep hyphenated words (W-2, 1099-NEC, on-campus) on one line: an invisible
+// word joiner on each side of the hyphen stops the browser breaking there.
+const keepHyphensTogether = (text: string) => text.replace(/(\S)-(?=\S)/g, '$1\u2060-\u2060')
 
 export function QuestionLayout({ position, backHref, questionId, question, answers, answerArea = 'fixed', wide = false, canContinue, onContinue, helper, help, onNavigate }: Props) {
   const block = wide ? wideColumn : column
@@ -90,12 +94,12 @@ export function QuestionLayout({ position, backHref, questionId, question, answe
             {/* tabIndex -1: receives focus on screen change, for screen readers.
                 text-balance: when a question wraps, its lines come out even. */}
             <h1 id={questionId} tabIndex={-1} className="font-display text-display text-balance outline-none">
-              {question}
+              {keepHyphensTogether(question)}
             </h1>
             {helper && <p className="text-small text-text-muted">{helper}</p>}
           </div>
 
-          <div className={`row-start-3 mt-10 flex flex-col ${answerArea === 'fixed' ? 'h-(--answer-h)' : answerArea === 'upload' ? 'h-(--answer-h-upload)' : ''} ${block}`}>{answers}</div>
+          <div className={`row-start-3 mt-10 flex flex-col ${answerArea === 'fixed' ? 'h-(--answer-h)' : answerArea === 'upload' ? 'min-h-(--answer-h-upload)' : ''} ${block}`}>{answers}</div>
 
           {/* Fixed height = Continue 56 + 8 + link 48, even when there's no link */}
           <div className={`row-start-4 mt-8 flex min-h-28 flex-col gap-2 ${column}`}>

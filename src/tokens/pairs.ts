@@ -27,7 +27,8 @@ export const pairs: Pair[] = [
   { fg: 'success', bg: 'background', kind: 'text', use: 'Success message on the page (upload done)' },
   { fg: 'success', bg: 'surface', kind: 'text', use: 'Success message in a card' },
   { fg: 'error', bg: 'background', kind: 'text', use: 'Error message on the page (upload failed)' },
-  { fg: 'error', bg: 'surface', kind: 'text', use: 'Error message in a card' },
+  { fg: 'error', bg: 'surface', kind: 'text', use: 'Error message in a card; "Remove" / "Remove file" labels' },
+  { fg: 'error', bg: 'sage-100', kind: 'text', use: '"Remove" / "Remove file" label while pressed' },
 
   // UI components
   { fg: 'border-strong', bg: 'background', kind: 'ui', use: 'Unselected tile border vs page' },

@@ -75,7 +75,16 @@ function upload(id: string, docLabel: string, question: string, helper: string, 
     answers: (a) => {
       const v = detail(a, id)
       const files = Array.isArray(v) ? v : []
-      return <UploadAnswer key={id} docLabel={docLabel} uploaded={files} allowAnother onUploaded={(name) => setDetail(id, [...files, name])} />
+      return (
+        <UploadAnswer
+          key={id}
+          docLabel={docLabel}
+          uploaded={files}
+          allowAnother
+          onUploaded={(name) => setDetail(id, [...files, name])}
+          onRemove={(i) => setDetail(id, files.filter((_, j) => j !== i))}
+        />
+      )
     },
   }
 }

@@ -282,6 +282,11 @@ and contract expenses, Donation, Child care.
 | /income/trading-upload | Trading | Upload your brokerage tax forms | Upload · "I didn't get a form" |
 | /income/contract-form, -1099, -amount | Contract work | Same as Freelance, for contract work | |
 
+Every upload (these screens and the previous-return sheet) lists the uploaded
+files below the zone, each with "Remove". Remove asks to confirm ("Remove
+W2-acme.pdf?"), then takes the file off that question; removing the last one
+empties the question again (Continue locks; the skip link comes back).
+
 After the last follow-up, Continue goes to /documents (not built yet).
 The scholarship question is shortened from the old copy ("Did your university
 withhold any tax…") so it fits 3 lines on a phone.

@@ -207,10 +207,14 @@ function FormControlsDemo() {
       </div>
       <div className="col-span-full flex flex-col gap-3 desktop:col-span-6">
         <span className="text-body font-semibold">Upload (every upload question)</span>
-        <Label>Folder upload zone with a real upload; fills the 296pt upload answer area. Full choreography on /motion.</Label>
-        <div className="flex h-(--answer-h-upload) flex-col">
-          <UploadAnswer docLabel="W-2" uploaded={files} allowAnother onUploaded={(name) => setFiles((f) => [...f, name])} />
-        </div>
+        <Label>Folder upload zone (296pt) with a real upload, then the uploaded files, each with Remove (asks first). Full choreography on /motion.</Label>
+        <UploadAnswer
+          docLabel="W-2"
+          uploaded={files}
+          allowAnother
+          onUploaded={(name) => setFiles((f) => [...f, name])}
+          onRemove={(i) => setFiles((f) => f.filter((_, j) => j !== i))}
+        />
       </div>
       <div className="col-span-full flex flex-col gap-3 desktop:col-span-6">
         <span id="sg-amount" className="text-body font-semibold">

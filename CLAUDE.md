@@ -145,6 +145,12 @@ Rules:
   Everywhere a file can be uploaded uses `UploadAnswer` (zone + real upload):
   the 8 income upload questions (answerArea "upload", "Add another file")
   and the previous-return sheet. Continue unlocks only after a real upload.
+  Uploaded files are listed below the zone (zone stays 296; each file row
+  adds 56 + the 16 gap), each with a text "Remove" button. Remove asks first
+  in a sheet naming the exact file ("Remove file" in error red / "Keep
+  file"), announces "Removed <file>. N files left." and moves focus to the
+  next Remove button or back to the zone. Removing the last file empties the
+  zone and locks Continue again.
   Register every new pair in `src/tokens/pairs.ts`.
 
 ## Motion

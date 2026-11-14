@@ -75,11 +75,9 @@ export default function FlowPage({ path }: { path: string }) {
         {sheet && (
           <BottomSheet title="To continue, we’ll ask for your previous tax return." onClose={() => setSheet(false)}>
             <p className="text-body text-text-muted">This is optional, but uploading it will save you time and reduce errors.</p>
-            {/* Same upload control and height as every upload question */}
+            {/* Same upload control as every upload question (zone + file list) */}
             <div className="pt-6">
-              <div className="flex h-(--answer-h-upload) flex-col">
-                <UploadAnswer docLabel="previous return" uploaded={priorFiles} onUploaded={(name) => setPriorFiles([name])} />
-              </div>
+              <UploadAnswer docLabel="previous return" uploaded={priorFiles} onUploaded={(name) => setPriorFiles([name])} onRemove={() => setPriorFiles([])} />
             </div>
             <div className="flex flex-col gap-2 pt-8">
               <PrimaryButton disabled={!priorFiles.length} onClick={() => finishSheet({ fileName: priorFiles[0] })}>

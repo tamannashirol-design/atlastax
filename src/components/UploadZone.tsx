@@ -105,6 +105,7 @@ export function UploadZone({ docLabel, status, progress, file, error, onFiles, o
               </div>
               <button
                 type="button"
+                data-upload-action
                 onClick={() => input.current?.click()}
                 className="flex h-11 items-center rounded-sm border border-border-strong bg-surface px-4 text-body font-semibold focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-text active:bg-sage-100"
               >
@@ -133,6 +134,7 @@ export function UploadZone({ docLabel, status, progress, file, error, onFiles, o
               {status === 'done' && allowAnother && (
                 <button
                   type="button"
+                  data-upload-action
                   onClick={() => input.current?.click()}
                   className="flex h-11 shrink-0 items-center rounded-sm border border-border-strong bg-surface px-4 text-body font-semibold focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-text active:bg-sage-100"
                 >
