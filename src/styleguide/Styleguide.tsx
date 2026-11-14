@@ -4,7 +4,7 @@ import { AmountField } from '../components/AmountField'
 import { AnswerTile } from '../components/AnswerTile'
 import { BottomSheet } from '../components/BottomSheet'
 import { FlowStepper } from '../components/FlowStepper'
-import { IncomeCard, Illustration } from '../components/IncomeCard'
+import { IncomeCard, IncomeRow, Illustration } from '../components/IncomeCard'
 import { extraOptions, incomeOptions } from '../data/income'
 import { SearchSelect } from '../components/SearchSelect'
 import { SecondaryButton } from '../components/SecondaryButton'
@@ -428,15 +428,19 @@ export default function Styleguide() {
                   { name: 'Pressed', props: { checked: false, forcePressed: true } },
                   { name: 'Selected', props: { checked: true } },
                   { name: 'Placeholder (art not approved)', props: { checked: false, showArt: false } },
-                  { name: 'Quiet (No earnings)', props: { checked: false, quiet: true } },
                 ].map(({ name, props }) => (
                   <div key={name} className="flex min-w-0 flex-col gap-2">
                     <Label>{name}</Label>
                     <div className="flex flex-1">
-                      <IncomeCard label={props.quiet ? 'No earnings' : 'Scholarship or fellowship'} form="1042-S" art={incomeOptions[3].art} {...props} />
+                      <IncomeCard label="Scholarship or fellowship" form="1042-S" art={incomeOptions[3].art} {...props} />
                     </div>
                   </div>
                 ))}
+              </div>
+              <Label>No earnings: slim full-width row below the income cards (default, selected)</Label>
+              <div className="flex flex-col gap-(--grid-gutter) desktop:w-1/2">
+                <IncomeRow label="No earnings" hint="None of the above" checked={false} />
+                <IncomeRow label="No earnings" hint="None of the above" checked />
               </div>
             </div>
             <div className="col-span-full flex flex-col gap-3 desktop:col-span-6">

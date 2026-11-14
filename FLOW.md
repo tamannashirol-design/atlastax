@@ -219,14 +219,19 @@ no real PDF yet.)*
 
 ## Q6 Income screen (built: /income)
 
-- Question: "Select the ones that apply to you". Multi-select cards, 3 across on
-  iPad and laptop, 2 on phone; every card 176pt tall with a 64px illustration.
+- Question: "Select the ones that apply to you" (one line on iPad and laptop;
+  balanced wrap on phone). Multi-select cards, same size everywhere (2 grid
+  columns each): 2 across on phone, 3 at 600–1023px (iPad portrait, same left
+  edge as the other screens), 4 at 1024px+ (laptop, iPad landscape: heading
+  and cards span 8 columns, Continue keeps the usual width). The 8 income
+  types fill 2 full rows at 4 across.
 - Form code under the label only where one form clearly applies:
   OPT or CPT · W-2, On-campus job · W-2, Scholarship or fellowship · 1042-S,
   Freelance · 1099-NEC, Contract work · 1099-NEC. Left blank for Bank interest,
   Investments and Trading, where the form can differ for nonresidents
   (to confirm with a tax professional).
-- "No earnings" is a plain card ("None of the above"), full width on phone.
+- "No earnings" is not a card: a slim full-width row ("None of the above")
+  below the 8 income cards, at every size.
 - Group 2 "Anything else that applies?": Donation, Child care.
 - Continue goes to /income/details (follow-ups, not built yet).
 

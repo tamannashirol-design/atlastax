@@ -41,6 +41,10 @@ type Props = {
   answers: ReactNode
   /** "auto": grows with its content (card grids). "upload": the taller fixed height shared by every upload question. */
   answerArea?: 'fixed' | 'auto' | 'upload'
+  /** Card grids only: at 1024px+ the question and answers span 8 columns
+   *  (cols 4–11) instead of 6, so a 4th card fits at the same size. Continue
+   *  keeps the normal 6-column width, so it never moves between screens. */
+  wide?: boolean
   canContinue: boolean
   onContinue?: () => void
   helper?: string
@@ -52,8 +56,10 @@ type Props = {
 const focusRing = 'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-text'
 // The 6-column question column (all 4 columns on phone)
 const column = 'col-span-full tablet:col-span-6 tablet:col-start-2 desktop:col-start-4'
+const wideColumn = `${column} desktop:col-span-8`
 
-export function QuestionLayout({ position, backHref, questionId, question, answers, answerArea = 'fixed', canContinue, onContinue, helper, help, onNavigate }: Props) {
+export function QuestionLayout({ position, backHref, questionId, question, answers, answerArea = 'fixed', wide = false, canContinue, onContinue, helper, help, onNavigate }: Props) {
+  const block = wide ? wideColumn : column
   return (
     <AppShell title={`${TAX_YEAR} tax return`} backHref={backHref} activeTab="home">
       <div className="flex flex-1 flex-col page-x">
@@ -80,15 +86,16 @@ export function QuestionLayout({ position, backHref, questionId, question, answe
             <FlowStepper presentation="rail" position={position} onNavigate={onNavigate} />
           </div>
 
-          <div className={`row-start-2 flex flex-col gap-2 ${column}`}>
-            {/* tabIndex -1: receives focus on screen change, for screen readers */}
-            <h1 id={questionId} tabIndex={-1} className="font-display text-display outline-none">
+          <div className={`row-start-2 flex flex-col gap-2 ${block}`}>
+            {/* tabIndex -1: receives focus on screen change, for screen readers.
+                text-balance: when a question wraps, its lines come out even. */}
+            <h1 id={questionId} tabIndex={-1} className="font-display text-display text-balance outline-none">
               {question}
             </h1>
             {helper && <p className="text-small text-text-muted">{helper}</p>}
           </div>
 
-          <div className={`row-start-3 mt-10 flex flex-col ${answerArea === 'fixed' ? 'h-(--answer-h)' : answerArea === 'upload' ? 'h-(--answer-h-upload)' : ''} ${column}`}>{answers}</div>
+          <div className={`row-start-3 mt-10 flex flex-col ${answerArea === 'fixed' ? 'h-(--answer-h)' : answerArea === 'upload' ? 'h-(--answer-h-upload)' : ''} ${block}`}>{answers}</div>
 
           {/* Fixed height = Continue 56 + 8 + link 48, even when there's no link */}
           <div className={`row-start-4 mt-8 flex min-h-28 flex-col gap-2 ${column}`}>

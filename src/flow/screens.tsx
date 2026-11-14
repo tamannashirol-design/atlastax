@@ -28,6 +28,8 @@ export type FlowScreen = {
   /** The answer control; must fit the fixed answer area unless answerArea is "auto". */
   answers: (a: Answers, labelledBy: string) => ReactNode
   answerArea?: 'fixed' | 'auto' | 'upload'
+  /** Card grid: 8 columns wide at 1024px+ (see QuestionLayout). */
+  wide?: boolean
 }
 
 // ---------- Income follow-ups (proposal in FLOW.md, approved) ----------
@@ -267,6 +269,7 @@ export const flow: FlowScreen[] = [
     question: 'Select the ones that apply to you',
     isAnswered: (a) => (a.income?.length ?? 0) > 0,
     answerArea: 'auto',
+    wide: true,
     answers: (a, id) => <IncomePicker labelledBy={id} value={a.income ?? []} onChange={(income) => setAnswers({ income })} />,
   },
   ...incomeFollowUps(),

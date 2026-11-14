@@ -18,17 +18,15 @@ import { pressScale, spring } from '../lib/motion'
 //
 // States: default · hover (lifts with shadow, pointer devices only) · pressed
 // (shrinks + sage fill) · selected (navy border + check badge; never color
-// alone) · focus ring. "quiet" = the No earnings card: no illustration,
-// page-colored background.
+// alone) · focus ring. "No earnings" is not a card: see IncomeRow below.
 
 type Props = {
   label: string
   form?: string
-  /** Illustration. Omit for quiet cards. */
+  /** Illustration. Omit to show the placeholder. */
   art?: Art
   /** false = show the placeholder instead of the illustration */
   showArt?: boolean
-  quiet?: boolean
   checked: boolean
   onToggle?: () => void
   /** Style guide only: show the pressed look without pressing. */
@@ -37,7 +35,7 @@ type Props = {
   index?: number
 }
 
-export function IncomeCard({ label, form, art, showArt = true, quiet, checked, onToggle, forcePressed, index = 0 }: Props) {
+export function IncomeCard({ label, form, art, showArt = true, checked, onToggle, forcePressed, index = 0 }: Props) {
   const reduce = useReducedMotion()
   return (
     <motion.button
@@ -51,9 +49,7 @@ export function IncomeCard({ label, form, art, showArt = true, quiet, checked, o
       animate={{ opacity: 1, y: 0, scale: forcePressed ? pressScale.tile : 1 }}
       whileTap={{ scale: pressScale.tile }}
       transition={{ ...spring.soft, delay: index * 0.03, scale: spring.quick }}
-      className={`flex h-57 w-full min-w-0 flex-col rounded-md border px-4 pt-3 pb-4 text-center transition-[background-color,box-shadow,border-color] hover:shadow-2 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-text active:bg-sage-100 data-pressed:bg-sage-100 tablet:h-61 ${
-        quiet ? 'bg-background' : 'bg-surface'
-      } ${checked ? 'border-text shadow-[inset_0_0_0_1px_var(--color-text)] hover:shadow-[inset_0_0_0_1px_var(--color-text),var(--shadow-2)]' : 'border-border-strong'}`}
+      className={`flex h-57 w-full min-w-0 flex-col rounded-md border px-4 pt-3 pb-4 text-center transition-[background-color,box-shadow,border-color] hover:shadow-2 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-text active:bg-sage-100 data-pressed:bg-sage-100 tablet:h-61 bg-surface ${checked ? 'border-text shadow-[inset_0_0_0_1px_var(--color-text)] hover:shadow-[inset_0_0_0_1px_var(--color-text),var(--shadow-2)]' : 'border-border-strong'}`}
     >
       {/* Top band: selection circle in the top-right corner */}
       <span className="flex h-8 shrink-0 justify-end">
@@ -62,14 +58,57 @@ export function IncomeCard({ label, form, art, showArt = true, quiet, checked, o
 
       {/* Icon zone */}
       <span data-zone="icon" className="mt-2 flex h-20 shrink-0 items-center justify-center tablet:h-24">
-        {!quiet && (showArt && art ? <Illustration art={art} /> : <span aria-hidden className="size-12 rounded-full bg-sage-100" />)}
+        {showArt && art ? <Illustration art={art} /> : <span aria-hidden className="size-12 rounded-full bg-sage-100" />}
       </span>
 
       {/* Label zone: same height and top edge on every card */}
       <span data-zone="label" className="mt-3 flex h-17 shrink-0 flex-col">
         <span className="line-clamp-2 text-body font-semibold">{label}</span>
-        <span className="text-small text-text-muted tabular-nums">{quiet ? 'None of the above' : form}</span>
+        <span className="text-small text-text-muted tabular-nums">{form}</span>
       </span>
+    </motion.button>
+  )
+}
+
+// Slim full-width checkbox row for "No earnings", below the income cards.
+// Same states as the cards, page-colored background so it reads as the quiet
+// "none of these" option. Label + hint on one line (they wrap at large text
+// sizes; the row grows), selection circle on the right, same as the cards.
+//
+//   16 padding · label "No earnings" (Body) 8 hint (Small, muted) · circle 32 · 16 padding
+//   min height 56 (circle centered; the row grows only at large text sizes)
+
+type RowProps = {
+  label: string
+  hint: string
+  checked: boolean
+  onToggle?: () => void
+  forcePressed?: boolean
+  index?: number
+}
+
+export function IncomeRow({ label, hint, checked, onToggle, forcePressed, index = 0 }: RowProps) {
+  const reduce = useReducedMotion()
+  return (
+    <motion.button
+      type="button"
+      role="checkbox"
+      aria-checked={checked}
+      onClick={onToggle}
+      data-pressed={forcePressed || undefined}
+      initial={reduce ? { opacity: 0 } : { opacity: 0, y: 8 }}
+      animate={{ opacity: 1, y: 0, scale: forcePressed ? pressScale.button : 1 }}
+      whileTap={{ scale: pressScale.button }}
+      transition={{ ...spring.soft, delay: index * 0.03, scale: spring.quick }}
+      className={`flex min-h-14 w-full min-w-0 items-center gap-4 rounded-md border bg-background px-4 py-1 text-left transition-[background-color,box-shadow,border-color] hover:shadow-2 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-text active:bg-sage-100 data-pressed:bg-sage-100 ${
+        checked ? 'border-text shadow-[inset_0_0_0_1px_var(--color-text)] hover:shadow-[inset_0_0_0_1px_var(--color-text),var(--shadow-2)]' : 'border-border-strong'
+      }`}
+    >
+      <span className="flex min-w-0 flex-1 flex-wrap items-baseline gap-x-2">
+        <span className="text-body font-semibold">{label}</span>
+        <span className="text-small text-text-muted">{hint}</span>
+      </span>
+      <CheckBadge checked={checked} />
     </motion.button>
   )
 }
