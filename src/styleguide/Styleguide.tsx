@@ -11,6 +11,7 @@ import { SecondaryButton } from '../components/SecondaryButton'
 import { SelectField } from '../components/SelectField'
 import { TileGroup } from '../components/TileGroup'
 import { UploadField } from '../components/UploadField'
+import { UploadFolder, type UploadState } from '../components/UploadFolder'
 import { countries, usStates } from '../data/places'
 import { allSteps } from '../flow/sections'
 import { PrimaryButton } from '../components/PrimaryButton'
@@ -513,6 +514,30 @@ export default function Styleguide() {
                   </figcaption>
                 </figure>
               ))}
+          </Section>
+
+          <Section
+            title="Upload folder (for approval)"
+            description="Static drawing for the upload animation; nothing moves yet. Inline SVG built only from tokens: body primary-tint, outline border-strong (2px), file surface with navy details, progress navy, success and error badges in their tokens. All text is real HTML."
+          >
+            {(
+              [
+                { state: 'idle', progress: 0, text: 'Drop your file here or choose one', tone: 'text-text text-body' },
+                { state: 'uploading', progress: 0.6, text: 'Uploading… 60%', tone: 'text-text-muted text-small tabular-nums' },
+                { state: 'success', progress: 1, text: 'W-2 added', tone: 'text-success text-small' },
+                { state: 'error', progress: 0, text: 'That file didn’t upload. Try again.', tone: 'text-error text-small' },
+              ] as { state: UploadState; progress: number; text: string; tone: string }[]
+            ).map((v) => (
+              <figure key={v.state} className="col-span-2 flex flex-col items-center gap-3 tablet:col-span-2 desktop:col-span-3">
+                <div className="flex h-32 w-full items-center justify-center rounded-md border border-border-decorative bg-background">
+                  <UploadFolder state={v.state} progress={v.progress} />
+                </div>
+                <figcaption className="flex flex-col items-center gap-1 text-center">
+                  <span className={v.tone}>{v.text}</span>
+                  <Label>{v.state}</Label>
+                </figcaption>
+              </figure>
+            ))}
           </Section>
 
           <Section title="Radii" description="Three corner sizes. Bigger surfaces get rounder corners.">

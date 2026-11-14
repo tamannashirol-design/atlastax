@@ -118,6 +118,10 @@
   --tab-bar-h: 56px; /* phone only; 0 at 768px+ */
   --stepper-h: 56px; /* compact stepper row, below 1024px */
   --answer-h: 88px; /* fixed answer area: fits 3 tiles or the state dropdown */
+
+  /* Stroke widths for inline SVG (match Tailwind's border / border-2) */
+  --stroke-1: 1px;
+  --stroke-2: 2px;
 }
 @media (width >= 768px) {
   :root {

@@ -124,6 +124,19 @@ Rules:
   fails if text is under 4.5:1 or UI components under 3:1. It runs before
   every build. Register new pairs in `src/tokens/pairs.ts`.
 
+## Upload animation (rules)
+- Any reference is for timing, sequence and behavior only; rebuild all visuals
+  from this design system (no copied colors, fonts, shapes or icon style).
+- Text is real HTML in our type tokens (Inter UI, Fraunces headlines only;
+  34/22/17/13). No text inside images or SVG.
+- Folder, drop zone, tray and file icons are inline SVG colored only with
+  tokens: body primary-tint, outline border-strong, details navy, progress
+  navy, success token, error token. No hex values anywhere.
+- Radii, stroke widths (`--stroke-1/2`) and shadows from tokens; 4pt grid.
+- Cobalt stays reserved for the primary action button.
+- Component: `UploadFolder` (static states on /styleguide, approve before
+  animating). Register every new pair in `src/tokens/pairs.ts`.
+
 ## Motion
 - Relaxing, not busy: soft springs, 200 to 400ms, one easing family
   (springs).
