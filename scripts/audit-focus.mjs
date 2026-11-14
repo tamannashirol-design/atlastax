@@ -286,6 +286,35 @@ if (!only || 'landing wide'.includes(only)) {
   await page.close()
 }
 
+// The Documents page: defer, undo and the upload sheet, by keyboard
+if (!only || 'documents'.includes(only)) {
+  const where = 'documents page'
+  const page = await browser.newPage({ viewport: { width: 390, height: 844 } })
+  await page.goto(BASE + '/documents', { waitUntil: 'networkidle' })
+  await page.evaluate(() =>
+    sessionStorage.setItem('atlastax:returns', JSON.stringify({ year: 2026, years: { 2026: { income: ['opt-cpt', 'freelance'], details: { 'freelance-form': 'no' } } } })),
+  )
+  await page.reload({ waitUntil: 'networkidle' })
+  await page.evaluate(watchBody)
+  console.log(where)
+  await tabTo(page, /^I’ll add it later$/)
+  await page.keyboard.press('Enter')
+  await page.waitForTimeout(300)
+  await check(page, where, 'defer W-2 → its row', { focus: /^W-2/, live: /W-2: you’ll add it later/ })
+  await tabTo(page, /^Undo for W-2$/)
+  await page.keyboard.press('Enter')
+  await page.waitForTimeout(300)
+  await check(page, where, 'Undo → its row', { focus: /^W-2/, live: /W-2: not added yet/ })
+  await tabTo(page, /^Upload W-2$/)
+  await page.keyboard.press('Enter')
+  await settle(page)
+  await check(page, where, 'upload sheet opened', { focus: /Close/ })
+  await page.keyboard.press('Escape')
+  await settle(page)
+  await check(page, where, 'sheet closed → its row', { focus: /^W-2/ })
+  await page.close()
+}
+
 await browser.close()
 console.log(`\n${checks} checks, ${failures.length} failed`)
 if (failures.length) {

@@ -9,7 +9,7 @@ import { DebugStack, useUrlFlag } from '../lib/debug'
 import { navigate } from '../lib/router'
 import { setAnswers, setDetail, useAnswers, useFilingYear } from './answers'
 import { ResidentSheet } from './ResidentSheet'
-import { AFTER_FLOW, flow } from './screens'
+import { AFTER_FLOW, REVIEW_PATH, flow } from './screens'
 
 // One page for the whole question flow. Because it stays mounted while the
 // address changes, the shell and stepper stay put and animate between screens.
@@ -23,6 +23,8 @@ export default function FlowPage({ path }: { path: string }) {
   const after = flow.map((_, i) => i).find((i) => i > index && applies(i))
   const back = before !== undefined ? flow[before].path : '/'
   const next = after !== undefined ? flow[after].path : AFTER_FLOW
+  // After the last question, the Documents page opens "from the flow" (it then shows Continue)
+  const goNext = () => navigate(next, next === AFTER_FLOW ? { fromFlow: true } : null)
   const [sheet, setSheet] = useState(false)
   const [residentSheet, setResidentSheet] = useState(false)
   const [priorFiles, setPriorFiles] = useState<string[]>(() => (typeof answers.priorReturn === 'object' ? [answers.priorReturn.fileName] : []))
@@ -56,12 +58,12 @@ export default function FlowPage({ path }: { path: string }) {
       ? setSheet(true)
       : screen.id === 'years' && answers.years === '5plus'
         ? setResidentSheet(true)
-        : navigate(next)
+        : goNext()
 
   const finishSheet = (priorReturn: 'skipped' | { fileName: string }) => {
     setAnswers({ priorReturn })
     setSheet(false)
-    navigate(next)
+    goNext()
   }
 
   return (
@@ -76,14 +78,18 @@ export default function FlowPage({ path }: { path: string }) {
         help={
           // The skip link hides once the question is answered (it would discard the upload)
           screen.skip && !screen.isAnswered(answers)
-            ? { label: screen.skip.label, icon: false, onClick: () => (setDetail(screen.id, screen.skip!.value), navigate(next)) }
+            ? { label: screen.skip.label, icon: false, onClick: () => (setDetail(screen.id, screen.skip!.value), goNext()) }
             : screen.helpLabel
               ? { label: screen.helpLabel }
               : undefined
         }
         canContinue={screen.isAnswered(answers)}
         onContinue={onContinue}
-        onNavigate={(section) => navigate(flow.find((s) => s.position.section === section)!.path)}
+        onNavigate={(section) => {
+          const screenInSection = flow.find((s) => s.position.section === section)
+          if (screenInSection) navigate(screenInSection.path)
+          else navigate(section === 3 ? AFTER_FLOW : REVIEW_PATH, section === 3 ? { fromFlow: true } : null)
+        }}
         answers={screen.answers(answers, questionId)}
         answerArea={screen.answerArea}
         wide={screen.wide}

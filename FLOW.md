@@ -150,17 +150,47 @@ or /motion → Intro, with a 390 / 820 / 1032 / 1280 width toggle and
   only when a form is expected), the income cards' form codes, and next the
   Documents page, the stepper and Home. `npm run check:documents` prints the
   table and runs 12 cases.
-- **Open question:** contract work asks "Did you get a 1099-NEC?", but its
-  flag is false, so "No" still expects a 1099-NEC: the flow now shows the
-  upload question and then the amount question. Either set the flag to true
-  (like freelance) or drop that question for contract work.
+- **TODO confirm with CPA:**
+  - Contract work should match freelance? Both are 1099-NEC, but only
+    freelance is reportableWithoutForm. Kept as is for now: contract work's
+    "No" still expects a 1099-NEC (the flow shows the upload question, then
+    the amount question).
+  - "Or" documents (investments: 1042-S or 1099-DIV; trading: 1099-B or
+    1042-S) count as ONE document: any uploaded file marks it added,
+    whichever form it is.
+  - What to collect for self-reported items.
+
+## Documents page (step 2 of 3: built, `src/documents/DocumentsPage.tsx`)
+
+- ONE page: the Documents tab (/documents) and the flow's Documents step
+  (after the last income question) open the same page.
+  - From the flow: back arrow, the stepper (compact; rail at 1024+) and
+    **Continue** (to Review, enabled once nothing is outstanding). "From the
+    flow" is kept in history state, so a reload keeps it.
+  - From the tab: title "Documents", tab bar, no stepper, no Continue.
+- Summary: "2 of 3 documents added" + thin navy bar (documents only), and
+  "1 income item needs details" on its own line. None: "No documents needed
+  yet" with "Why no documents yet?" (explains it depends on the income you
+  tell us about, links to the income question).
+- Your documents: form + who sends it, status as text and an icon (Added ·
+  n files / You'll add it later / You don't have this / Not added yet).
+  Upload opens a sheet with the real upload (same answer as the flow's
+  upload question). Not added: "I'll add it later" and "I don't have this"
+  (both on every document here; the flow's upload questions offer one
+  each). Deferred: Undo.
+- Income without a form: "You told us you had this income. We'll ask for
+  the details here." Status "Details needed"; "I'll add it later" / Undo.
+  What to collect: TODO confirm with CPA (nothing collected yet).
+- Each item has its own address: /documents#item-<id> scrolls to it and
+  focuses it (Home's links in step 3 use this).
+- Stepper: Documents shows done only when requiredItems() says nothing is
+  outstanding. "Continue where you left off" goes to Documents (from the
+  flow) once the questions are done, until then.
+- W-2 upload question is neutral: "Upload your W-2", "From your employer.
+  One per employer" (no longer names OPT or CPT).
 
 ## Next steps (agreed order)
 
-2. **One Documents page** (the Documents tab). The flow's Documents step
-   opens the same page, with Continue only when arriving from the flow. The
-   stepper marks Documents done when every required document is added or
-   deferred. Each document has its own link address.
 3. **Logged-in Home**, to this brief (pasted by the designer):
    - Focus only on the user's tax return. No deadlines, news, refund
      estimates or promises about outcomes.
@@ -468,7 +498,7 @@ and contract expenses, Donation, Child care.
 | /income/bank-upload | …and Yes | Upload your bank interest form | Upload · "I'll add it later" |
 | /income/bank-amount | …and No | How much bank interest did you earn in {year}? | Amount |
 | /income/opt-type | OPT or CPT | Was this work OPT, CPT, or both? | OPT / CPT / Both |
-| /income/opt-w2 | OPT or CPT | Upload your W-2 from your OPT job / CPT job / Upload your W-2s from your OPT and CPT jobs (follows the answer to opt-type) | Upload · "I'll add it later" |
+| /income/opt-w2 | OPT or CPT | Upload your W-2 (helper: "From your employer. One per employer"; neutral, doesn't name OPT or CPT) | Upload · "I'll add it later" |
 | /income/campus-w2 | On-campus job | Upload your W-2 from your on-campus job | Upload · "I'll add it later" |
 | /income/scholarship-withheld | Scholarship | Did your university withhold tax from your scholarship? | Yes / No |
 | /income/scholarship-1042s | Scholarship | Upload your 1042-S for your scholarship | Upload · "I didn't get one" |

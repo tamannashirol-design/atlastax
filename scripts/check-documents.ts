@@ -109,5 +109,41 @@ check('12. Contract work, "No" (reportableWithoutForm = false)', { income: ['con
   done: false,
 })
 
+console.log('\n"Or" documents (one item, either form counts)')
+check('13. Investments, 1099-DIV uploaded', { income: ['investments'], details: { 'investments-upload': ['1099-DIV Example Brokerage.pdf'] } }, {
+  items: ['investments:document:added'],
+  documents: '1 of 1 document added',
+  done: true,
+})
+check('14. Trading, neither form uploaded', { income: ['trading'] }, {
+  items: ['trading:document:missing'],
+  documents: '0 of 1 document added',
+  done: false,
+})
+
+// ---- finishing without a form: every type, both paths (rules unchanged) ----
+console.log('\nFinishing without a form (each type on its own)\n')
+const pathHead = ['Item', '"I don\'t have this"', '"I\'ll add it later"']
+const pathRows: string[][] = []
+for (const r of DOCUMENT_RULES) {
+  const base: Answers = { income: [r.income], details: r.formQuestion ? { [r.formQuestion]: 'yes' } : {} }
+  const say = (v: string) => {
+    const s = summarizeItems(requiredItems({ ...base, details: { ...base.details, [r.uploadScreen]: v } }))
+    return `${documentsLine(s)} · done ${s.done}`
+  }
+  pathRows.push([`${r.form} (${r.incomeLabel})`, say('none'), say('later')])
+}
+for (const r of DOCUMENT_RULES.filter((x) => x.reportableWithoutForm)) {
+  const base: Answers = { income: [r.income], details: { [r.formQuestion!]: 'no' } }
+  const s0 = summarizeItems(requiredItems(base))
+  const s1 = summarizeItems(requiredItems({ ...base, details: { ...base.details, [`self-report:${r.id}`]: 'later' } }))
+  pathRows.push([`${r.incomeLabel}, no form (self-reported)`, `n/a (they told us about it) · now: ${incomeItemsLine(s0)} · done ${s0.done}`, `${incomeItemsLine(s1) ?? 'no items need details'} · done ${s1.done}`])
+}
+const pw = pathHead.map((h, i) => Math.max(h.length, ...pathRows.map((r) => r[i].length)))
+const pline = (c: string[]) => '| ' + c.map((x, i) => x.padEnd(pw[i])).join(' | ') + ' |'
+console.log(pline(pathHead))
+console.log('|' + pw.map((w) => '-'.repeat(w + 2)).join('|') + '|')
+pathRows.forEach((r) => console.log(pline(r)))
+
 console.log(failed ? `\n${failed} failed` : '\nAll checks pass.')
 process.exit(failed ? 1 : 0)

@@ -6,7 +6,7 @@ import { FlowStepper } from '../components/FlowStepper'
 import { PrimaryButton } from '../components/PrimaryButton'
 import { PREVIOUS_TAX_YEARS, PRIVACY_LINE, TAX_YEAR } from '../config'
 import { hasProgress, setFilingYear, useAllReturns } from '../flow/answers'
-import { flow, resumeScreen } from '../flow/screens'
+import { flow, resumeTarget } from '../flow/screens'
 import { Intro, type IntroExit } from '../intro/Intro'
 import { navigate } from '../lib/router'
 
@@ -35,14 +35,15 @@ export default function HomePage() {
   const returns = useAllReturns()
   const current = returns[TAX_YEAR]
   const inProgress = hasProgress(current)
-  const resume = resumeScreen(current ?? {})
+  const resume = resumeTarget(current ?? {})
   const [intro, setIntro] = useState(false)
   const replay = useRef<HTMLButtonElement>(null)
   const afterIntro = useRef<() => void>(() => {})
 
   const open = (year: number) => {
     setFilingYear(year)
-    navigate(resumeScreen(returns[year] ?? {}).path)
+    const target = resumeTarget(returns[year] ?? {})
+    navigate(target.path, target.state)
   }
 
   const closeIntro = (how: IntroExit) => {

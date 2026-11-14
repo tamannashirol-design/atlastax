@@ -67,6 +67,13 @@ export function setDetail(id: string, value: string | string[]) {
   setAnswers({ details: { ...answers.details, [id]: value } })
 }
 
+/** Remove one income follow-up answer (e.g. undo "I'll add it later"). */
+export function clearDetail(id: string) {
+  const rest = { ...answers.details }
+  delete rest[id]
+  setAnswers({ details: rest })
+}
+
 /** Switch to another tax year (its own answers, kept separately). */
 export function setFilingYear(year: number) {
   if (year !== store.year) commit({ ...store, year })

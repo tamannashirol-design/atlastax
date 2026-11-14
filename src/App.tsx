@@ -1,3 +1,4 @@
+import DocumentsPage from './documents/DocumentsPage'
 import FlowPage from './flow/FlowPage'
 import { isFlowPath } from './flow/screens'
 import HomePage from './home/HomePage'
@@ -17,6 +18,8 @@ export default function App() {
   if (path === '/styleguide') return <Styleguide />
   if (path === '/motion') return <MotionPage />
   if (isFlowPath(path)) return <FlowPage path={path} />
+  // One Documents page for the tab and the flow (the flow opens it with { fromFlow: true })
+  if (path === '/documents') return <DocumentsPage />
   // Logged out: the intro is the entry page. Logged in: Home (fake auth, see lib/auth)
   if (path === '/') return loggedIn ? <HomePage /> : <LandingPage />
   if (isPlaceholderPath(path)) return <PlaceholderPage path={path} />

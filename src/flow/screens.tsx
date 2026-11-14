@@ -10,7 +10,7 @@ import { UploadAnswer } from '../components/UploadAnswer'
 import type { IncomeId } from '../data/income'
 import { countries, usStates } from '../data/places'
 import { setAnswers, setDetail, type Answers } from './answers'
-import { ruleForUploadScreen, uploadScreenApplies, type SkipValue } from './requiredDocuments'
+import { documentsDone, ruleForUploadScreen, uploadScreenApplies, type SkipValue } from './requiredDocuments'
 import type { FlowPosition } from './sections'
 
 export type FlowScreen = {
@@ -109,15 +109,6 @@ function amount(id: string, question: FlowScreen['question'], helper: string, wh
   }
 }
 
-// Names the work picked on the previous screen (OPT, CPT, or both)
-const optW2Question = (a: Answers) => {
-  const kind = detail(a, 'opt-type')
-  if (kind === 'opt') return 'Upload your W-2 from your OPT job'
-  if (kind === 'cpt') return 'Upload your W-2 from your CPT job'
-  if (kind === 'both') return 'Upload your W-2s from your OPT and CPT jobs'
-  return 'Upload your W-2 from your OPT or CPT job' // not answered yet (opened directly)
-}
-
 const yesNo: TileOption<string>[] = [
   { value: 'yes', code: 'Yes' },
   { value: 'no', code: 'No' },
@@ -150,7 +141,8 @@ function incomeFollowUps(): FlowScreen[] {
       has('opt-cpt'),
       { helper: 'So we can label your job correctly' },
     ),
-    upload('opt-w2', 'W-2', optW2Question, 'From your employer. One per employer', LATER),
+    // Neutral copy: the W-2 comes from the employer, whatever the work authorization
+    upload('opt-w2', 'W-2', 'Upload your W-2', 'From your employer. One per employer', LATER),
     // On-campus job
     upload('campus-w2', 'W-2', 'Upload your W-2 from your on-campus job', 'From your university’s payroll office. One per job', LATER),
     // Scholarship (the "costs other than tuition" question waits for tax review)
@@ -320,20 +312,34 @@ export const flow: FlowScreen[] = [
   ...incomeFollowUps(),
 ]
 
-/** Where Continue goes after the last question (Documents isn't built yet). */
+/** Where Continue goes after the last question: the Documents page, opened "from the flow". */
 export const AFTER_FLOW = '/documents'
+/** Documents and Review are sections 3 and 4 (pages, not question screens). */
+export const DOCUMENTS_POSITION = { section: 3, step: 0 }
+export const REVIEW_PATH = '/review'
 
 export const isFlowPath = (path: string) => flow.some((s) => s.path === path)
 
-/**
- * Where "Continue where you left off" goes: the first screen that applies to
- * these answers and isn't done yet. Skipped uploads ("I'll add it later")
- * count as done. "5 years or more" stays on its screen: we can't file that
- * return (see ResidentSheet). Everything done → the last screen that applies.
- */
+/** A question counts as done once answered, or skipped with its skip link. "5 years or more" never does (ResidentSheet). */
+function screenDone(s: FlowScreen, a: Answers): boolean {
+  if (s.id === 'years') return a.years === 'under5'
+  return s.isAnswered(a) || (!!s.skip && detail(a, s.id) === s.skip.value)
+}
+
+/** The first question that applies and isn't done; everything done → the last one that applies. */
 export function resumeScreen(a: Answers): FlowScreen {
   const applies = flow.filter((s) => !s.when || s.when(a))
-  const skipped = (s: FlowScreen) => !!s.skip && detail(a, s.id) === s.skip.value
-  const done = (s: FlowScreen) => (s.id === 'years' ? a.years === 'under5' : s.isAnswered(a) || skipped(s))
-  return applies.find((s) => !done(s)) ?? applies[applies.length - 1]
+  return applies.find((s) => !screenDone(s, a)) ?? applies[applies.length - 1]
+}
+
+/**
+ * Where "Continue where you left off" goes, and the stepper position there:
+ * the first unfinished question; else the Documents page (from the flow)
+ * until documentsDone(); else Review.
+ */
+export function resumeTarget(a: Answers): { path: string; position: FlowPosition; state: Record<string, unknown> | null } {
+  const unfinished = flow.filter((s) => !s.when || s.when(a)).find((s) => !screenDone(s, a))
+  if (unfinished) return { path: unfinished.path, position: unfinished.position, state: null }
+  if (!documentsDone(a)) return { path: AFTER_FLOW, position: DOCUMENTS_POSITION, state: { fromFlow: true } }
+  return { path: REVIEW_PATH, position: { section: 4, step: 0 }, state: null }
 }

@@ -144,6 +144,11 @@ Rules:
   deferred. Counts via `summarizeItems`, words via `documentsLine` /
   `incomeItemsLine`. Never write a tax rule elsewhere; components never
   decide reportability. `npm run check:documents` tests the function.
+- Documents page (`src/documents/`): ONE page for the tab and the flow.
+  The flow opens it with history state { fromFlow: true } (navigate(path,
+  state)); only then it shows the stepper and Continue. Items link as
+  /documents#item-<id>. The stepper's Documents section uses
+  `completed={{ 3: documentsDone(answers) }}`.
 - Fake auth for testing only (`src/lib/auth.ts`): /motion toggle or
   ?auth=in / ?auth=out. No real authentication yet.
 - Home (`src/home/`): one primary (Start / Continue where you left off),

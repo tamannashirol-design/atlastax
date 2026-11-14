@@ -20,19 +20,33 @@ type Props = {
   position: FlowPosition
   /** Called with a section index when a completed section is chosen. */
   onNavigate?: (section: number) => void
+  /**
+   * Sections whose "done" doesn't follow position alone, e.g. Documents:
+   * done only when requiredItems() says nothing is outstanding. Applies to
+   * the current section and those before it (later sections stay upcoming).
+   */
+  completed?: Partial<Record<number, boolean>>
 }
 
-export function FlowStepper({ presentation, position, onNavigate }: Props) {
+type State = 'done' | 'current' | 'upcoming'
+
+/** One rule for every presentation: position, unless `completed` says otherwise. */
+function sectionState(i: number, position: FlowPosition, completed?: Props['completed']): State {
+  const override = i <= position.section ? completed?.[i] : undefined
+  if (override === true) return 'done'
+  if (override === false) return i === position.section ? 'current' : 'upcoming'
+  return i < position.section ? 'done' : i === position.section ? 'current' : 'upcoming'
+}
+
+export function FlowStepper({ presentation, position, onNavigate, completed }: Props) {
   return presentation === 'rail' ? (
-    <StepList position={position} onNavigate={onNavigate} group="rail" />
+    <StepList position={position} onNavigate={onNavigate} completed={completed} group="rail" />
   ) : (
-    <CompactStepper position={position} onNavigate={onNavigate} />
+    <CompactStepper position={position} onNavigate={onNavigate} completed={completed} />
   )
 }
 
 // ---------- shared vertical list ----------
-
-type State = 'done' | 'current' | 'upcoming'
 
 const srState: Record<State, string> = {
   done: ', completed',
@@ -40,7 +54,7 @@ const srState: Record<State, string> = {
   upcoming: ', not started',
 }
 
-function StepList({ position, onNavigate, group }: Omit<Props, 'presentation'> & { group: string }) {
+function StepList({ position, onNavigate, completed, group }: Omit<Props, 'presentation'> & { group: string }) {
   // Only animate check marks that appear after the first render, not on page load.
   const mounted = useRef(false)
   useEffect(() => {
@@ -52,7 +66,7 @@ function StepList({ position, onNavigate, group }: Omit<Props, 'presentation'> &
       <nav aria-label="Filing progress">
         <ol className="flex flex-col">
           {sections.map((s, i) => {
-            const state: State = i < position.section ? 'done' : i === position.section ? 'current' : 'upcoming'
+            const state = sectionState(i, position, completed)
             const count = state === 'current' ? stepCount(position) : null
             const content = (
               <>
@@ -84,7 +98,7 @@ function StepList({ position, onNavigate, group }: Omit<Props, 'presentation'> &
                 ) : (
                   <div className="flex min-h-11 items-center gap-3">{content}</div>
                 )}
-                {i < sections.length - 1 && <Connector filled={i < position.section} />}
+                {i < sections.length - 1 && <Connector filled={state === 'done' && i < position.section} />}
               </li>
             )
           })}
@@ -146,7 +160,7 @@ function Connector({ filled }: { filled: boolean }) {
 
 // ---------- compact presentation + sheet ----------
 
-function CompactStepper({ position, onNavigate }: Omit<Props, 'presentation'>) {
+function CompactStepper({ position, onNavigate, completed }: Omit<Props, 'presentation'>) {
   const [open, setOpen] = useState(false)
   const trigger = useRef<HTMLButtonElement>(null)
   const section = sections[position.section]
@@ -175,24 +189,25 @@ function CompactStepper({ position, onNavigate }: Omit<Props, 'presentation'>) {
             <span className="flex-1" />
             <CaretDownIcon size={24} weight="regular" aria-hidden className="shrink-0" />
           </span>
-          <Segments position={position} />
+          <Segments position={position} completed={completed} />
         </button>
       </nav>
       {/* When the sheet finishes closing, focus returns to the button that opened it */}
       <AnimatePresence onExitComplete={() => trigger.current?.focus()}>
-        {open && <StepSheet position={position} onNavigate={onNavigate} onClose={() => setOpen(false)} />}
+        {open && <StepSheet position={position} onNavigate={onNavigate} completed={completed} onClose={() => setOpen(false)} />}
       </AnimatePresence>
     </>
   )
 }
 
-function Segments({ position }: { position: FlowPosition }) {
+function Segments({ position, completed }: { position: FlowPosition; completed?: Props['completed'] }) {
   const reduce = useReducedMotion()
   return (
     <span aria-hidden className="flex gap-1">
       {sections.map((s, i) => {
         // Done = full. Current = halfway through the current step. Upcoming = empty.
-        const fill = i < position.section ? 1 : i === position.section ? (position.step + 0.5) / s.steps.length : 0
+        const state = sectionState(i, position, completed)
+        const fill = state === 'done' ? 1 : state === 'current' ? (position.step + 0.5) / s.steps.length : 0
         return (
           <span key={s.id} className="flex h-1 flex-1 overflow-hidden rounded-full bg-border-decorative">
             <motion.span
@@ -208,11 +223,12 @@ function Segments({ position }: { position: FlowPosition }) {
   )
 }
 
-function StepSheet({ position, onNavigate, onClose }: Omit<Props, 'presentation'> & { onClose: () => void }) {
+function StepSheet({ position, onNavigate, completed, onClose }: Omit<Props, 'presentation'> & { onClose: () => void }) {
   return (
     <BottomSheet title="Your progress" onClose={onClose}>
       <StepList
         position={position}
+        completed={completed}
         group="sheet"
         onNavigate={
           onNavigate

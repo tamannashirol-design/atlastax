@@ -70,6 +70,12 @@ export function summarizeItems(items: RequiredItem[]): ItemsSummary {
   }
 }
 
+/** The stepper's Documents section, Home and the flow use this one answer. */
+export const documentsDone = (a: Answers) => summarizeItems(requiredItems(a)).done
+
+/** Link to one item on the Documents page. */
+export const documentHref = (itemId: string) => `/documents#item-${itemId}`
+
 /** "2 of 3 documents added" (documents only), or "No documents needed yet". Same words everywhere. */
 export function documentsLine(s: ItemsSummary): string {
   const { total, added } = s.documents

@@ -1,7 +1,12 @@
 // REQUIRED DOCUMENTS: which income needs which tax document.
 //
 // TODO confirm with CPA: every value in this file is a PLACEHOLDER until a
-// tax professional confirms it (forms, conditions, wording).
+// tax professional confirms it (forms, conditions, wording). Open questions:
+//   - Contract work should match freelance? Both are 1099-NEC, but only
+//     freelance is reportableWithoutForm (kept as is for now).
+//   - "Or" documents (investments, trading) are one item: any uploaded file
+//     counts, whichever of the forms it is.
+//   - What to collect for self-reported items (SELF_REPORTED_DETAILS).
 //
 // This is the only place these rules live. Everything else reads them through
 // requiredDocuments() (src/flow/requiredDocuments.ts): the flow's upload
@@ -51,7 +56,7 @@ export const DOCUMENT_RULES: DocumentRule[] = [
     formQuestion: 'bank-form',
     reportableWithoutForm: true,
   },
-  { id: 'opt-cpt', income: 'opt-cpt', form: 'W-2', label: 'W-2 for your OPT or CPT job', incomeLabel: 'OPT or CPT job', source: 'From your employer', uploadScreen: 'opt-w2', reportableWithoutForm: false, showOnIncomeCard: true },
+  { id: 'opt-cpt', income: 'opt-cpt', form: 'W-2', label: 'W-2 from your employer', incomeLabel: 'OPT or CPT job', source: 'From your employer', uploadScreen: 'opt-w2', reportableWithoutForm: false, showOnIncomeCard: true },
   { id: 'on-campus-job', income: 'on-campus-job', form: 'W-2', label: 'W-2 for your on-campus job', incomeLabel: 'On-campus job', source: 'From your university’s payroll office', uploadScreen: 'campus-w2', reportableWithoutForm: false, showOnIncomeCard: true },
   { id: 'scholarship', income: 'scholarship', form: '1042-S', label: '1042-S for your scholarship', incomeLabel: 'Scholarship or fellowship', source: 'From your university', uploadScreen: 'scholarship-1042s', reportableWithoutForm: false, showOnIncomeCard: true },
   {
