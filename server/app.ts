@@ -11,6 +11,14 @@
 //   POST   /api/consent        { version } → 204, records the date and notice version
 //   GET    /api/health         → { ok: true }
 //
+//   Reading (EXTRACTION-PLAN.md; statuses only, never values):
+//   GET    /api/extraction?year=2026          → snapshot { capabilities, documents }
+//   GET    /api/extraction/events?year=2026   → live updates (server-sent events), snapshot first
+//   POST   /api/extraction/:itemId/retry?year=2026 → 204
+//   POST   /api/extraction/scenario { scenario }  → 204 (dev only: what the mock does)
+//
+// Upload headers x-item-id + x-tax-year start reading that document (D4).
+//
 // Dev test switches on POST /api/files (only when options.dev):
 //   ?fail=1 fails halfway · ?kbps=300 another speed · ?dry=1 measure only, nothing stored
 //
@@ -19,6 +27,8 @@
 import { randomBytes } from 'node:crypto'
 import type { IncomingMessage, ServerResponse } from 'node:http'
 import { DEFAULT_OPTIONS, DEV_FINISH_MS, DEV_UPLOAD_KBPS, type ServerOptions } from './config.ts'
+import { readingJobs, type ExtractionUpdate } from './extraction/jobs.ts'
+import { isScenario, mockProvider, type Scenario } from './extraction/mockProvider.ts'
 import { sniff, storage } from './storage.ts'
 
 type Handler = (req: IncomingMessage, res: ServerResponse, next?: () => void) => void
@@ -26,10 +36,26 @@ type Handler = (req: IncomingMessage, res: ServerResponse, next?: () => void) =>
 const SESSION_COOKIE = 'atlastax_session'
 const SESSION_ID = /^[0-9a-f]{64}$/
 const ITEM_ID = /^[a-z0-9-]{1,40}$/
+/** A tax year we'd accept (header or query) */
+const taxYear = (v: unknown) => {
+  const n = Number(v)
+  return Number.isInteger(n) && n >= 2000 && n <= 2100 ? n : undefined
+}
 
 export function createApp(overrides: Partial<ServerOptions> = {}): Handler {
   const options = { ...DEFAULT_OPTIONS, ...overrides }
   const store = storage(options.dataDir)
+  // The mock's scenario, per session (dev). One-shot scenarios fail the next uploaded document once.
+  const scenarios = new Map<string, { scenario: Scenario; armed: boolean }>()
+  const jobs = readingJobs({
+    providerFor: (sessionId) =>
+      mockProvider(() => {
+        const s = scenarios.get(sessionId) ?? { scenario: 'normal' as Scenario, armed: false }
+        return { scenario: s.scenario, takeOneShot: () => (s.armed ? ((s.armed = false), true) : false) }
+      }),
+    filesDir: store.filesDir,
+    listFiles: (id) => store.listFiles(id),
+  })
 
   return (req, res, next) => {
     const url = new URL(req.url ?? '/', 'http://localhost')
@@ -68,11 +94,14 @@ export function createApp(overrides: Partial<ServerOptions> = {}): Handler {
 
     if (path === '/api/files' && req.method === 'POST') return upload(req, res, url, sessionId)
 
+    if (path.startsWith('/api/extraction')) return extraction(req, res, url, sessionId)
+
     const del = path.match(/^\/api\/files\/([^/]+)$/)
     if (del && req.method === 'DELETE') {
       const meta = await store.meta(del[1])
       if (!meta || meta.sessionId !== sessionId) return send(res, 404, { error: 'not-found' })
       await store.remove(meta.fileId)
+      jobs.filesChanged(sessionId, meta.year, meta.itemId)
       return send(res, 204)
     }
 
@@ -99,6 +128,7 @@ export function createApp(overrides: Partial<ServerOptions> = {}): Handler {
     const name = fileName(req.headers['x-file-name'])
     const item = String(req.headers['x-item-id'] ?? '')
     const itemId = ITEM_ID.test(item) ? item : undefined
+    const year = taxYear(req.headers['x-tax-year'])
 
     const file = dry ? null : await store.begin()
     let head = Buffer.alloc(0)
@@ -160,10 +190,44 @@ export function createApp(overrides: Partial<ServerOptions> = {}): Handler {
     let fileId = 'dry-run'
     if (file) {
       await new Promise<void>((resolve, reject) => file.stream.end((err?: Error | null) => (err ? reject(err) : resolve())))
-      fileId = (await file.keep({ sessionId, itemId, name, size: received, kind, createdAt: new Date().toISOString() })).fileId
+      fileId = (await file.keep({ sessionId, itemId, year, name, size: received, kind, createdAt: new Date().toISOString() })).fileId
+      jobs.filesChanged(sessionId, year, itemId)
     }
     if (dev) await new Promise((r) => setTimeout(r, DEV_FINISH_MS))
     return send(res, 201, { fileId, name, size: received })
+  }
+
+  async function extraction(req: IncomingMessage, res: ServerResponse, url: URL, sessionId: string) {
+    const path = url.pathname
+    if (path === '/api/extraction/scenario' && req.method === 'POST') {
+      if (!options.dev) return send(res, 404, { error: 'not-found' })
+      const body = await readJson(req)
+      if (!isScenario(body?.scenario)) return send(res, 400, { error: 'scenario' })
+      scenarios.set(sessionId, { scenario: body.scenario, armed: true })
+      return send(res, 204)
+    }
+    const year = taxYear(url.searchParams.get('year'))
+    if (!year) return send(res, 400, { error: 'year' })
+
+    if (path === '/api/extraction' && req.method === 'GET') return send(res, 200, await jobs.snapshot(sessionId, year))
+
+    if (path === '/api/extraction/events' && req.method === 'GET') {
+      res.writeHead(200, { 'content-type': 'text/event-stream', 'cache-control': 'no-store', connection: 'keep-alive', 'x-accel-buffering': 'no' })
+      const write = (u: ExtractionUpdate) => res.write(`data: ${JSON.stringify(u)}\n\n`)
+      const stop = jobs.listen(sessionId, year, write)
+      write(await jobs.snapshot(sessionId, year))
+      const ping = setInterval(() => res.write(': ping\n\n'), 15_000)
+      req.on('close', () => {
+        clearInterval(ping)
+        stop()
+      })
+      return
+    }
+
+    const retry = path.match(/^\/api\/extraction\/([a-z0-9-]{1,40})\/retry$/)
+    if (retry && req.method === 'POST') return send(res, jobs.retry(sessionId, year, retry[1]) ? 204 : 404)
+
+    return send(res, 404, { error: 'not-found' })
   }
 }
 

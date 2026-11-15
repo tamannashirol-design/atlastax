@@ -269,6 +269,10 @@ The confirmation screen, in the **Review** section of the stepper.
 - Editing a field marks it `edited`. Changing a confirmed document later
   (or replacing its file) clears its confirmation.
 
+> **Updated:** what happens after the last confirmed document (the result screen,
+> a calculated federal estimate, forms, how to pay) is now planned in
+> **`AFTER-DOCUMENTS-PLAN.md`**. Read that first; this section stays as the base.
+
 ### After the last document
 - A summary screen: each document with "Confirmed" and an "Edit" link.
 - The **download is offered only** when every required document is confirmed,
@@ -316,7 +320,7 @@ going back to an already confirmed document.
 |---|---|---|---|
 | 1 ✓ | Masking helper, fixture check, field config (`npm run check:extraction`) | `/styleguide` → "Masked ID numbers" | Opus |
 | 2 ✓ | Server skeleton, `/api/files` replaces the dev endpoint, consent recorded (not yet required) · `npm run check:server` | Uploads still animate as before | Opus |
-| 3 | Mock provider, jobs and events, `answers.extraction` | A "Reading" pill on Documents cards; scenarios on /motion | Opus, then Sonnet for the pill |
+| 3 ✓ | Mock provider, jobs and live updates, file ids in `answers.fileIds`, Remove deletes on the server | "Reading" / "Couldn't read" on Documents cards; scenarios on /motion | Opus, then Sonnet for the pill |
 | 4 | Consent sheet (placeholder copy) | Appears before the first upload | Sonnet |
 | 5 | Reading page (section below) | `/reading?reading=slow` etc. | Opus for logic, Sonnet for motion |
 | 6 | Review screen | One screen per document, all states via `?review=` | Opus for logic, Sonnet for polish |
@@ -325,6 +329,20 @@ going back to an already confirmed document.
 
 Each step ends with `npm run contrast`, the new checks, and new color pairs in
 `src/tokens/pairs.ts`.
+
+**Built differently from this plan (step 3, for your review):**
+- Add/Replace stay **enabled** while a document is read (the Reading-page
+  section said disabled). Replacing simply restarts the reading; a disabled
+  button would only make people wait.
+- Cards also show **"Couldn't read"** (under the name, with the reason) and a
+  **"Try again"** text button when another try can help. This is a first
+  answer to Q-D; the Reading page and Review still decide the full flow.
+- Live updates are one small status object per document
+  (`queued · reading · checking · ready · failed`), not the separate
+  `stage / ready / failed / complete` events sketched in the Reading-page
+  section; the page derives the same moments from them.
+- The job is per document (person + tax year + item), so there is no single
+  `jobId`; the browser listens per tax year.
 
 ---
 

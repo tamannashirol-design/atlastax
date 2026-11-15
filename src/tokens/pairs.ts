@@ -44,6 +44,7 @@ export const pairs: Pair[] = [
   { fg: 'success', bg: 'primary-tint', kind: 'ui', use: 'Upload: check on the folder front panel (bottom tone)' },
   { fg: 'success', bg: 'sage-100', kind: 'ui', use: 'Upload: check on the folder front panel (darker than its top tone)' },
   { fg: 'error', bg: 'background', kind: 'ui', use: 'Upload zone: error border vs page' },
+  { fg: 'error', bg: 'surface', kind: 'ui', use: 'Documents card: “Couldn’t read” pill border and icon' },
   { fg: 'primary', bg: 'background', kind: 'ui', use: 'Primary button vs page' },
   { fg: 'primary', bg: 'surface', kind: 'text', use: 'Home: "Filing for an earlier year?" label on the hero card' },
   { fg: 'primary', bg: 'sage-100', kind: 'text', use: 'Home: "Filing for an earlier year?" label while pressed' },

@@ -267,6 +267,20 @@ Rules:
 - Never log file names, contents or values (route + error code only).
 - Dev switches: `?fail=1`, `?kbps=300`, `?dry=1` (measured, not stored;
   /motion uses it). `npm run check:server` tests the safety rules.
+- Reading (`server/extraction/`): providers behind one interface
+  (`provider.ts`); the mock (`mockProvider.ts`, scenarios set on /motion,
+  one per session) is the only one so far. `jobs.ts` reads a document as
+  soon as a file is uploaded with `x-item-id` + `x-tax-year`; adding,
+  replacing or removing a file re-reads it. Only documents in
+  `ITEM_FORMS` are read. The browser gets statuses only, never values
+  (live via `/api/extraction/events`; `useExtraction()` in
+  `src/extraction/client.ts`). Extracted fields stay on the server.
+- Every `UploadAnswer` that stores files passes `upload={{ key, itemId }}`:
+  file ids are kept in `answers.fileIds[key]` (same order as the names) so
+  Remove deletes the file on the server. No `upload` prop = measured only.
+- Documents cards: "Reading" shares the corner spot with "Added" (space
+  reserved); "Couldn't read" sits under the name with a reason, plus
+  "Try again" when another try can help (else Replace).
 
 ## Tech stack
 React + TypeScript + Tailwind CSS + Framer Motion, built with Vite.

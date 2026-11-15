@@ -102,6 +102,7 @@ function upload(id: string, docLabel: string, question: FlowScreen['question'], 
           docLabel={docLabel}
           uploaded={files}
           allowAnother
+          upload={{ key: id, itemId: ruleForUploadScreen(id).id }}
           onUploaded={(name) => setDetail(id, [...files, name])}
           onRemove={(i) => setDetail(id, files.filter((_, j) => j !== i))}
         />

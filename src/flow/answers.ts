@@ -17,6 +17,14 @@ export type Answers = {
   details?: Record<string, string | string[]>
   /** Status, arrival, years in the U.S. and days (src/residency). Travel history is sensitive: kept only here, in this tab. */
   residency?: ResidencyAnswers
+  /**
+   * The server's id for each uploaded file, keyed like the file names it
+   * belongs to (an upload screen id, or 'cbp-history'), in the same order as
+   * those names. Lets "Remove" delete the file from the server. Ids only:
+   * no file contents and no extracted values are ever kept in the browser.
+   * Managed only by UploadAnswer (rememberFileId / takeFileId).
+   */
+  fileIds?: Record<string, (string | null)[]>
 }
 
 export type ResidencyAnswers = {
@@ -96,6 +104,22 @@ export function clearDetail(id: string) {
   const rest = { ...answers.details }
   delete rest[id]
   setAnswers({ details: rest })
+}
+
+/** Remember the server id of the file at position `index` in the list called `key`. */
+export function rememberFileId(key: string, index: number, fileId: string) {
+  const ids = [...(answers.fileIds?.[key] ?? [])]
+  while (ids.length < index) ids.push(null) // files uploaded before ids were kept
+  ids[index] = fileId
+  setAnswers({ fileIds: { ...answers.fileIds, [key]: ids } })
+}
+
+/** Forget the id of the file at `index` (it's being removed) and return it, if known. */
+export function takeFileId(key: string, index: number): string | undefined {
+  const ids = [...(answers.fileIds?.[key] ?? [])]
+  const [id] = ids.splice(index, 1)
+  setAnswers({ fileIds: { ...answers.fileIds, [key]: ids } })
+  return id ?? undefined
 }
 
 /** Switch to another tax year (its own answers, kept separately). */

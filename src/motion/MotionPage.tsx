@@ -8,6 +8,8 @@ import { useUpload, type UploadState } from '../lib/upload'
 import { setLoggedIn, useLoggedIn } from '../lib/auth'
 import type { IntroMode } from '../intro/chrome'
 import { IntroContent } from '../intro/IntroContent'
+import { MOCK_SCENARIOS, setMockScenario } from '../extraction/client'
+import { Link } from '../lib/router'
 
 // /motion: play each state of the upload moment, scrub progress, and toggle
 // reduced motion. "Upload" and "Error" run REAL uploads to the dev endpoint
@@ -162,6 +164,8 @@ export default function MotionPage() {
               </div>
             </section>
 
+            <ReadingScenarios />
+
             <IntroPreview />
           </div>
         </main>
@@ -277,6 +281,44 @@ function SecondaryButtonInline({ onClick, children }: { onClick: () => void; chi
     >
       {children}
     </button>
+  )
+}
+
+/** Development only: what the mock reader does with the next documents (one setting per browser session). */
+function ReadingScenarios() {
+  const [chosen, setChosen] = useState<string>('normal')
+  const [said, setSaid] = useState('')
+  const choose = async (id: (typeof MOCK_SCENARIOS)[number]['id'], label: string) => {
+    if (await setMockScenario(id)) {
+      setChosen(id)
+      setSaid(`Mock reader: ${label}`)
+    } else setSaid('Couldn’t reach the dev server')
+  }
+  return (
+    <section aria-labelledby="reading-mock" className="flex flex-col gap-6 border-t border-border-decorative pt-12 mt-12">
+      <header className="flex max-w-column flex-col gap-2">
+        <h2 id="reading-mock" className="font-display text-title">
+          Reading (mock)
+        </h2>
+        <p className="text-body text-text-muted">
+          Choose what the fake reader does, then add or replace a document on the{' '}
+          <Link href="/documents" className="font-semibold text-text underline underline-offset-4">
+            Documents page
+          </Link>
+          . “Next upload” scenarios fail once; Try again then works. Statuses come from the server, never a timer in the page.
+        </p>
+      </header>
+      <div className="grid grid-cols-2 gap-3 tablet:grid-cols-3 desktop:grid-cols-5" role="group" aria-label="Mock reader scenario">
+        {MOCK_SCENARIOS.map((s) => (
+          <SecondaryButton key={s.id} aria-pressed={chosen === s.id} onClick={() => void choose(s.id, s.label)}>
+            {s.label}
+          </SecondaryButton>
+        ))}
+      </div>
+      <p className="text-small text-text-muted" aria-live="polite">
+        {said || `Mock reader: ${MOCK_SCENARIOS.find((s) => s.id === chosen)?.label}`}
+      </p>
+    </section>
   )
 }
 

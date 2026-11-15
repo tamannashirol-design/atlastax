@@ -215,6 +215,7 @@ export function TripsStep({ labelledBy, taxYear }: { labelledBy: string; taxYear
                 docLabel="travel history"
                 uploaded={files}
                 allowAnother
+                upload={{ key: 'cbp-history' }}
                 onUploaded={(name) => {
                   // TODO: real reading (OCR) comes later; the trips read are sample data for now
                   const { trips: read, cutOff } = tripsFromTravelHistory(extractTravelHistoryStub(r.arrivalYear ?? taxYear, taxYear), r.arrivalYear ?? taxYear)

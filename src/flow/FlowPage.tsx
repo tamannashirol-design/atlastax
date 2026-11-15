@@ -172,7 +172,7 @@ export default function FlowPage({ path }: { path: string }) {
             <p className="text-body text-text-muted">This is optional, but uploading it will save you time and reduce errors.</p>
             {/* Same upload control as every upload question (zone + file list) */}
             <div className="pt-6">
-              <UploadAnswer docLabel="previous return" uploaded={priorFiles} onUploaded={(name) => setPriorFiles([name])} onRemove={() => setPriorFiles([])} />
+              <UploadAnswer docLabel="previous return" uploaded={priorFiles} upload={{ key: PREVIOUS_RETURN.uploadScreen, itemId: PREVIOUS_RETURN.id }} onUploaded={(name) => setPriorFiles([name])} onRemove={() => setPriorFiles([])} />
             </div>
             <div className="flex flex-col gap-2 pt-8">
               <PrimaryButton disabled={!priorFiles.length} onClick={() => finishSheet({ fileName: priorFiles[0] })}>

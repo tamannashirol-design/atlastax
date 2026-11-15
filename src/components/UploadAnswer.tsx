@@ -1,7 +1,9 @@
 import { AnimatePresence, motion, useReducedMotionConfig } from 'framer-motion'
 import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { spring } from '../lib/motion'
-import { useUpload } from '../lib/upload'
+import { deleteFile } from '../extraction/client'
+import { rememberFileId, takeFileId, useFilingYear } from '../flow/answers'
+import { useUpload, type UploadMeta } from '../lib/upload'
 import { BottomSheet } from './BottomSheet'
 import { SecondaryButton } from './SecondaryButton'
 import { UploadZone } from './UploadZone'
@@ -15,6 +17,11 @@ import { UploadZone } from './UploadZone'
 // - allowAnother: offer "Add another file" after each upload.
 // - Remove: asks first (a sheet naming the exact file), then calls
 //   onRemove(index). Removing the last file returns the zone to its empty state.
+// - upload: where the files' server ids are kept (`key`, the same name as the
+//   caller's list of file names) and which Documents item they're for
+//   (`itemId`, which starts reading them on the server). Remove also deletes
+//   the file from the server. Without it (style guide demos) uploads are
+//   measured only and never stored.
 //
 // Focus is moved on purpose at every step, because the button that started
 // each step disappears (it must never fall back to the page body):
@@ -38,10 +45,20 @@ type Props = {
   allowAnother?: boolean
   /** A file dropped somewhere else (e.g. on a Documents card): upload it straight away */
   initialFile?: File
+  /** Keep the files on the server: `key` = where their ids are kept, `itemId` = the document to read */
+  upload?: { key: string; itemId?: string }
 }
 
-export function UploadAnswer({ docLabel, uploaded, onUploaded, onRemove, allowAnother, initialFile }: Props) {
+export function UploadAnswer({ docLabel, uploaded, onUploaded, onRemove, allowAnother, initialFile, upload }: Props) {
   const up = useUpload()
+  const year = useFilingYear()
+  const meta: UploadMeta = { itemId: upload?.itemId, year }
+  const query = upload ? '' : '?dry=1'
+  // Read in the effect below without re-running it on every render
+  const latest = useRef({ meta, query, key: upload?.key, count: uploaded.length })
+  useLayoutEffect(() => {
+    latest.current = { meta, query, key: upload?.key, count: uploaded.length }
+  })
   const reduce = useReducedMotionConfig() ?? false
   const reported = useRef<string | null>(null)
   const root = useRef<HTMLDivElement>(null)
@@ -61,7 +78,7 @@ export function UploadAnswer({ docLabel, uploaded, onUploaded, onRemove, allowAn
   // start() is stable and cancels any earlier attempt, so a dev-mode double run is harmless.
   const { start } = up
   useEffect(() => {
-    if (initialFile) start(initialFile)
+    if (initialFile) start(initialFile, latest.current.query, latest.current.meta)
   }, [initialFile, start])
 
   useEffect(() => {
@@ -69,6 +86,9 @@ export function UploadAnswer({ docLabel, uploaded, onUploaded, onRemove, allowAn
       reported.current = up.file.name + up.file.size
       focusNewRow.current = true
       setAnnounce(`${up.file.name} uploaded`)
+      // Its server id goes in the same position as its name (the caller appends the name)
+      const { key, count } = latest.current
+      if (key && up.file.fileId) rememberFileId(key, count, up.file.fileId)
       onUploaded(up.file.name)
     }
   }, [up.status, up.file, onUploaded])
@@ -102,6 +122,10 @@ export function UploadAnswer({ docLabel, uploaded, onUploaded, onRemove, allowAn
     // The zone shows the newest remaining file (or its empty state), not the one that was just uploaded
     up.reset()
     reported.current = null
+    if (upload) {
+      const id = takeFileId(upload.key, i)
+      if (id) void deleteFile(id)
+    }
     onRemove(i)
     setAnnounce(`${name} removed`)
     // Back to the zone's button: "Choose a file", or "Add another file" while other files remain
@@ -127,7 +151,7 @@ export function UploadAnswer({ docLabel, uploaded, onUploaded, onRemove, allowAn
           allowAnother={allowAnother}
           onFiles={(files) => {
             reported.current = null
-            up.start(files[0])
+            up.start(files[0], query, meta)
           }}
           onRetry={up.retry}
           managed

@@ -88,6 +88,74 @@ check('with consent required, an upload without consent is refused (403)', noCon
 const withConsent = await fetch(strictBase + '/api/files?kbps=100000', { method: 'POST', body: PDF(), headers: { cookie } })
 check('…and accepted once consent is recorded', withConsent.status === 201)
 
+console.log('\nREADING (mock provider)\n')
+type Snap = { capabilities: { stages: boolean }; documents: { itemId: string; status: string; failure?: string; files: number }[] }
+const reader = { cookie: '' }
+const snap = async (): Promise<Snap> => (await (await fetch(`${base}/api/extraction?year=2026`, { headers: reader })).json()) as Snap
+const statusOf = async (itemId: string) => (await snap()).documents.find((d) => d.itemId === itemId)
+async function until(itemId: string, want: string, ms = 4000) {
+  const end = Date.now() + ms
+  while (Date.now() < end) {
+    if ((await statusOf(itemId))?.status === want) return true
+    await new Promise((r) => setTimeout(r, 50))
+  }
+  return false
+}
+const upload = (itemId: string) => post('/api/files?kbps=100000', PDF(), { ...reader, 'x-item-id': itemId, 'x-tax-year': '2026' })
+const scenario = (name: string) => fetch(`${base}/api/extraction/scenario`, { method: 'POST', headers: reader, body: JSON.stringify({ scenario: name }) })
+
+reader.cookie = cookieOf(await fetch(`${base}/api/consent`))
+await scenario('fast')
+
+// Listen to the live updates for the whole section, to check what reaches the browser
+const events: string[] = []
+const live = new AbortController()
+const stream = fetch(`${base}/api/extraction/events?year=2026`, { headers: reader, signal: live.signal }).then(async (r) => {
+  const dec = new TextDecoder()
+  for await (const chunk of r.body!) events.push(dec.decode(chunk as Uint8Array))
+}).catch(() => {})
+
+const w2 = (await (await upload('opt-cpt')).json()) as { fileId: string }
+check('an upload with a document and year starts reading right away', ['queued', 'reading', 'checking'].includes((await statusOf('opt-cpt'))?.status ?? ''))
+check('…and reaches "ready"', await until('opt-cpt', 'ready'))
+check('files without a readable document aren’t read (previous return)', (await upload('previous-return')).status === 201 && !(await statusOf('previous-return')))
+
+await scenario('one-fails')
+await upload('passport')
+check('one-fails: the next upload fails', await until('passport', 'failed'))
+check('…with a reason', (await statusOf('passport'))?.failure === 'unreadable')
+const retried = await fetch(`${base}/api/extraction/passport/retry?year=2026`, { method: 'POST', headers: reader })
+check('Try again restarts reading (204)', retried.status === 204)
+check('…and this time it works', await until('passport', 'ready', 8000))
+
+await scenario('fast')
+await upload('opt-cpt')
+check('adding a second file re-reads the document with both files', (await statusOf('opt-cpt'))?.files === 2 && (await until('opt-cpt', 'ready')))
+await fetch(`${base}/api/files/${w2.fileId}`, { method: 'DELETE', headers: reader })
+check('removing one file re-reads with the file that’s left', (await statusOf('opt-cpt'))?.files === 1 && (await until('opt-cpt', 'ready')))
+
+const otherYear = (await (await fetch(`${base}/api/extraction?year=2025`, { headers: reader })).json()) as Snap
+check('another tax year sees none of these documents', otherYear.documents.length === 0)
+const stranger = (await (await fetch(`${base}/api/extraction?year=2026`)).json()) as Snap
+check('another session sees none of these documents', stranger.documents.length === 0)
+check('scenarios can’t be set outside development', (await createAppStatus()) === 404)
+
+await new Promise((r) => setTimeout(r, 300))
+live.abort()
+await stream
+const all = events.join('')
+check('live updates arrived (snapshot, then document changes)', all.includes('"type":"snapshot"') && all.includes('"status":"checking"') && all.includes('"status":"ready"'))
+check('no extracted value ever reaches the browser', !/123-45-6789|12-3456789|X1234567|24180|SAMPLE/.test(all + JSON.stringify(await snap())))
+
+async function createAppStatus() {
+  const prod = createApp({ dataDir, dev: false })
+  const s = createServer((req, res) => prod(req, res))
+  await new Promise<void>((r) => s.listen(0, r))
+  const r = await fetch(`http://localhost:${(s.address() as { port: number }).port}/api/extraction/scenario`, { method: 'POST', body: JSON.stringify({ scenario: 'fast' }) })
+  s.close()
+  return r.status
+}
+
 server.close()
 strictServer.close()
 await rm(dataDir, { recursive: true, force: true })

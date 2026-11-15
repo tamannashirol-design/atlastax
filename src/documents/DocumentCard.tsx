@@ -1,5 +1,5 @@
-import { CheckIcon, CircleDashedIcon } from '@phosphor-icons/react'
-import { motion, useReducedMotionConfig } from 'framer-motion'
+import { CheckIcon, CircleDashedIcon, DotsNineIcon, WarningCircleIcon } from '@phosphor-icons/react'
+import { AnimatePresence, motion, useReducedMotionConfig } from 'framer-motion'
 import { useRef, useState, type DragEvent } from 'react'
 import type { Art } from '../data/income'
 import { spring } from '../lib/motion'
@@ -16,13 +16,20 @@ import { spring } from '../lib/motion'
 // sheet with the file already uploading. Add stays for keyboard and phone.
 // White surface, radius lg, faint sage border + soft shadow; 24 padding.
 
-// Pills only where they say something: "Added" once uploaded, and "Details
-// needed" on income without a form (it has no Add). Nothing while not added:
-// the card just shows "Add".
-export type Pill = 'added' | 'details'
+// Pills only where they say something: "Added" once uploaded, "Reading"
+// while the server reads it (then back to "Added"), "Couldn't read" when it
+// failed, and "Details needed" on income without a form (it has no Add).
+// Nothing while not added: the card just shows "Add".
+// Corner pills (Added, Reading) share one reserved spot, as wide as the wider
+// of the two, so the card never changes size. Wide pills (Couldn't read,
+// Details needed) sit under the name.
+export type Pill = 'added' | 'reading' | 'failed' | 'details'
+const CORNER: Pill[] = ['added', 'reading']
 
 const PILLS: Record<Pill, { text: string; Icon: typeof CheckIcon; cls: string }> = {
   added: { text: 'Added', Icon: CheckIcon, cls: 'border border-success bg-surface text-success' },
+  reading: { text: 'Reading', Icon: DotsNineIcon, cls: 'bg-sage-100 text-text' },
+  failed: { text: 'Couldn’t read', Icon: WarningCircleIcon, cls: 'border border-error bg-surface text-error' },
   details: { text: 'Details needed', Icon: CircleDashedIcon, cls: 'bg-sage-100 text-text' },
 }
 
@@ -32,6 +39,8 @@ type Props = {
   optional?: boolean
   /** One-line hint (unchanged once added, so the card keeps its size) */
   hint: string
+  /** A short message under the pill (why a document couldn't be read) */
+  note?: string
   /** The designer's illustration (decorative); see documents/artwork.ts */
   art?: Art
   pill?: Pill
@@ -44,10 +53,12 @@ type Props = {
   index: number
 }
 
-export function DocumentCard({ id, name, optional, hint, art, pill, primary, secondary, onDropFile, index }: Props) {
+export function DocumentCard({ id, name, optional, hint, note, art, pill, primary, secondary, onDropFile, index }: Props) {
   const reduce = useReducedMotionConfig() ?? false
   const [over, setOver] = useState(false)
   const depth = useRef(0)
+  // "Added" draws its check only when it changes on screen (added, or reading finished), never on load
+  const [firstPill] = useState(pill)
   const drop = onDropFile
     ? {
         onDragEnter: (e: DragEvent) => {
@@ -99,14 +110,33 @@ export function DocumentCard({ id, name, optional, hint, art, pill, primary, sec
               </h3>
               <p className="text-small text-text-muted [overflow-wrap:anywhere]">{hint}</p>
             </div>
-            {/* "Added": top-right, level with the name (same 24pt line height). Its space is reserved on every card that can be
-                added (invisible until then), so the text column never changes width and the card never changes size. */}
-            <span className="flex">
-              {pill === 'added' ? <StatusPill pill={pill} /> : primary && <StatusPill pill="added" placeholder />}
+            {/* "Added" / "Reading": top-right, level with the name (same 24pt line height). Their space is reserved on every card
+                that can be added (invisible until then), so the text column never changes width and the card never changes size.
+                A status change cross-fades (old out with fade, new in with quick). */}
+            <span className="grid justify-items-end">
+              {primary && CORNER.map((p) => <StatusPill key={p} pill={p} placeholder className="[grid-area:1/1]" />)}
+              <AnimatePresence initial={false}>
+                {pill && CORNER.includes(pill) && (
+                  <motion.span
+                    key={pill}
+                    className="flex [grid-area:1/1]"
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1, transition: spring.quick }}
+                    exit={{ opacity: 0, transition: spring.fade }}
+                  >
+                    <StatusPill pill={pill} drawCheck={pill === 'added' && firstPill !== 'added'} />
+                  </motion.span>
+                )}
+              </AnimatePresence>
             </span>
           </div>
-          {/* "Details needed" (income without a form, which is never uploaded) sits under the name: it's too wide for the corner on narrow cards */}
-          {pill === 'details' && <StatusPill pill={pill} />}
+          {/* "Couldn't read" and "Details needed" sit under the name: too wide for the corner on narrow cards */}
+          {(pill === 'details' || pill === 'failed') && (
+            <div className="flex flex-col gap-1">
+              <StatusPill pill={pill} />
+              {note && <p className="text-small text-text">{note}</p>}
+            </div>
+          )}
           {(primary || secondary) && (
             <div className="mt-auto flex flex-wrap items-center gap-x-4 gap-y-2">
               {primary && (
@@ -148,17 +178,30 @@ export function DocumentCard({ id, name, optional, hint, art, pill, primary, sec
 }
 
 /** Status pill: text + icon. "Added" draws its check in when it changes after the card first appears. */
-export function StatusPill({ pill, placeholder = false }: { pill: Pill; /** Holds the space, invisible and hidden from screen readers */ placeholder?: boolean }) {
+export function StatusPill({
+  pill,
+  placeholder = false,
+  className = '',
+  drawCheck,
+}: {
+  pill: Pill
+  /** Holds the space, invisible and hidden from screen readers */
+  placeholder?: boolean
+  className?: string
+  /** Draw the check in (the card just became "Added"). Default: when the pill changes to "Added" while on screen. */
+  drawCheck?: boolean
+}) {
   const reduce = useReducedMotionConfig() ?? false
   const p = PILLS[pill]
   // Only draw the check when the card becomes "Added" while on screen, not on load
   const [startedAs] = useState(pill)
+  const draw = drawCheck ?? (pill === 'added' && startedAs !== 'added')
   return (
-    <span aria-hidden={placeholder || undefined} className={`flex min-h-6 shrink-0 items-center gap-1 self-start rounded-full px-2 text-small font-semibold ${p.cls} ${placeholder ? 'invisible' : ''}`}>
+    <span aria-hidden={placeholder || undefined} className={`flex min-h-6 shrink-0 items-center gap-1 self-start rounded-full px-2 text-small font-semibold ${p.cls} ${placeholder ? 'invisible' : ''} ${className}`}>
       <motion.span
         key={pill}
         className="flex"
-        initial={pill === 'added' && startedAs !== 'added' ? (reduce ? { opacity: 0 } : { clipPath: 'inset(0 100% 0 0)' }) : false}
+        initial={draw ? (reduce ? { opacity: 0 } : { clipPath: 'inset(0 100% 0 0)' }) : false}
         animate={reduce ? { opacity: 1 } : { clipPath: 'inset(0 0% 0 0)' }}
         transition={spring.quick}
       >

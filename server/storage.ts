@@ -10,7 +10,7 @@
 // a retention rule) is TODO with legal; this is the dev version.
 import { randomUUID } from 'node:crypto'
 import { createWriteStream, type WriteStream } from 'node:fs'
-import { mkdir, readFile, rename, rm, writeFile } from 'node:fs/promises'
+import { mkdir, readdir, readFile, rename, rm, writeFile } from 'node:fs/promises'
 import { join } from 'node:path'
 
 export type FileKind = 'pdf' | 'jpeg' | 'png' | 'heic' | 'webp'
@@ -20,6 +20,8 @@ export type FileMeta = {
   sessionId: string
   /** The Documents item this file is for (e.g. "opt-cpt"), when known */
   itemId?: string
+  /** The tax year it was uploaded for, when known */
+  year?: number
   name: string
   size: number
   kind: FileKind
@@ -37,6 +39,24 @@ export function storage(dataDir: string) {
   const ready = Promise.all([mkdir(files, { recursive: true, mode: 0o700 }), mkdir(sessions, { recursive: true, mode: 0o700 })])
 
   return {
+    filesDir: files,
+
+    /** Every file a session has uploaded (dev storage: reads the records on disk). */
+    async listFiles(sessionId: string): Promise<FileMeta[]> {
+      await ready
+      const out: FileMeta[] = []
+      for (const f of await readdir(files)) {
+        if (!f.endsWith('.json')) continue
+        try {
+          const m = JSON.parse(await readFile(join(files, f), 'utf8')) as FileMeta
+          if (m.sessionId === sessionId) out.push(m)
+        } catch {
+          /* a record being written right now: skip */
+        }
+      }
+      return out
+    },
+
     /** A new file being written. Call keep() once it's complete and checked, or discard() to throw it away. */
     async begin(): Promise<{ fileId: string; stream: WriteStream; keep: (meta: Omit<FileMeta, 'fileId'>) => Promise<FileMeta>; discard: () => Promise<void> }> {
       await ready

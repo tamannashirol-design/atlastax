@@ -15,6 +15,9 @@ export type UploadFile = { name: string; size?: number; fileId?: string }
 /** retryable: the same file can be sent again (network/server failure), not for a file type we can't take */
 export type UploadState = { status: UploadStatus; progress: number; file?: UploadFile; error?: string; retryable?: boolean }
 
+/** What the server stores with a file: which document it is and for which tax year */
+export type UploadMeta = { itemId?: string; year?: number }
+
 const ACCEPTED = /^(application\/pdf|image\/)/
 const TYPE_ERROR = 'That file type isn’t supported. Use a PDF or a photo.'
 const SIZE_ERROR = `That file is too big. Use one under ${Math.round(MAX_UPLOAD_BYTES / 1024 / 1024)} MB.` // TODO confirm copy
@@ -22,16 +25,16 @@ const SIZE_ERROR = `That file is too big. Use one under ${Math.round(MAX_UPLOAD_
 export function useUpload(endpoint = '/api/files') {
   const [state, setState] = useState<UploadState>({ status: 'idle', progress: 0 })
   const xhr = useRef<XMLHttpRequest | null>(null)
-  const last = useRef<{ file: File; query: string; itemId?: string } | null>(null)
+  const last = useRef<{ file: File; query: string; meta: UploadMeta } | null>(null)
 
   const start = useCallback(
-    /** itemId: the Documents item this file is for (e.g. "opt-cpt"), stored with the file */
-    (file: File, query = '', itemId?: string) => {
+    /** meta: the Documents item this file is for (e.g. "opt-cpt") and the tax year; together they start reading it */
+    (file: File, query = '', meta: UploadMeta = {}) => {
       xhr.current?.abort()
       const refuse = (error: string) => setState({ status: 'error', progress: 0, file: { name: file.name, size: file.size }, error, retryable: false })
       if (!ACCEPTED.test(file.type)) return refuse(TYPE_ERROR)
       if (file.size > MAX_UPLOAD_BYTES) return refuse(SIZE_ERROR)
-      last.current = { file, query, itemId }
+      last.current = { file, query, meta }
       setState({ status: 'accepted', progress: 0, file: { name: file.name, size: file.size } })
       const req = new XMLHttpRequest()
       xhr.current = req
@@ -55,14 +58,15 @@ export function useUpload(endpoint = '/api/files') {
       req.onerror = () => setState((s) => ({ ...s, status: 'error', error: undefined, retryable: true }))
       req.open('POST', endpoint + query)
       req.setRequestHeader('x-file-name', encodeURIComponent(file.name))
-      if (itemId) req.setRequestHeader('x-item-id', itemId)
+      if (meta.itemId) req.setRequestHeader('x-item-id', meta.itemId)
+      if (meta.year) req.setRequestHeader('x-tax-year', String(meta.year))
       req.send(file)
     },
     [endpoint],
   )
 
   /** Try the last file again (without any test flags). */
-  const retry = useCallback(() => last.current && start(last.current.file, '', last.current.itemId), [start])
+  const retry = useCallback(() => last.current && start(last.current.file, '', last.current.meta), [start])
 
   const reset = useCallback(() => {
     xhr.current?.abort()
