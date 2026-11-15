@@ -16,7 +16,7 @@ Open the app with `npm run dev`, then http://localhost:5173.
 | 2 | Server | Uploads stored privately, checked by content, deletable; consent recorded; `check:server` | **Done** (`1eced11`) | Nothing new on screen; uploads work as before | Opus |
 | 3 | Mock reader | Mock provider (10 scenarios), live reading status, Remove deletes on the server | **Done** (`c00e141`) | `/motion` → "Reading (mock)"; `/documents` → Reading, Added, Couldn't read, Try again on cards | Opus, Sonnet for the pills |
 | **4** | **Consent sheet** | Notice shown before the first upload; "Continue to upload" / "Not now"; server requires it; read again on Profile; `check:consent`. **Plus the consent review fixes** (below). | **Done** (`5cdf3b4`, review fixes in the commit after it) | `/documents` → **Add** on any card (first time). `/profile` → **Privacy**. `/trips` → open "Fill this in from your I-94 travel history". See "How to see step 4" below. | Sonnet for the sheet, Opus for the logic (reviewed and fixed on Opus) |
-| **5** | **Reading page** (redone Nov 15) | One status pill: "Reading your documents" → "Extracting your details" → "Done" (success fill + small settle), each changed only by the mock reader (3–5s per stage); hold 600ms, then Review. Reading starts only when /reading opens (never at upload), every visit reads again. Failures: "Couldn't read" + Try again / Choose another file / Enter it myself, Continue waits. Removed: reading at upload, Reading/Couldn't read on cards, 10s/60s messages, skip-to-Review, minimum display time, Home's "Reading N documents". | **Committed; focus audit has a known flaky part** (below) | `/documents` → **Continue**, or `/reading?reading=normal` / `?reading=fail` | Opus |
+| **5** | **Reading page** (redone Nov 15) | One status pill: "Reading your documents" → "Extracting your details" → "Done" (success fill + small settle), each changed only by the mock reader (3–5s per stage); hold 600ms, then Review. Reading starts only when /reading opens (never at upload), every visit reads again. Failures: "Couldn't read" + Try again / Choose another file / Enter it myself, Continue waits. Removed: reading at upload, Reading/Couldn't read on cards, 10s/60s messages, skip-to-Review, minimum display time, Home's "Reading N documents". | **Done** (stall fixed, see below) | `/documents` → **Continue**, or `/reading?reading=normal` / `?reading=fail` | Opus |
 | **6** | **Review screen** | "Check your details": one document per screen (passport, I-94, then income), "2 of n", file placeholder left (iPad/laptop) or "View document" sheet (phone), editable fields, tick rule, masked IDs with Show, Confirm and continue (locked, says what's left), Skip for now, summary → "Looks good" → `/result`; saved on the server as you go, resumes; states: needs review, all ticked, couldn't read, wrong document, being read after Replace; `check:review` | **Built, waiting for your "next"** | `/review` after the Reading page; states: `/motion` → "Review" or `/review?review=needs` etc. See "How to see step 6". | Opus |
 | R1 | Transcription | Fix the field list to the IRS boxes (1042-S Box 10); turn confirmed values into tax input; `check:taxinput` | Not started | Nothing on screen | Opus |
 | R2 | Engine core, 2025 | 2025 tables with sources, Tax Table method, wages-only; `check:tax` | Not started | Nothing on screen | Opus |
@@ -53,13 +53,9 @@ Old step 7 (summary, download lock) no longer exists as its own step: it is part
 - Confirmed values live in server memory only (prototype): restarting the dev
   server forgets them, and the next Review re-reads the document.
 - Checks: `check:review` (new, in the build), `check:server` (Review section
-  added), focus audit "review" part, `contrast`, build. The Review audit runs
-  through the Reading page first: in 4 runs it passed (15/15) twice and crashed
-  twice while waiting to arrive on /review, likely the same known stall (below).
-  Full audit: every section before "reading page" passed; "trips" passed alone. `check:server` also failed once on a slow retry (over
-  200s) and passed in 21s on the rerun: since that test has no browser, **the
-  stall may be on the server side**, so real users could be affected. Not
-  investigated.
+  added), focus audit "review" part, `contrast`, build. The earlier stall is
+  fixed (below). `check:server` once failed on a slow retry and passed on the
+  rerun; it hasn't recurred.
 
 ## How to see step 5
 
@@ -82,16 +78,18 @@ Old step 7 (summary, download lock) no longer exists as its own step: it is part
 - Focus audit: only the Reading part was run after this change; the other sections
   were not re-run.
 
-### Known flaky: focus audit, Reading part
+### Fixed: the "stall" (was: known flaky, Reading part of the focus audit)
 
-- **What happens:** now and then a test page stops getting updates and sits on one
-  stage (seen on "Reading your documents"), so a later step times out (e.g. waiting
-  for Continue in the failure case, or for `/review`). Each scenario passed in at
-  least one run; no run passed all of them. Cause not found; it has only been seen
-  in automated runs, and it is not yet known whether a real user can hit it.
-- **Reproduce:** with `npm run dev` running, `ONLY=reading npm run audit:focus`, a few
-  times in a row. Failures move between scenarios from run to run.
-- Not investigated further, at the designer's request.
+- **Cause:** the live reading connection (`/api/extraction/events`) closed and
+  reopened on every re-render, because React got a new subscribe function each
+  time. The browser allows only a few connections to one server, so other
+  requests (ticks on Review, reading updates) queued behind the churn and seemed
+  to do nothing. Real users were affected: on Review, "This is correct" stopped
+  responding after a click or two.
+- **Fix:** one stable subscription per tax year, and the connection closes only
+  after 2s with nobody listening (`src/extraction/client.ts`).
+- **After:** Reading and Review audits 6 of 6 runs passing; full focus audit
+  180 checks, 0 failed; 117 of 117 tick clicks registered across 3 runs.
 
 ## How to see step 4
 

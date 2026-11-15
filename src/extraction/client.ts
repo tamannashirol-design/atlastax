@@ -31,7 +31,7 @@ type Update =
 const EMPTY: ExtractionState = { loaded: false, capabilities: { stages: true }, documents: {} }
 
 /** run: the newest reading heard of; news from an earlier one (arriving late on the live connection) is ignored */
-type Channel = { state: ExtractionState; run: number; listeners: Set<() => void>; source?: EventSource; opening?: boolean }
+type Channel = { state: ExtractionState; run: number; listeners: Set<() => void>; source?: EventSource; opening?: boolean; closing?: ReturnType<typeof setTimeout> }
 const channels = new Map<number, Channel>()
 
 function channel(year: number): Channel {
@@ -57,6 +57,7 @@ function apply(c: Channel, u: Update) {
 function subscribe(year: number, listener: () => void) {
   const c = channel(year)
   c.listeners.add(listener)
+  clearTimeout(c.closing)
   if (!c.source && !c.opening && typeof EventSource !== 'undefined') {
     // Wait for the session cookie first (see lib/session), then listen
     c.opening = true
@@ -75,20 +76,30 @@ function subscribe(year: number, listener: () => void) {
   }
   return () => {
     c.listeners.delete(listener)
+    // Close only when nobody has come back shortly after (a re-render or the next
+    // page re-subscribes at once). Closing and reopening on every change used up the
+    // browser's few connections to our server, so other requests (saves) waited.
     if (!c.listeners.size) {
-      c.source?.close()
-      c.source = undefined
+      clearTimeout(c.closing)
+      c.closing = setTimeout(() => {
+        if (c.listeners.size) return
+        c.source?.close()
+        c.source = undefined
+      }, CLOSE_AFTER_MS)
     }
   }
 }
 
+const CLOSE_AFTER_MS = 2000
+
+/** One subscribe function per year, so React doesn't re-subscribe on every render */
+const subscribers = new Map<number, (l: () => void) => () => void>()
+const subscriberFor = (year: number) => subscribers.get(year) ?? subscribers.set(year, (l) => subscribe(year, l)).get(year)!
+
 /** Reading status for the tax year being worked on, live. */
 export function useExtraction(): ExtractionState {
   const year = useFilingYear()
-  return useSyncExternalStore(
-    (l) => subscribe(year, l),
-    () => channel(year).state,
-  )
+  return useSyncExternalStore(subscriberFor(year), () => channel(year).state)
 }
 
 /**
