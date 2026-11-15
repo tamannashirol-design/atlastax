@@ -40,9 +40,8 @@ type Props = {
   question: string
   /** Must fit the fixed answer area, unless answerArea is "auto". */
   answers: ReactNode
-  /** "auto": grows with its content (card grids). "upload": at least the upload zone's height (--answer-h-upload),
-   *  the same on every upload question; the list of uploaded files below the zone adds to it. */
-  answerArea?: 'fixed' | 'auto' | 'upload'
+  /** "auto": grows with its content (card grids, lists). Uploads open in a sheet instead (FlowPage). */
+  answerArea?: 'fixed' | 'auto'
   /** Card grids only: at 1024px+ the question and answers span 8 columns
    *  (cols 4–11) instead of 6, so a 4th card fits at the same size. Continue
    *  keeps the normal 6-column width, so it never moves between screens. */
@@ -100,7 +99,7 @@ export function QuestionLayout({ year, position, backHref, questionId, question,
             {helper && <p className="text-small text-text-muted">{helper}</p>}
           </div>
 
-          <div className={`row-start-3 mt-10 flex flex-col ${answerArea === 'fixed' ? 'h-(--answer-h)' : answerArea === 'upload' ? 'min-h-(--answer-h-upload)' : ''} ${block}`}>{answers}</div>
+          <div className={`row-start-3 mt-10 flex flex-col ${answerArea === 'fixed' ? 'h-(--answer-h)' : ''} ${block}`}>{answers}</div>
 
           {/* Fixed height = Continue 56 + 8 + link 48, even when there's no link */}
           <div className={`row-start-4 mt-8 flex min-h-28 flex-col gap-2 ${column}`}>

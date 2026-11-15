@@ -43,8 +43,8 @@ elements floating over each other. The flow is documented in FLOW.md.
   (only part that scrolls), tab bar (phone only, below 768px). Content never
   sits under a bar.
 - Tokens in index.css: `--top-bar-h` 56, `--tab-bar-h` 56 (0 at 768px+),
-  `--stepper-h` 56, `--answer-h` 88, `--answer-h-upload` 296 (every upload
-  question and the previous-return sheet), `--safe-top` / `--safe-bottom`.
+  `--stepper-h` 56, `--answer-h` 88, `--answer-h-upload` 296 (the upload
+  zone, in every upload sheet), `--safe-top` / `--safe-bottom`.
 - Question screens (`QuestionLayout`): one block =
   header (question reserves 3 lines on phone, 2 at 600px+; helper 8 below
   it, reserving 2 lines on phone, 1 at 600px+), 40 gap, fixed-height answer
@@ -186,8 +186,12 @@ Rules:
   panel and the folder lifts on drop, the check draws on the front panel when
   done, and the sheet slides back out on error.
   Everywhere a file can be uploaded uses `UploadAnswer` (zone + real upload):
-  the 8 income upload questions (answerArea "upload", "Add another file")
-  and the previous-return sheet. Continue unlocks only after a real upload.
+  the 8 income uploads and the previous-return sheet, ALL as slide-up
+  sheets: an income upload (screen `sheet: true`) opens over the question
+  before it, with Continue (unlocks only after a real upload) and its skip
+  as a secondary button; back-to-back uploads replace the sheet. Its address
+  (e.g. /income/opt-w2) shows that page with the sheet open; closing goes
+  back. Sheets aren't stepper steps. "Add another file" stays.
   Uploaded files are listed below the zone (zone stays 296; each file row
   adds 56 + the 16 gap), each with a text "Remove" button. Remove asks first
   in a sheet naming the exact file ("Remove file" in error red / "Keep

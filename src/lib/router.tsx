@@ -20,11 +20,14 @@ export function usePath() {
 /**
  * Go to a path (may end in #id, to link to an item on a page). Keeps debug
  * flags like ?grid=1 in the address. `state` rides along in history (e.g.
- * { fromFlow: true } when the flow opens the Documents page).
+ * { fromFlow: true } when the flow opens the Documents page). replace: swap
+ * the current history entry instead of adding one.
  */
-export function navigate(path: string, state: Record<string, unknown> | null = null) {
+export function navigate(path: string, state: Record<string, unknown> | null = null, opts: { replace?: boolean } = {}) {
   const [p, hash] = path.split('#')
-  window.history.pushState(state, '', p + window.location.search + (hash ? `#${hash}` : ''))
+  const url = p + window.location.search + (hash ? `#${hash}` : '')
+  if (opts.replace) window.history.replaceState(state, '', url)
+  else window.history.pushState(state, '', url)
   window.dispatchEvent(new Event(EVENT))
 }
 

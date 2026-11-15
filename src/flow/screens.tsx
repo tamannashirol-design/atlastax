@@ -31,13 +31,20 @@ export type FlowScreen = {
   /** Show this screen only when this returns true (income follow-ups, residency steps). */
   when?: (a: Answers, year: number) => boolean
   /** Link under Continue that skips the question: "I'll add it later" (value "later")
-   *  or "I didn't get one" (value "none"). Both count as deferred documents. */
+   *  Every income upload uses "I'll add it later"; "I don't have this" (value
+   *  "none") is reported on the Documents page. Both count as deferred. */
   skip?: { label: string; value: SkipValue }
   /** The answer control; must fit the fixed answer area unless answerArea is "auto". */
   answers: (a: Answers, labelledBy: string, year: number) => ReactNode
-  answerArea?: 'fixed' | 'auto' | 'upload'
+  answerArea?: 'fixed' | 'auto'
   /** Card grid: 8 columns wide at 1024px+ (see QuestionLayout). */
   wide?: boolean
+  /**
+   * Shown as a slide-up sheet over the page before it (the income uploads),
+   * like the previous-return sheet. Its address still works: opening it shows
+   * that page with the sheet open. Sheets aren't counted as stepper steps.
+   */
+  sheet?: boolean
 }
 
 // ---------- Income follow-ups (proposal in FLOW.md, approved) ----------
@@ -67,8 +74,8 @@ function tiles(id: string, question: string, options: TileOption<string>[], when
   }
 }
 
-// Every upload question uses the same control (folder UploadZone + real upload)
-// and the same taller answer area, so Continue sits in one place on all of them.
+// Every upload question uses the same control (folder UploadZone + real upload),
+// in a slide-up sheet over the question before it (see FlowPage).
 // It appears only when documents.config.ts says its document is needed (no
 // tax rule here): `id` is the rule's uploadScreen.
 function upload(id: string, docLabel: string, question: FlowScreen['question'], helper: string, skip: FlowScreen['skip']): FlowScreen {
@@ -81,7 +88,7 @@ function upload(id: string, docLabel: string, question: FlowScreen['question'], 
     helper,
     skip,
     when: (a) => uploadScreenApplies(id, a),
-    answerArea: 'upload',
+    sheet: true,
     isAnswered: (a) => Array.isArray(detail(a, id)) && (detail(a, id) as string[]).length > 0,
     answers: (a) => {
       const v = detail(a, id)
@@ -120,8 +127,6 @@ const yesNo: TileOption<string>[] = [
   { value: 'no', code: 'No' },
 ]
 const LATER: FlowScreen['skip'] = { label: "I'll add it later", value: 'later' }
-const NO_ONE: FlowScreen['skip'] = { label: 'I didn’t get one', value: 'none' }
-const NO_FORM: FlowScreen['skip'] = { label: 'I didn’t get a form', value: 'none' }
 
 function incomeFollowUps(): FlowScreen[] {
   // Freelance and contract work ask the same things
@@ -156,13 +161,13 @@ function incomeFollowUps(): FlowScreen[] {
       helper: 'To check refund eligibility',
       helpLabel: 'Not sure whether tax was withheld?',
     }),
-    upload('scholarship-1042s', '1042-S', 'Upload your 1042-S for your scholarship', 'From your university', NO_ONE),
+    upload('scholarship-1042s', '1042-S', 'Upload your 1042-S for your scholarship', 'From your university', LATER),
     // Freelance (expenses wait for tax review)
     ...selfEmployed('freelance', 'freelance work', 'freelance'),
     // Investments
-    upload('investments-upload', 'tax form', 'Upload your investment tax forms', `From your brokerage or bank, such as a ${ruleForUploadScreen('investments-upload').form}`, NO_FORM),
+    upload('investments-upload', 'tax form', 'Upload your investment tax forms', `From your brokerage or bank, such as a ${ruleForUploadScreen('investments-upload').form}`, LATER),
     // Trading
-    upload('trading-upload', 'tax form', 'Upload your brokerage tax forms', `Such as a ${ruleForUploadScreen('trading-upload').form}`, NO_FORM),
+    upload('trading-upload', 'tax form', 'Upload your brokerage tax forms', `Such as a ${ruleForUploadScreen('trading-upload').form}`, LATER),
     // Contract work (expenses wait for tax review)
     ...selfEmployed('contract-work', 'contract work', 'contract'),
     // No earnings: nothing to ask. Donation and Child care: on hold for tax review.
@@ -393,7 +398,7 @@ export function listYears(years: number[]): string {
  * segments are always derived from this, never typed in.
  */
 export function positionOf(screen: FlowScreen, a: Answers, year = TAX_YEAR): FlowPosition {
-  const inSection = flow.filter((s) => s.section === screen.section)
+  const inSection = flow.filter((s) => s.section === screen.section && !s.sheet)
   const applying = inSection.filter((s) => s === screen || !s.when || s.when(a, year))
   return { section: sectionIndex(screen.section), step: Math.max(0, applying.indexOf(screen)), steps: applying.length }
 }

@@ -5,7 +5,7 @@
 //
 // Two kinds of items:
 //   document  a form is expected (upload it, or defer: "I'll add it later" /
-//             "I didn't get one")
+//             "I don't have this", on the Documents page)
 //   income    self-reported: the income is registered but no form came
 //             ("No, I didn't get one" where the config allows it). Needs
 //             details, unless deferred with "I'll add it later".
@@ -15,7 +15,7 @@ import type { IncomeId } from '../data/income.ts'
 import type { Answers } from './answers.ts'
 import { isSupportedStudent } from '../residency/fromAnswers.ts'
 
-/** added · later ("I'll add it later") · none ("I didn't get one / a form") · missing. later and none are deferred. */
+/** added · later ("I'll add it later") · none ("I don't have this", Documents page) · missing. later and none are deferred. */
 export type DocumentStatus = 'added' | 'later' | 'none' | 'missing'
 /** details-needed · later ("I'll add it later") · provided (once details collection exists; TODO confirm with CPA) */
 export type IncomeItemStatus = 'details-needed' | 'later' | 'provided'

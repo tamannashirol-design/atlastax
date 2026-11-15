@@ -6,7 +6,7 @@ import { QuestionLayout } from '../components/QuestionLayout'
 import { SecondaryButton } from '../components/SecondaryButton'
 import { UploadAnswer } from '../components/UploadAnswer'
 import { DebugStack, useUrlFlag } from '../lib/debug'
-import { navigate } from '../lib/router'
+import { navigate, useHistoryState } from '../lib/router'
 import { setAnswers, setDetail, useAnswers, useFilingYear } from './answers'
 import { UnsupportedSheet } from '../residency/UnsupportedSheet'
 import { AFTER_FLOW, flow, pathForSection, positionOf } from './screens'
@@ -15,17 +15,52 @@ import { AFTER_FLOW, flow, pathForSection, positionOf } from './screens'
 // address changes, the shell and stepper stay put and animate between screens.
 export default function FlowPage({ path }: { path: string }) {
   const answers = useAnswers()
-  const index = flow.findIndex((s) => s.path === path)
-  const screen = flow[index]
   const year = useFilingYear()
+  const historyState = useHistoryState()
   // Back/Continue skip screens that don't apply to these answers (income follow-ups, residency steps)
   const applies = (i: number) => !flow[i].when || flow[i].when!(answers, year)
+  const requested = flow.findIndex((s) => s.path === path)
+  // A sheet screen (income uploads) opens over the page before it: render that page, sheet on top
+  const host = flow[requested].sheet
+    ? (flow
+        .slice(0, requested)
+        .map((_, i) => i)
+        .filter((i) => !flow[i].sheet && applies(i))
+        .pop() ?? requested)
+    : requested
+  const index = host
+  const screen = flow[index]
+  const sheetScreen = flow[requested].sheet ? flow[requested] : null
   const before = flow.slice(0, index).map((_, i) => i).filter(applies).pop()
-  const after = flow.map((_, i) => i).find((i) => i > index && applies(i))
+  const nextAfter = (from: number) => {
+    const i = flow.map((_, j) => j).find((j) => j > from && applies(j))
+    return i !== undefined ? flow[i].path : AFTER_FLOW
+  }
   const back = before !== undefined ? flow[before].path : '/'
-  const next = after !== undefined ? flow[after].path : AFTER_FLOW
-  // After the last question, the Documents page opens "from the flow" (it then shows Continue)
-  const goNext = () => navigate(next, next === AFTER_FLOW ? { fromFlow: true } : null)
+  const next = nextAfter(index)
+  // After the last question, the Documents page opens "from the flow" (it then shows Continue).
+  // Opening an upload sheet remembers its page, so closing it can simply go back.
+  // From one sheet to the next, the history entry is replaced (Back never reopens a finished sheet).
+  const isSheet = (to: string) => !!flow.find((s) => s.path === to)?.sheet
+  const go = (to: string, fromSheet = false) =>
+    navigate(to, to === AFTER_FLOW ? { fromFlow: true } : isSheet(to) ? { sheetFrom: screen.path } : null, { replace: fromSheet })
+  const goNext = () => go(next)
+  const closeSheet = () => {
+    if (historyState.sheetFrom === screen.path) window.history.back()
+    else navigate(screen.path, null, { replace: true })
+  }
+  // A sheet that closes because we moved on to another page: focus that page's question
+  const sheetOnPage = useRef<string | null>(null)
+  useEffect(() => {
+    if (sheetScreen) sheetOnPage.current = screen.path
+  }, [sheetScreen, screen.path])
+  const afterSheetExit = () => {
+    if (sheetScreen) return // one sheet replaced another: nothing to do
+    const moved = sheetOnPage.current && sheetOnPage.current !== screen.path
+    sheetOnPage.current = null
+    // Next frame: the sheet (a modal) is still in the page during this callback, so the page behind can't take focus yet
+    if (moved) requestAnimationFrame(() => document.getElementById(questionId)?.focus({ preventScroll: true }))
+  }
   const [sheet, setSheet] = useState(false)
   const [unsupported, setUnsupported] = useState(false)
   const [priorFiles, setPriorFiles] = useState<string[]>(() => (typeof answers.priorReturn === 'object' ? [answers.priorReturn.fileName] : []))
@@ -95,6 +130,28 @@ export default function FlowPage({ path }: { path: string }) {
       />
 
       <AnimatePresence>{unsupported && <UnsupportedSheet onClose={() => setUnsupported(false)} />}</AnimatePresence>
+
+      {/* Income uploads: one sheet at a time; the next upload replaces it (mode "wait") */}
+      <AnimatePresence mode="wait" onExitComplete={afterSheetExit}>
+        {sheetScreen && (
+          <BottomSheet
+            key={sheetScreen.id}
+            title={typeof sheetScreen.question === 'function' ? sheetScreen.question(answers, year) : sheetScreen.question}
+            onClose={closeSheet}
+          >
+            {sheetScreen.helper && <p className="text-body text-text-muted">{sheetScreen.helper}</p>}
+            <div className="pt-6">{sheetScreen.answers(answers, `q-${sheetScreen.id}`, year)}</div>
+            <div className="flex flex-col gap-2 pt-8">
+              <PrimaryButton disabled={!sheetScreen.isAnswered(answers, year)} onClick={() => go(nextAfter(requested), true)}>
+                Continue
+              </PrimaryButton>
+              {sheetScreen.skip && !sheetScreen.isAnswered(answers, year) && (
+                <SecondaryButton onClick={() => (setDetail(sheetScreen.id, sheetScreen.skip!.value), go(nextAfter(requested), true))}>{sheetScreen.skip.label}</SecondaryButton>
+              )}
+            </div>
+          </BottomSheet>
+        )}
+      </AnimatePresence>
 
       <AnimatePresence>
         {sheet && (

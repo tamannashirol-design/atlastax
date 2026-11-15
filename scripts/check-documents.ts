@@ -52,7 +52,7 @@ check('3. OPT/CPT + scholarship, nothing uploaded', { income: ['opt-cpt', 'schol
   documents: '0 of 2 documents added',
   done: false,
 })
-check('4. One added, one "I\'ll add it later", one "I didn\'t get one"', {
+check('4. One added, one "I\'ll add it later", one "I don\'t have this"', {
   income: ['opt-cpt', 'on-campus-job', 'scholarship'],
   details: { 'opt-w2': ['w2.pdf'], 'campus-w2': 'later', 'scholarship-1042s': 'none' },
 }, {
