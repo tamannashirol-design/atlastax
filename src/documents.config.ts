@@ -97,7 +97,7 @@ export type IdentityRule = { id: string; form: string; label: string; source: st
 export const IDENTITY_DOCUMENTS: IdentityRule[] = [
   { id: 'passport', form: 'Passport', label: 'Your passport', source: 'The page with your photo', uploadScreen: 'passport-upload' },
   // Separate from the CBP travel history (which is only used to count days)
-  { id: 'i94', form: 'Most recent I-94', label: 'Your most recent I-94', source: 'From the CBP I-94 website (i94.cbp.dhs.gov)', uploadScreen: 'i94-upload' },
+  { id: 'i94', form: 'Most recent I-94', label: 'Your most recent I-94', source: 'From the CBP I-94 website', uploadScreen: 'i94-upload' },
   { id: 'state-id', form: 'Driver’s license or state ID', label: 'Your driver’s license or state ID', source: 'If you have one', uploadScreen: 'state-id-upload', optional: true },
 ]
 

@@ -1,4 +1,4 @@
-import { CheckIcon, CircleDashedIcon, ClockIcon, MinusCircleIcon, UploadSimpleIcon, type Icon } from '@phosphor-icons/react'
+import { CheckIcon, CircleDashedIcon } from '@phosphor-icons/react'
 import { AnimatePresence, motion, useReducedMotionConfig } from 'framer-motion'
 import { useEffect, useRef, useState } from 'react'
 import { AppShell } from '../components/AppShell'
@@ -10,6 +10,7 @@ import { UploadAnswer } from '../components/UploadAnswer'
 import { SELF_REPORTED_INTRO } from '../documents.config'
 import { clearDetail, setDetail, useAnswers, useFilingYear } from '../flow/answers'
 import { documentsLine, incomeItemsLine, selfReportKey, type DocumentItem, type IncomeItem } from '../flow/requiredDocuments'
+import { DocumentCard } from './DocumentCard'
 import { returnStatus } from '../home/returnStatus'
 import { REVIEW_PATH, pathForSection, resumeScreen } from '../flow/screens'
 import { at, sectionIndex } from '../flow/sections'
@@ -24,55 +25,33 @@ import { Link, navigate, useHistoryState } from '../lib/router'
 // "From the flow" is remembered in history state ({ fromFlow: true }), so a
 // reload keeps it and opening the tab never shows Continue.
 //
-// Everything listed comes from requiredItems() (rules: documents.config.ts):
-//   Summary   "2 of 3 documents added" + thin navy bar (documents only);
-//             "1 income item needs details" on its own line
-//   Documents each with status (text + icon), Upload (sheet with the real
-//             upload), and "I'll add it later" / "I don't have this"
-//   Income without a form (self-reported): neutral intro, "Details needed",
-//             "I'll add it later". TODO confirm with CPA: what to collect.
+// Everything listed comes from requiredItems() via returnStatus() (rules:
+// documents.config.ts). Presentation (friendly, not a form):
+//   Top     "<added> of <total> added", a thin navy bar, and a human line:
+//           "<n> to go. Add what you have, and you can come back for the rest."
+//           The count ticks up (soft spring) when a document is added.
+//   Groups  Identity · Income documents · Income without a form, each with a
+//           quiet heading and a short friendly line (TODO confirm wording)
+//   Cards   DocumentCard: art, name, hint, status pill, one soft "Add" /
+//           "Replace", and at most one quiet secondary ("Not now" menu with
+//           "Remind me later" / "I don't have this one"; Undo once deferred).
+//           Drop a file on a card (iPad, laptop) to add it.
 // Each item has its own address: /documents#item-<id> scrolls to and focuses it.
 //
-// Layout: the question column (6 of 8/12 columns); from the flow, the rail
-// sits in columns 1–3 at 1024+, like the question screens.
+// Layout: phone one column; iPad and laptop a two-column card grid in the
+// content area (6 columns on iPad; 8 on laptop, right of the rail when
+// arriving from the flow). Continue is the page's only cobalt element.
 
-const column = 'col-span-full tablet:col-span-6 tablet:col-start-2 desktop:col-start-4'
+// From the flow the rail takes columns 1–3, so the content starts at 4; from the tab it's centred
+const column = (fromFlow: boolean) => `col-span-full tablet:col-span-6 tablet:col-start-2 desktop:col-span-8 ${fromFlow ? 'desktop:col-start-4' : 'desktop:col-start-3'}`
 const focusRing = 'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-text'
 const quietLink = `flex min-h-11 min-w-12 items-center justify-center rounded-sm text-body font-semibold underline underline-offset-4 ${focusRing}`
 
-// Identity first (needed by everyone with a supported status), then income documents
+// TODO confirm wording
 const GROUPS = [
-  { id: 'identity', title: 'Identity' },
-  { id: 'income', title: 'Income documents' },
+  { id: 'identity', title: 'Identity', line: 'These show who you are. A clear photo or a PDF works.' },
+  { id: 'income', title: 'Income documents', line: 'Forms from your employer, school or bank.' },
 ] as const
-
-const docStatus: Record<DocumentItem['status'], { text: (d: DocumentItem) => string; Icon: Icon; tone: string }> = {
-  added: {
-    text: (d) => (d.files.length === 1 ? 'Added · 1 file' : `Added · ${d.files.length} files`),
-    Icon: CheckIcon,
-    tone: 'text-success',
-  },
-  later: {
-    text: () => 'You’ll add it later',
-    Icon: ClockIcon,
-    tone: 'text-text',
-  },
-  none: {
-    text: () => 'You don’t have this',
-    Icon: MinusCircleIcon,
-    tone: 'text-text',
-  },
-  missing: {
-    text: () => 'Not added yet',
-    Icon: CircleDashedIcon,
-    tone: 'text-text',
-  },
-}
-const incomeStatus: Record<IncomeItem['status'], { text: string; Icon: Icon }> = {
-  'details-needed': { text: 'Details needed', Icon: CircleDashedIcon },
-  later: { text: 'You’ll add the details later', Icon: ClockIcon },
-  provided: { text: 'Details added', Icon: CheckIcon },
-}
 
 export default function DocumentsPage() {
   const answers = useAnswers()
@@ -80,7 +59,8 @@ export default function DocumentsPage() {
   const reduce = useReducedMotionConfig() ?? false
   // Follows history state, so opening the tab while on this page drops the flow frame
   const fromFlow = useHistoryState().fromFlow === true
-  const [uploading, setUploading] = useState<DocumentItem | null>(null)
+  // The open upload sheet: which document, and a file dropped on its card (if any)
+  const [uploading, setUploading] = useState<{ item: DocumentItem; file?: File } | null>(null)
   const [announce, setAnnounce] = useState('')
   const [why, setWhy] = useState(false)
   // Same source as Home and its stepper
@@ -109,6 +89,28 @@ export default function DocumentsPage() {
     document.getElementById(`item-${id}`)?.focus({ preventScroll: true })
     apply()
     setAnnounce(message)
+  }
+
+  // Still to do: documents not added or deferred (documents only, like the count; income items have their own line)
+  const toGo = summary.documents.missing
+  // Card order for the entrance stagger: Identity, Income documents, then income without a form
+  const order = [...GROUPS.flatMap((g) => docs.filter((d) => d.group === g.id)), ...income].map((i) => i.id)
+
+  /** The one quiet secondary on a card: "Not now" while to do, Undo once deferred. Same states as before. */
+  const secondaryFor = (d: DocumentItem) => {
+    if (d.status === 'missing')
+      return {
+        kind: 'menu' as const,
+        label: 'Not now',
+        items: d.optional
+          ? [{ label: 'I don’t have one', onSelect: () => change(d.id, () => setDetail(d.uploadScreen, 'none'), `${d.form}: you don’t have one`) }]
+          : [
+              { label: 'Remind me later', onSelect: () => change(d.id, () => setDetail(d.uploadScreen, 'later'), `${d.form}: you’ll add it later`) },
+              { label: 'I don’t have this one', onSelect: () => change(d.id, () => setDetail(d.uploadScreen, 'none'), `${d.form}: you don’t have this`) },
+            ],
+      }
+    if (d.status === 'later' || d.status === 'none') return { kind: 'button' as const, label: 'Undo', onClick: () => change(d.id, () => clearDetail(d.uploadScreen), `${d.form}: not added yet`) }
+    return undefined
   }
 
   const t = (i: number) => (reduce ? spring.fade : { ...spring.soft, delay: i * 0.04 })
@@ -148,23 +150,33 @@ export default function DocumentsPage() {
             </div>
           )}
 
-          <div className={`flex flex-col ${column} ${fromFlow ? 'desktop:row-start-1' : ''}`}>
+          <div className={`flex flex-col ${column(fromFlow)} ${fromFlow ? 'desktop:row-start-1' : ''}`}>
             <h1 id="documents-title" tabIndex={-1} className="font-display text-display outline-none">
               Documents
             </h1>
             <p className="mt-2 text-small text-text-muted">For your {year} tax return</p>
 
-            {/* Summary: documents only on the first line; income items on their own line */}
-            <motion.section aria-label="Summary" className="mt-8 flex flex-col gap-3" initial={enter} animate={{ opacity: 1, y: 0 }} transition={t(0)}>
-              <p className="flex items-center gap-2 text-body font-semibold">
-                {summary.documents.total > 0 && summary.documents.missing === 0 ? (
-                  <CheckIcon size={24} weight="regular" aria-hidden className="text-success" />
-                ) : (
-                  <CircleDashedIcon size={24} weight="regular" aria-hidden />
-                )}
-                <span className="tabular-nums">{documentsLine(summary)}</span>
+            {/* Progress: documents only; income items on their own line */}
+            <motion.section aria-label="Your progress" className="mt-8 flex flex-col gap-3" initial={enter} animate={{ opacity: 1, y: 0 }} transition={t(0)}>
+              {summary.documents.total > 0 && (
+                <>
+                  <p className="flex items-center gap-2 font-display text-title">
+                    {summary.documents.missing === 0 ? <CheckIcon size={24} weight="regular" aria-hidden className="text-success" /> : <CircleDashedIcon size={24} weight="regular" aria-hidden />}
+                    <span className="tabular-nums">
+                      <Count value={summary.documents.added} reduce={reduce} /> of {summary.documents.total} added
+                    </span>
+                  </p>
+                  <ProgressBar value={summary.documents.added / summary.documents.total} reduce={reduce} />
+                </>
+              )}
+              {/* TODO confirm wording. No promises about speed, accuracy or automatic reading. */}
+              <p className="text-body text-text-muted tabular-nums">
+                {items.length === 0
+                  ? documentsLine(summary)
+                  : toGo > 0
+                    ? `${toGo} to go. Add what you have, and you can come back for the rest.`
+                    : 'All done for now. You can come back any time to add more.'}
               </p>
-              {summary.documents.total > 0 && <ProgressBar value={summary.documents.added / summary.documents.total} reduce={reduce} />}
               {incomeItemsLine(summary) && (
                 <p className="flex items-center gap-2 text-body">
                   <CircleDashedIcon size={24} weight="regular" aria-hidden />
@@ -173,13 +185,7 @@ export default function DocumentsPage() {
               )}
               {items.length === 0 && (
                 <div className="flex flex-col">
-                  <button
-                    type="button"
-                    aria-expanded={why}
-                    aria-controls="documents-why"
-                    onClick={() => setWhy((w) => !w)}
-                    className={`self-start ${quietLink}`}
-                  >
+                  <button type="button" aria-expanded={why} aria-controls="documents-why" onClick={() => setWhy((w) => !w)} className={`self-start ${quietLink}`}>
                     Why no documents yet?
                   </button>
                   {why && (
@@ -201,85 +207,28 @@ export default function DocumentsPage() {
               if (!groupDocs.length) return null
               return (
                 <section key={group.id} aria-labelledby={`documents-${group.id}`} className="mt-10 flex flex-col gap-4">
-                  <h2 id={`documents-${group.id}`} className="font-display text-title">
-                    {group.title}
-                  </h2>
-                  <ul className="flex flex-col gap-4">
-                    {groupDocs.map((d, i) => {
-                      const s = docStatus[d.status]
-                      return (
-                        <motion.li
-                          key={d.id}
-                          id={`item-${d.id}`}
-                          tabIndex={-1}
-                          aria-labelledby={`item-${d.id}-title`}
-                          initial={enter}
-                          animate={{ opacity: 1, y: 0 }}
-                          transition={t(i + 1)}
-                          className={`flex flex-col gap-3 rounded-md border border-border-strong bg-surface p-4 ${focusRing}`}
-                        >
-                          <div className="flex flex-col">
-                            <span id={`item-${d.id}-title`} className="text-body font-semibold">
-                              {d.form}
-                              {d.optional && <span className="font-normal text-text-muted"> (optional)</span>}
-                            </span>
-                            <span className="text-small text-text-muted">{d.source}</span>
-                          </div>
-                          <p className={`flex items-center gap-2 text-small font-semibold ${s.tone}`}>
-                            <s.Icon size={24} weight="regular" aria-hidden />
-                            <span className="tabular-nums">{d.optional && d.status === 'missing' ? 'Optional' : d.optional && d.status === 'none' ? 'You don’t have one' : s.text(d)}</span>
-                          </p>
-                          <div className="flex flex-wrap items-center gap-x-6 gap-y-1">
-                            <button
-                              type="button"
-                              onClick={() => setUploading(d)}
-                              className={`flex h-11 items-center gap-2 rounded-sm border border-border-strong bg-surface px-4 text-body font-semibold active:bg-sage-100 ${focusRing}`}
-                            >
-                              <UploadSimpleIcon size={24} weight="regular" aria-hidden />
-                              {d.status === 'added' ? 'Manage files' : 'Upload'}
-                              <span className="sr-only"> {d.form}</span>
-                            </button>
-                            {d.status === 'missing' && d.optional && (
-                              <button
-                                type="button"
-                                onClick={() => change(d.id, () => setDetail(d.uploadScreen, 'none'), `${d.form}: you don’t have one`)}
-                                className={quietLink}
-                              >
-                                I don’t have one
-                              </button>
-                            )}
-                            {d.status === 'missing' && !d.optional && (
-                              <>
-                                <button
-                                  type="button"
-                                  onClick={() => change(d.id, () => setDetail(d.uploadScreen, 'later'), `${d.form}: you’ll add it later`)}
-                                  className={quietLink}
-                                >
-                                  I’ll add it later
-                                </button>
-                                <button
-                                  type="button"
-                                  onClick={() => change(d.id, () => setDetail(d.uploadScreen, 'none'), `${d.form}: you don’t have this`)}
-                                  className={quietLink}
-                                >
-                                  I don’t have this
-                                </button>
-                              </>
-                            )}
-                            {(d.status === 'later' || d.status === 'none') && (
-                              <button
-                                type="button"
-                                onClick={() => change(d.id, () => clearDetail(d.uploadScreen), `${d.form}: not added yet`)}
-                                className={quietLink}
-                              >
-                                Undo
-                                <span className="sr-only"> for {d.form}</span>
-                              </button>
-                            )}
-                          </div>
-                        </motion.li>
-                      )
-                    })}
+                  <div className="flex flex-col">
+                    <h2 id={`documents-${group.id}`} className="text-body font-semibold">
+                      {group.title}
+                    </h2>
+                    <p className="text-small text-text-muted">{group.line}</p>
+                  </div>
+                  <ul className="grid gap-(--grid-gutter) tablet:grid-cols-2">
+                    {groupDocs.map((d) => (
+                      <DocumentCard
+                        key={d.id}
+                        id={d.id}
+                        index={order.indexOf(d.id)}
+                        name={d.form}
+                        optional={d.optional}
+                        hint={d.status === 'added' ? d.files.join(', ') : d.source}
+                        artwork={d.id === 'passport' || d.id === 'i94' ? 'passport' : d.id === 'state-id' ? 'id' : 'document'}
+                        pill={d.status === 'added' ? 'added' : d.status === 'later' ? 'later' : d.status === 'none' ? 'none' : d.optional ? 'optional' : 'todo'}
+                        primary={{ label: d.status === 'added' ? 'Replace' : 'Add', onClick: () => setUploading({ item: d }) }}
+                        secondary={secondaryFor(d)}
+                        onDropFile={(file) => setUploading({ item: d, file })}
+                      />
+                    ))}
                   </ul>
                 </section>
               )
@@ -287,71 +236,43 @@ export default function DocumentsPage() {
 
             {income.length > 0 && (
               <section aria-labelledby="documents-income" className="mt-10 flex flex-col gap-4">
-                <div className="flex flex-col gap-1">
-                  <h2 id="documents-income" className="font-display text-title">
+                <div className="flex flex-col">
+                  <h2 id="documents-income" className="text-body font-semibold">
                     Income without a form
                   </h2>
-                  <p className="text-body text-text-muted">{SELF_REPORTED_INTRO}</p>
+                  <p className="text-small text-text-muted">{SELF_REPORTED_INTRO}</p>
                 </div>
-                <ul className="flex flex-col gap-4">
-                  {income.map((item, i) => {
-                    const s = incomeStatus[item.status]
-                    return (
-                      <motion.li
-                        key={item.id}
-                        id={`item-${item.id}`}
-                        tabIndex={-1}
-                        aria-labelledby={`item-${item.id}-title`}
-                        initial={enter}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={t(docs.length + i + 1)}
-                        className={`flex flex-col gap-3 rounded-md border border-border-strong bg-surface p-4 ${focusRing}`}
-                      >
-                        <span id={`item-${item.id}-title`} className="text-body font-semibold">
-                          {item.incomeLabel}
-                        </span>
-                        <p className="flex items-center gap-2 text-small font-semibold">
-                          <s.Icon size={24} weight="regular" aria-hidden />
-                          {s.text}
-                        </p>
-                        {/* TODO confirm with CPA: what details to ask for here (SELF_REPORTED_DETAILS). Nothing is collected yet. */}
-                        <div className="flex flex-wrap items-center gap-x-6 gap-y-1">
-                          {item.status === 'details-needed' && (
-                            <button
-                              type="button"
-                              onClick={() =>
-                                change(item.id, () => setDetail(selfReportKey(item.id), 'later'), `${item.incomeLabel}: you’ll add the details later`)
-                              }
-                              className={quietLink}
-                            >
-                              I’ll add it later
-                            </button>
-                          )}
-                          {item.status === 'later' && (
-                            <button
-                              type="button"
-                              onClick={() => change(item.id, () => clearDetail(selfReportKey(item.id)), `${item.incomeLabel}: details needed`)}
-                              className={quietLink}
-                            >
-                              Undo
-                              <span className="sr-only"> for {item.incomeLabel}</span>
-                            </button>
-                          )}
-                        </div>
-                      </motion.li>
-                    )
-                  })}
+                {/* TODO confirm with CPA: what details to ask for here (SELF_REPORTED_DETAILS). Nothing is collected yet. */}
+                <ul className="grid gap-(--grid-gutter) tablet:grid-cols-2">
+                  {income.map((item) => (
+                    <DocumentCard
+                      key={item.id}
+                      id={item.id}
+                      index={order.indexOf(item.id)}
+                      name={item.incomeLabel}
+                      hint="No form for this one"
+                      artwork="document"
+                      pill={item.status === 'later' ? 'later' : item.status === 'provided' ? 'added' : 'details'}
+                      secondary={
+                        item.status === 'details-needed'
+                          ? { kind: 'button', label: 'Remind me later', onClick: () => change(item.id, () => setDetail(selfReportKey(item.id), 'later'), `${item.incomeLabel}: you’ll add the details later`) }
+                          : item.status === 'later'
+                            ? { kind: 'button', label: 'Undo', onClick: () => change(item.id, () => clearDetail(selfReportKey(item.id)), `${item.incomeLabel}: details needed`) }
+                            : undefined
+                      }
+                    />
+                  ))}
                 </ul>
               </section>
             )}
 
             {fromFlow && (
-              <div className="mt-10 flex flex-col gap-2">
+              <div className="mt-10 grid gap-2 tablet:grid-cols-2 tablet:gap-x-(--grid-gutter)">
                 <PrimaryButton disabled={!summary.done} onClick={() => navigate(REVIEW_PATH)}>
                   Continue
                 </PrimaryButton>
                 {!summary.done && (
-                  <p className="text-small text-text-muted">For each item, add it or choose “I’ll add it later” (or “I don’t have this”) to continue.</p>
+                  <p className="text-small text-text-muted tablet:col-span-2">Add each document, or choose “Not now” for the ones you don’t have yet, to continue.</p>
                 )}
               </div>
             )}
@@ -366,21 +287,21 @@ export default function DocumentsPage() {
       <AnimatePresence onExitComplete={() => afterSheet.current()}>
         {uploading && (
           <BottomSheet
-            title={`Upload: ${uploading.form}`}
+            title={`Add: ${uploading.item.form}`}
             onClose={() => {
-              const id = uploading.id
+              const id = uploading.item.id
               afterSheet.current = () => document.getElementById(`item-${id}`)?.focus({ preventScroll: true })
               setUploading(null)
             }}
           >
-            <p className="text-body text-text-muted">{uploading.source}</p>
+            <p className="text-body text-text-muted">{uploading.item.source}</p>
             <div className="pt-6">
-              <SheetUpload item={uploading} />
+              <SheetUpload item={uploading.item} initialFile={uploading.file} />
             </div>
             <div className="flex flex-col pt-8">
               <SecondaryButton
                 onClick={() => {
-                  const id = uploading.id
+                  const id = uploading.item.id
                   afterSheet.current = () => document.getElementById(`item-${id}`)?.focus({ preventScroll: true })
                   setUploading(null)
                 }}
@@ -396,7 +317,7 @@ export default function DocumentsPage() {
 }
 
 /** The real upload, saving to the same answer the flow's upload question uses. */
-function SheetUpload({ item }: { item: DocumentItem }) {
+function SheetUpload({ item, initialFile }: { item: DocumentItem; initialFile?: File }) {
   const answers = useAnswers()
   const v = answers.details?.[item.uploadScreen]
   const files = Array.isArray(v) ? v : []
@@ -405,6 +326,7 @@ function SheetUpload({ item }: { item: DocumentItem }) {
       docLabel={item.form}
       uploaded={files}
       allowAnother
+      initialFile={initialFile}
       onUploaded={(name) => setDetail(item.uploadScreen, [...files, name])}
       onRemove={(i) =>
         setDetail(
@@ -413,6 +335,26 @@ function SheetUpload({ item }: { item: DocumentItem }) {
         )
       }
     />
+  )
+}
+
+/** A number that ticks up: the new value rises in with the soft spring (reduced motion: fades). */
+function Count({ value, reduce }: { value: number; reduce: boolean }) {
+  return (
+    <span data-stack className="inline-grid overflow-hidden align-bottom">
+      <AnimatePresence initial={false} mode="popLayout">
+        <motion.span
+          key={value}
+          className="[grid-area:1/1]"
+          initial={reduce ? { opacity: 0 } : { opacity: 0, y: '60%' }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={reduce ? { opacity: 0 } : { opacity: 0, y: '-60%' }}
+          transition={reduce ? spring.fade : spring.soft}
+        >
+          {value}
+        </motion.span>
+      </AnimatePresence>
+    </span>
   )
 }
 

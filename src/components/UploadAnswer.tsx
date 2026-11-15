@@ -36,9 +36,11 @@ type Props = {
   onUploaded: (name: string) => void
   onRemove: (index: number) => void
   allowAnother?: boolean
+  /** A file dropped somewhere else (e.g. on a Documents card): upload it straight away */
+  initialFile?: File
 }
 
-export function UploadAnswer({ docLabel, uploaded, onUploaded, onRemove, allowAnother }: Props) {
+export function UploadAnswer({ docLabel, uploaded, onUploaded, onRemove, allowAnother, initialFile }: Props) {
   const up = useUpload()
   const reduce = useReducedMotionConfig() ?? false
   const reported = useRef<string | null>(null)
@@ -54,6 +56,13 @@ export function UploadAnswer({ docLabel, uploaded, onUploaded, onRemove, allowAn
   const removeButton = (i: number) => root.current?.querySelectorAll<HTMLButtonElement>('[data-remove]')[i]
   const message = () => root.current?.querySelector<HTMLElement>('[data-upload-message]')
   const zoneButton = () => root.current?.querySelector<HTMLButtonElement>('[data-upload-action]:not([inert] *)')
+
+  // A dropped file starts uploading as soon as the sheet opens (a real upload, same rules).
+  // start() is stable and cancels any earlier attempt, so a dev-mode double run is harmless.
+  const { start } = up
+  useEffect(() => {
+    if (initialFile) start(initialFile)
+  }, [initialFile, start])
 
   useEffect(() => {
     if (up.status === 'done' && up.file && reported.current !== up.file.name + up.file.size) {

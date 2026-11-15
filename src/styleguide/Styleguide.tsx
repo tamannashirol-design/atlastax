@@ -12,6 +12,8 @@ import { Intro } from '../intro/Intro'
 import { LaptopPreview } from '../intro/LaptopPreview'
 import { VisaDemo } from '../intro/scenes'
 import { FlagLine } from '../residency/TimeInUS'
+import { DocumentCard, StatusPill } from '../documents/DocumentCard'
+import { MenuButton } from '../components/MenuButton'
 import { IncomeCard, IncomeRow, Illustration } from '../components/IncomeCard'
 import { extraOptions, incomeOptions } from '../data/income'
 import { SearchSelect } from '../components/SearchSelect'
@@ -208,6 +210,32 @@ function IntroDemo() {
           <LaptopPreview position={{ section: 0, step: 0, steps: 4 }}>
             <VisaDemo play={0} fit="content" />
           </LaptopPreview>
+        </div>
+        <span className="pt-4 text-body font-semibold">Document card (Documents page)</span>
+        <Label>Art, name, hint, status pill, one soft “Add” (primary tint, never cobalt), at most one quiet secondary. Drop a file on it (iPad, laptop).</Label>
+        <ul className="grid gap-(--grid-gutter)">
+          <DocumentCard
+            id="sg-doc"
+            index={0}
+            name="Passport"
+            hint="The page with your photo"
+            artwork="passport"
+            pill="todo"
+            primary={{ label: 'Add', onClick: () => {} }}
+            secondary={{ kind: 'menu', label: 'Not now', items: [{ label: 'Remind me later', onSelect: () => {} }, { label: 'I don’t have this one', onSelect: () => {} }] }}
+          />
+        </ul>
+        <span className="pt-4 text-body font-semibold">Status pills</span>
+        <Label>Text + icon, never color alone.</Label>
+        <div className="flex flex-wrap gap-2">
+          {(['todo', 'added', 'later', 'none', 'optional', 'details'] as const).map((p) => (
+            <StatusPill key={p} pill={p} />
+          ))}
+        </div>
+        <span className="pt-4 text-body font-semibold">Menu button</span>
+        <Label>Quiet text button with a menu: arrow keys, Escape closes and returns focus.</Label>
+        <div className="flex">
+          <MenuButton label="Not now" items={[{ label: 'Remind me later', onSelect: () => {} }, { label: 'I don’t have this one', onSelect: () => {} }]} />
         </div>
         <span className="pt-4 text-body font-semibold">Needs attention (Time in the U.S.)</span>
         <Label>Only rows that need attention are highlighted: text + icon, never color alone, with a way to fix it.</Label>

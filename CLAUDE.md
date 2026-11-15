@@ -147,7 +147,10 @@ Rules:
   decide reportability. `npm run check:documents` tests the function.
   Identity documents (`IDENTITY_DOCUMENTS`): passport and I-94 required; a
   driver's license or state ID is `optional` (shown, never counted).
-- Documents page (`src/documents/`): ONE page for the tab and the flow.
+- Documents page (`src/documents/`): friendly cards (`DocumentCard`: art,
+  status pill, one soft primary-tint "Add"/"Replace", one quiet secondary:
+  a `MenuButton` "Not now" or Undo; drop a file on a card). Continue is the
+  only cobalt element. ONE page for the tab and the flow.
   The flow opens it with history state { fromFlow: true } (navigate(path,
   state)); only then it shows the stepper and Continue. Items link as
   /documents#item-<id>. The stepper's Documents section uses

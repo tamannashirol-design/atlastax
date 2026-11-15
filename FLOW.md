@@ -228,34 +228,37 @@ or /motion → Intro, with a 390 / 820 / 1032 / 1280 width toggle and
     whichever form it is.
   - What to collect for self-reported items.
 
-## Documents page (step 2 of 3: built, `src/documents/DocumentsPage.tsx`)
+## Documents page (built, `src/documents/`)
 
 - ONE page: the Documents tab (/documents) and the flow's Documents step
-  (after the last income question) open the same page.
-  - From the flow: back arrow, the stepper (compact; rail at 1024+) and
-    **Continue** (to Review, enabled once nothing is outstanding). "From the
-    flow" is kept in history state, so a reload keeps it.
-  - From the tab: title "Documents", tab bar, no stepper, no Continue.
-- Summary: "2 of 3 documents added" + thin navy bar (documents only), and
-  "1 income item needs details" on its own line. None: "No documents needed
-  yet" with "Why no documents yet?" (explains it depends on the income you
-  tell us about, links to the income question).
-- Your documents: form + who sends it, status as text and an icon (Added ·
-  n files / You'll add it later / You don't have this / Not added yet).
-  Upload opens a sheet with the real upload (same answer as the flow's
-  upload question). Not added: "I'll add it later" and "I don't have this"
-  (both on every document here; the flow's upload sheets offer "I'll add it
-  later" only, so a missing form is reported here). Deferred: Undo.
-- Income without a form: "You told us you had this income. We'll ask for
-  the details here." Status "Details needed"; "I'll add it later" / Undo.
-  What to collect: TODO confirm with CPA (nothing collected yet).
-- Each item has its own address: /documents#item-<id> scrolls to it and
-  focuses it (Home's links in step 3 use this).
-- Stepper: Documents shows done only when requiredItems() says nothing is
-  outstanding. "Continue where you left off" goes to Documents (from the
-  flow) once the questions are done, until then.
-- W-2 upload question is neutral: "Upload your W-2", "From your employer.
-  One per employer" (no longer names OPT or CPT).
+  open the same page. From the flow: back arrow, the stepper (compact; rail
+  at 1024+) and **Continue** (the page's only cobalt element; unlocks once
+  nothing is outstanding). From the tab: title "Documents", no Continue.
+- Friendly cards, not a form (presentation only; the logic is unchanged):
+  - Top: "<n> of <total> added" (documents only; ticks up with the soft
+    spring), a thin navy bar, and "<n> to go. Add what you have, and you can
+    come back for the rest." / "All done for now. You can come back any time
+    to add more." (TODO confirm). Income items: their own line.
+  - Groups with a quiet heading and a short line (TODO confirm): Identity
+    ("These show who you are. A clear photo or a PDF works."), Income
+    documents ("Forms from your employer, school or bank."), Income without
+    a form (the neutral self-reported line).
+  - Card (`DocumentCard`): art (the passport illustration for Passport and
+    I-94; a UI icon otherwise), name, one-line hint (file names once added),
+    a status pill (text + icon: To do / Added / Later / Not available /
+    Optional / Details needed), ONE soft button "Add" (primary tint, navy
+    text) or "Replace", and at most one quiet secondary: **"Not now"** menu
+    ("Remind me later" = I'll add it later; "I don't have this one" = I
+    don't have this; the optional ID shows only "I don't have one"), or
+    Undo once deferred. White, radius lg, faint sage border + soft shadow.
+  - Drop a file on a card (iPad, laptop): "Drop to add" on a primary-tint
+    layer; the upload sheet opens with the file already uploading (a real
+    upload). Add stays for keyboard and phone.
+  - Layout: phone one column; iPad and laptop a two-column card grid
+    (cards equal height per row).
+- Each item has its own address: /documents#item-<id> scrolls to and
+  focuses it. Focus moves to the card after any change; the sheet returns
+  focus to its card.
 
 ## Next steps (agreed order)
 
