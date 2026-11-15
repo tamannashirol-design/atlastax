@@ -28,6 +28,7 @@ import { sections, type FlowPosition } from '../flow/sections'
 import { PrimaryButton } from '../components/PrimaryButton'
 import cssText from '../index.css?raw'
 import { contrastRatio } from '../lib/contrast'
+import { mask, maskSpoken, SENSITIVE_ID_NAMES, type SensitiveId } from '../lib/mask'
 import { DebugStack, useUrlFlag } from '../lib/debug'
 import { parseColors } from '../tokens/colors'
 import { pairs, thresholds, type Pair } from '../tokens/pairs'
@@ -65,6 +66,38 @@ function Section({ title, description, children }: { title: string; description:
       </header>
       {children}
     </section>
+  )
+}
+
+// Fake example values only (the allowed ones in scripts/check-files.ts)
+const MASK_EXAMPLES: { kind: SensitiveId; value: string }[] = [
+  { kind: 'ssn', value: '123-45-6789' },
+  { kind: 'itin', value: '555-55-5555' },
+  { kind: 'ein', value: '12-3456789' },
+  { kind: 'passport', value: 'X1234567' },
+]
+
+function MaskedIds() {
+  return (
+    <Section
+      title="Masked ID numbers"
+      description="SSN, ITIN, EIN and passport numbers are always masked (src/lib/mask.ts): only the last 4 show, the bullets never reveal the length, and screen readers hear “ending in” plus the digits instead of the bullets. Fields that need their own tick are set in src/extraction.config.ts. Example values are fake."
+    >
+      <ul className="col-span-full flex flex-col rounded-md border border-border-decorative bg-surface desktop:col-span-8">
+        {MASK_EXAMPLES.map(({ kind, value }) => (
+          <li key={kind} className="flex min-h-14 flex-col justify-center gap-1 border-b border-border-decorative px-4 py-2 last:border-b-0 tablet:flex-row tablet:items-center tablet:justify-between tablet:gap-4">
+            <span className="text-body font-semibold">{SENSITIVE_ID_NAMES[kind]}</span>
+            <span className="flex flex-col tablet:items-end">
+              <span className="text-body tabular-nums">
+                <span aria-hidden="true">{mask(value, kind)}</span>
+                <span className="sr-only">{maskSpoken(value, kind)}</span>
+              </span>
+              <Label>Screen reader: “{maskSpoken(value, kind)}”</Label>
+            </span>
+          </li>
+        ))}
+      </ul>
+    </Section>
   )
 }
 
@@ -646,6 +679,8 @@ export default function Styleguide() {
               </figure>
             ))}
           </Section>
+
+          <MaskedIds />
 
           <Section title="Radii" description="Three corner sizes. Bigger surfaces get rounder corners.">
             {radii.map((r) => (

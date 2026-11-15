@@ -249,6 +249,11 @@ Rules:
   `references/`). SSN-like numbers only as 123-45-6789, 000-00-0000,
   111-11-1111 or 555-55-5555. `npm run check:files` enforces both (runs
   before every build). Extraction plan: EXTRACTION-PLAN.md.
+- SSN, ITIN, EIN and passport numbers are shown ONLY through `mask()` /
+  `maskSpoken()` (`src/lib/mask.ts`): screens, announcements, errors; never
+  logged. Which fields each form has, which are masked and which need their
+  own tick: ONLY `src/extraction.config.ts` (TODO confirm with CPA).
+  `npm run check:extraction` tests both.
 
 ## Tech stack
 React + TypeScript + Tailwind CSS + Framer Motion, built with Vite.
