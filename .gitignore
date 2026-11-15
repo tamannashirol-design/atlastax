@@ -25,3 +25,6 @@ dist-ssr
 
 # Screenshots from layout checks (not committed)
 screenshots/
+
+# Motion reference videos (large, kept locally only)
+references/motion/*.mov
