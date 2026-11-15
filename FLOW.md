@@ -299,8 +299,7 @@ documents|ready (doesn't change saved answers).
 
 - Hero: "2026 tax return", the headline, one plain sentence (TODO confirm),
   the progress row (all 6 sections with names: done = check, current =
-  bold), the button. New state: passport, graduation cap and bank
-  illustrations overlap in the corner (decorative).
+  bold), the button. No illustrations in the hero.
 - Layout: phone one column; iPad 5 + 3 columns; laptop 8 + 4. The hero and
   the side column share a top edge. White cards (radius lg, shadow) on the
   page background.

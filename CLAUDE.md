@@ -72,8 +72,8 @@ elements floating over each other. The flow is documented in FLOW.md.
   (listed on /styleguide). No SF Symbols (not licensed for web).
 
 **Illustrations**
-- Soft 3D objects, used on the Income cards and on Home (the new-state
-  hero cluster and "Things you may need"). Decorative (empty alt),
+- Soft 3D objects, used on the Income cards and on Home's "Things you may
+  need" (not in the hero). Decorative (empty alt),
   lazy loaded. Icon box 80px on phone, 96px from 600px, centered, contain.
 - `npm run illustrations`: trims each file's transparent border, fits the art
   in a 384px square with equal ~8% padding (illustrations/normalized/), then

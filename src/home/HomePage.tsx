@@ -240,12 +240,9 @@ export default function HomePage() {
               transition={reduce ? spring.fade : spring.soft}
               className="flex flex-col gap-6 rounded-lg bg-surface p-6 shadow-2 tablet:p-8"
             >
-              {/* Phone: label (bottom-aligned) beside the art, headline full width below.
-                  600px+: label and headline on the left, art spanning both on the right. */}
-              <div className="grid grid-cols-[minmax(0,1fr)_auto] gap-x-4 gap-y-2">
-                <p className="self-end text-small text-text-muted tablet:col-start-1 tablet:row-start-1">{TAX_YEAR} tax return</p>
-                {status.state === 'new' && <ArtCluster />}
-                <div className="col-span-2 flex min-w-0 flex-col gap-2 tablet:col-span-1 tablet:row-start-2">
+              <div className="flex flex-col gap-2">
+                <p className="text-small text-text-muted">{TAX_YEAR} tax return</p>
+                <div className="flex min-w-0 flex-col gap-2">
                   <AnimatePresence mode="wait" initial={false}>
                     <motion.div key={status.state} className="flex flex-col gap-2" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={spring.quick}>
                       <h1 id="home-title" tabIndex={-1} className="font-display text-display text-balance outline-none">
@@ -309,20 +306,6 @@ function Card({ id, title, children, motionProps }: { id: string; title: string;
       </h2>
       {children}
     </motion.section>
-  )
-}
-
-/** Three overlapping illustrations in one grid cell (no absolute positioning). Decorative. */
-function ArtCluster() {
-  const img = (a: Art, cls: string) => (
-    <img src={a.src} srcSet={a.srcSet} sizes="80px" alt="" width={80} height={80} loading="lazy" decoding="async" className={`size-16 object-contain [grid-area:1/1] tablet:size-20 ${cls}`} />
-  )
-  return (
-    <div aria-hidden data-stack className="col-start-2 row-start-1 grid size-28 justify-self-end tablet:row-span-2 tablet:size-36">
-      {img(art('optcpt'), 'self-start justify-self-start')}
-      {img(art('scholarship'), 'self-start justify-self-end')}
-      {img(art('bank'), 'self-end justify-self-center')}
-    </div>
   )
 }
 
