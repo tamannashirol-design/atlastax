@@ -11,6 +11,9 @@ import { IntroContent } from '../intro/IntroContent'
 import { MOCK_SCENARIOS, READING_SCENARIOS, setMockScenario } from '../extraction/client'
 import { REVIEW_FIXTURES } from '../review/fixtureNames'
 import { Link } from '../lib/router'
+import { useAnswers, useFilingYear } from '../flow/answers'
+import { requiredItems } from '../flow/requiredDocuments'
+import { taxItemsFrom, type TaxInput } from '../tax/input'
 
 // /motion: play each state of the upload moment, scrub progress, and toggle
 // reduced motion. "Upload" and "Error" run REAL uploads to the dev endpoint
@@ -166,6 +169,7 @@ export default function MotionPage() {
             </section>
 
             <ReadingScenarios />
+            <TaxInputPreview />
 
             <IntroPreview />
           </div>
@@ -282,6 +286,76 @@ function SecondaryButtonInline({ onClick, children }: { onClick: () => void; chi
     >
       {children}
     </button>
+  )
+}
+
+/** Development only (R1): the tax input built from the values confirmed on Review, built on the server. Shown here, never stored. */
+function TaxInputPreview() {
+  const answers = useAnswers()
+  const year = useFilingYear()
+  const [input, setInput] = useState<TaxInput | null>(null)
+  const [error, setError] = useState('')
+  const load = async () => {
+    setError('')
+    try {
+      const body = { person: { citizenship: answers.citizenship, visa: answers.visa }, income: answers.income ?? [], items: taxItemsFrom(requiredItems(answers)) }
+      const r = await fetch(`/api/dev/tax-input?year=${year}`, { method: 'POST', body: JSON.stringify(body) })
+      if (!r.ok) throw new Error(String(r.status))
+      setInput((await r.json()) as TaxInput)
+    } catch {
+      setInput(null)
+      setError('Couldn’t reach the dev server')
+    }
+  }
+  const dollars = (cents: number) => (cents / 100).toLocaleString('en-US', { style: 'currency', currency: 'USD' })
+  return (
+    <section aria-labelledby="tax-input" className="mt-12 flex flex-col gap-6 border-t border-border-decorative pt-12">
+      <header className="flex max-w-column flex-col gap-2">
+        <h2 id="tax-input" className="font-display text-title">
+          Tax input (R1)
+        </h2>
+        <p className="text-body text-text-muted">
+          What the engine will receive: only values you confirmed on Review (ticked where a tick is needed). No ID numbers. Anything missing shows as a
+          blocker. Confirm your documents on Review first, then press the button.
+        </p>
+      </header>
+      <div className="max-w-column">
+        <SecondaryButton onClick={() => void load()}>Show the tax input for my return</SecondaryButton>
+      </div>
+      {error && <p className="text-body text-error">{error}</p>}
+      {input && (
+        <div className="flex max-w-column flex-col gap-4">
+          <p className="text-body font-semibold">{input.blockers.length ? `${input.blockers.length} blocking: no number yet` : 'Ready for the engine'}</p>
+          <ul className="flex flex-col gap-2">
+            {input.blockers.map((b) => (
+              <li key={b.id} className="text-body">
+                {b.reason}
+              </li>
+            ))}
+          </ul>
+          {input.wages.map((w) => (
+            <dl key={w.itemId} className="grid grid-cols-[1fr_auto] gap-x-4 gap-y-1 rounded-md border border-border-decorative bg-surface p-4 text-body tabular-nums">
+              <dt className="col-span-2 font-semibold">W-2{w.employer ? `, ${w.employer}` : ''}</dt>
+              <dt>Wages (box 1)</dt>
+              <dd>{dollars(w.wages)}</dd>
+              <dt>Federal tax withheld (box 2)</dt>
+              <dd>{dollars(w.federalWithheld)}</dd>
+              <dt>State (box 15)</dt>
+              <dd>{w.stateCode ?? 'none'}</dd>
+              <dt>State wages (box 16)</dt>
+              <dd>{dollars(w.stateWages)}</dd>
+              <dt>State tax withheld (box 17)</dt>
+              <dd>{dollars(w.stateWithheld)}</dd>
+            </dl>
+          ))}
+          {input.other.length > 0 && <p className="text-small text-text-muted">Not read by the engine yet: {input.other.map((o) => o.label).join(', ')}</p>}
+          <details>
+            <summary className="flex min-h-11 cursor-pointer items-center text-body font-semibold underline underline-offset-4">The raw input</summary>
+            <pre className="overflow-x-auto rounded-md bg-sage-100 p-4 text-small">{JSON.stringify(input, null, 2)}</pre>
+          </details>
+        </div>
+      )}
+    </section>
   )
 }
 

@@ -4,7 +4,8 @@ import type { FormType } from '../../src/extraction.config.ts'
 
 // Fake values per form, keyed by field (src/extraction.config.ts). null = not on the form.
 export const FAKE: Record<FormType, Record<string, string | null>> = {
-  'W-2': { employeeTaxId: '123-45-6789', employerName: 'Sample Employer Inc.', employerEin: '12-3456789', wages: '24180.00', federalWithheld: '2016.00', state: 'NY', stateWages: '24180.00', stateWithheld: null },
+  // FAKE, but realistic for an OPT student: wages, federal and state withholding, state NY
+  'W-2': { employeeTaxId: '123-45-6789', employerName: 'Sample Employer Inc. (FAKE)', employerEin: '12-3456789', wages: '38450.00', federalWithheld: '3186.00', state: 'NY', stateWages: '38450.00', stateWithheld: '1893.00' },
   '1042-S': { withholdingAgent: 'Sample University', incomeCode: '16', grossIncome: '12000.00', exemptionCode: '04', taxRate: '00.00', federalWithheld: '0.00', recipientCountry: 'Sample Country' },
   '1099-INT': { payerName: 'Sample Bank', interest: '42.17', federalWithheld: '0.00' },
   '1099-NEC': { payerName: 'Sample Client LLC', payerTin: '98-7654321', compensation: '3500.00', federalWithheld: '0.00' },

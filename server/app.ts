@@ -22,6 +22,8 @@
 //   POST   /api/extraction/:itemId/retry?year=2025 → 204
 //   POST   /api/extraction/scenario { scenario }  → 204 (dev only: what the mock does next)
 //
+//   Development only: POST /api/dev/tax-input?year= { person, income, items } → the TaxInput (R1)
+//
 //   Review (server/review.ts; ID numbers masked except on reveal):
 //   GET    /api/review?year=2025 → { documents } · PUT /api/review/:itemId?year= → document
 //   GET    /api/review/:itemId/reveal?year=&key= → { value } (Show)
@@ -43,6 +45,7 @@ import { readingJobs, type ExtractionUpdate } from './extraction/jobs.ts'
 import { isScenario, mockProvider, type Scenario } from './extraction/mockProvider.ts'
 import { fingerprintOf, type Notice } from './notice.ts'
 import { reviewStore } from './review.ts'
+import { buildTaxInput, type TaxItem } from '../src/tax/input.ts'
 import { sniff, storage, type ConsentRecord } from './storage.ts'
 
 type Handler = (req: IncomingMessage, res: ServerResponse, next?: () => void) => void
@@ -122,6 +125,19 @@ export function createApp(overrides: Partial<ServerOptions> = {}): Handler {
     if (path === '/api/files' && req.method === 'POST') return upload(req, res, url, sessionId)
 
     if (path.startsWith('/api/extraction')) return extraction(req, res, url, sessionId)
+
+    // Development only (R1): the tax input built from this person's confirmed values, so it can be looked at.
+    // The browser sends the non-sensitive summary of its required documents; amounts come back for display only.
+    if (path === '/api/dev/tax-input' && req.method === 'POST') {
+      if (!options.dev) return send(res, 404, { error: 'not-found' })
+      const year = taxYear(url.searchParams.get('year'))
+      const body = await readJson(req, 16_384)
+      const items = body?.items
+      if (!year || !body || !Array.isArray(items) || !items.every((i) => i && typeof i.id === 'string' && typeof i.label === 'string' && typeof i.status === 'string' && (i.kind === 'document' || i.kind === 'income'))) return send(res, 400, { error: 'malformed' })
+      const person = (body.person ?? {}) as { citizenship?: string; visa?: string }
+      const income = Array.isArray(body.income) ? body.income.filter((x): x is string => typeof x === 'string') : []
+      return send(res, 200, buildTaxInput({ year, person: { citizenship: person.citizenship ? String(person.citizenship) : undefined, visa: person.visa ? String(person.visa) : undefined }, income, items: items as TaxItem[], documents: await review.taxDocuments(sessionId, year) }))
+    }
 
     if (path === '/api/review' || path.startsWith('/api/review/')) {
       const year = taxYear(url.searchParams.get('year'))
@@ -340,11 +356,11 @@ function fileName(header: string | string[] | undefined): string {
   return name || 'Document'
 }
 
-async function readJson(req: IncomingMessage): Promise<Record<string, unknown> | null> {
+async function readJson(req: IncomingMessage, maxBytes = 1024): Promise<Record<string, unknown> | null> {
   let raw = ''
   for await (const chunk of req) {
     raw += chunk
-    if (raw.length > 1024) return null
+    if (raw.length > maxBytes) return null
   }
   try {
     return JSON.parse(raw) as Record<string, unknown>

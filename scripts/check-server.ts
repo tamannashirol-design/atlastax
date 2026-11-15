@@ -171,6 +171,7 @@ defaultsServer.close()
 prodServer.close()
 await rm(prodDir, { recursive: true, force: true })
 
+let prodTaxStatus = 0
 console.log('\nREADING (mock provider)\n')
 type Snap = { capabilities: { stages: boolean }; documents: { itemId: string; status: string; failure?: string; files: number }[] }
 const reader = { cookie: '' }
@@ -258,11 +259,28 @@ const editedDoc = (await (await put('opt-cpt', { fields: { wages: { value: '100.
 check('editing a value clears its tick (server enforces it)', editedDoc.fields?.find((f) => f.key === 'wages')?.ticked === false)
 check('Review refuses a document this session has no file for (404)', (await put('i94', { fields: {} })).status === 404)
 
+// R1: the tax input is built from what was confirmed (dev route), amounts in cents, no ID numbers
+type TInput = { wages: { wages: number; stateCode: string | null; stateWithheld: number }[]; blockers: { id: string }[] }
+const taxInput = async (items: unknown[]) => (await (await fetch(`${base}/api/dev/tax-input?year=2025`, { method: 'POST', headers: reader, body: JSON.stringify({ person: { citizenship: 'IN', visa: 'F-1' }, income: ['opt-cpt'], items }) })).json()) as TInput
+const w2Item = [{ id: 'opt-cpt', kind: 'document', label: 'W-2', status: 'added' }]
+check('tax input: an unconfirmed W-2 blocks and no value is used', await taxInput(w2Item).then((t) => t.wages.length === 0 && t.blockers.some((b) => b.id === 'opt-cpt:unconfirmed')))
+const tickAll = Object.fromEntries(['employeeTaxId', 'employerEin', 'wages', 'federalWithheld', 'state', 'stateWages', 'stateWithheld'].map((k) => [k, { ticked: true }]))
+await put('opt-cpt', { fields: tickAll })
+check('tax input: ticked but not confirmed yet still blocks', await taxInput(w2Item).then((t) => t.wages.length === 0))
+check('confirming the W-2 works once every tick is done', (await put('opt-cpt', { status: 'confirmed' })).status === 200)
+const confirmedInput = await taxInput(w2Item)
+check('tax input: the confirmed W-2 is in, in cents (wages edited to 100.00 earlier)', confirmedInput.wages[0]?.wages === 10000 && confirmedInput.wages[0]?.stateCode === 'NY' && confirmedInput.wages[0]?.stateWithheld === 189300 && confirmedInput.blockers.length === 0)
+check('tax input: no ID number anywhere in it', !/123-45-6789|12-3456789|\d{3}-\d{2}-\d{4}/.test(JSON.stringify(confirmedInput)))
+const editedAgain = await put('opt-cpt', { fields: { wages: { value: '200.00' } } })
+check('tax input: editing a confirmed value reopens it, and it blocks again', editedAgain.status === 200 && (await taxInput(w2Item)).blockers.some((b) => b.id === 'opt-cpt:unconfirmed'))
+check('tax input: refuses a malformed body (400)', (await fetch(`${base}/api/dev/tax-input?year=2025`, { method: 'POST', headers: reader, body: JSON.stringify({ items: 'x' }) })).status === 400)
+
 const otherYear = (await (await fetch(`${base}/api/extraction?year=2024`, { headers: reader })).json()) as Snap
 check('another tax year sees none of these documents', otherYear.documents.length === 0)
 const stranger = (await (await fetch(`${base}/api/extraction?year=2025`)).json()) as Snap
 check('another session sees none of these documents', stranger.documents.length === 0)
 check('scenarios can’t be set outside development', (await createAppStatus()) === 404)
+check('the dev tax-input route doesn’t exist outside development (404)', prodTaxStatus === 404)
 check('the old dev replay is gone (404)', (await fetch(`${base}/api/extraction/replay?year=2025`, { method: 'POST', headers: reader, body: JSON.stringify({ scenario: 'fast' }) })).status === 404)
 
 await new Promise((r) => setTimeout(r, 300))
@@ -270,13 +288,15 @@ live.abort()
 await stream
 const all = events.join('')
 check('live updates arrived (snapshot, then document changes)', all.includes('"type":"snapshot"') && all.includes('"status":"checking"') && all.includes('"status":"ready"'))
-check('no extracted value ever reaches the browser', !/123-45-6789|12-3456789|X1234567|24180|SAMPLE/.test(all + JSON.stringify(await snap())))
+check('no extracted value ever reaches the browser', !/123-45-6789|12-3456789|X1234567|38450|3186|1893|SAMPLE/.test(all + JSON.stringify(await snap())))
 
 async function createAppStatus() {
   const prod = createApp({ dataDir, dev: false })
   const s = createServer((req, res) => prod(req, res))
   await new Promise<void>((r) => s.listen(0, r))
-  const r = await fetch(`http://localhost:${(s.address() as { port: number }).port}/api/extraction/scenario`, { method: 'POST', body: JSON.stringify({ scenario: 'fast' }) })
+  const port = (s.address() as { port: number }).port
+  const r = await fetch(`http://localhost:${port}/api/extraction/scenario`, { method: 'POST', body: JSON.stringify({ scenario: 'fast' }) })
+  prodTaxStatus = (await fetch(`http://localhost:${port}/api/dev/tax-input?year=2025`, { method: 'POST', body: JSON.stringify({ items: [] }) })).status
   s.close()
   return r.status
 }

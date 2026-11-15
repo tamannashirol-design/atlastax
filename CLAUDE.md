@@ -176,6 +176,13 @@ Rules:
   is a placeholder card ("Passport, file 1"); phone: "View document" sheet.
   Dev: `/review?review=needs|ticked|failed|wrongtype|replace|summary` (fixtures
   load only in development).
+- Tax input (R1, `src/tax/input.ts`, `npm run check:taxinput`): the ONLY place confirmed
+  Review values become tax input (`buildTaxInput`, cents). Only values the person
+  confirmed go in (ticked where a tick is needed); anything else is a blocker with the
+  screen to fix it; "Not on my form" counts as zero only where the field may be blank;
+  no ID numbers in the output. Runs on the server (`server/review.ts` `taxDocuments`);
+  dev route `/api/dev/tax-input`, shown on /motion. Box numbers in
+  `extraction.config.ts` are checked against the IRS PDFs (2026 versions).
 - First contact with the server goes through `sessionReady()`
   (`src/lib/session.ts`), so parallel first requests can't create different
   sessions (files in one, the page reading another).

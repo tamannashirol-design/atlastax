@@ -1,5 +1,8 @@
 // EXTRACTION FIELDS: which details are read from each kind of document.
 //
+// Box numbers checked against the IRS Form W-2 and Form 1042-S PDFs (irs.gov/pub/irs-pdf/fw2.pdf, f1042s.pdf;
+// the versions online in Nov 2026 are the 2026 forms; the 2025 layout is believed identical, not checked).
+//
 // TODO confirm with CPA: every field below is a PLACEHOLDER (which fields,
 // their names, which can be "Not on my form"). Open questions:
 //   - 1099-DIV and 1099-B fields (left as a short placeholder list)
@@ -59,18 +62,20 @@ export const FIELDS: Record<FormType, FieldSpec[]> = {
     { key: 'employerEin', label: 'Employer EIN', box: 'Box b', kind: 'id', sensitive: 'ein', needsTick: true },
     money('wages', 'Wages', 'Box 1'),
     money('federalWithheld', 'Federal tax withheld', 'Box 2'),
-    { key: 'state', label: 'State', box: 'Box 15', kind: 'state', needsTick: false, mayBeBlank: true },
+    // The state decides which state return applies, so it needs a tick like the amounts do
+    { key: 'state', label: 'State', box: 'Box 15', kind: 'state', needsTick: true, mayBeBlank: true },
     money('stateWages', 'State wages', 'Box 16', true),
     money('stateWithheld', 'State tax withheld', 'Box 17', true),
   ],
   '1042-S': [
-    { key: 'withholdingAgent', label: 'Withholding agent', box: 'Box 12a', kind: 'name', needsTick: false },
+    { key: 'withholdingAgent', label: 'Withholding agent', box: 'Box 12d', kind: 'name', needsTick: false },
     { key: 'incomeCode', label: 'Income code', box: 'Box 1', kind: 'code', needsTick: true },
     money('grossIncome', 'Gross income', 'Box 2'),
     { key: 'exemptionCode', label: 'Exemption code', box: 'Box 3a', kind: 'code', needsTick: true, mayBeBlank: true },
     { key: 'taxRate', label: 'Tax rate', box: 'Box 3b', kind: 'code', needsTick: true, mayBeBlank: true },
-    money('federalWithheld', 'Federal tax withheld', 'Box 7a', true),
-    { key: 'recipientCountry', label: 'Country (for tax purposes)', box: 'Box 13b', kind: 'country', needsTick: true },
+    // Box 10 (total withholding credit = boxes 7a + 8 + 9) is what the 1040-NR credits on line 25g, not Box 7a
+    money('federalWithheld', 'Total tax withheld (credit)', 'Box 10', true),
+    { key: 'recipientCountry', label: 'Your country code', box: 'Box 13b', kind: 'country', needsTick: true },
   ],
   '1099-INT': [
     { key: 'payerName', label: 'Bank', kind: 'name', needsTick: false },

@@ -18,7 +18,7 @@ Open the app with `npm run dev`, then http://localhost:5173.
 | **4** | **Consent sheet** | Notice shown before the first upload; "Continue to upload" / "Not now"; server requires it; read again on Profile; `check:consent`. **Plus the consent review fixes** (below). | **Done** (`5cdf3b4`, review fixes in the commit after it) | `/documents` → **Add** on any card (first time). `/profile` → **Privacy**. `/trips` → open "Fill this in from your I-94 travel history". See "How to see step 4" below. | Sonnet for the sheet, Opus for the logic (reviewed and fixed on Opus) |
 | **5** | **Reading page** (redone Nov 15) | One status pill: "Reading your documents" → "Extracting your details" → "Done" (success fill + small settle), each changed only by the mock reader (3–5s per stage); hold 600ms, then Review. Reading starts only when /reading opens (never at upload), every visit reads again. Failures: "Couldn't read" + Try again / Choose another file / Enter it myself, Continue waits. Removed: reading at upload, Reading/Couldn't read on cards, 10s/60s messages, skip-to-Review, minimum display time, Home's "Reading N documents". | **Done** (stall fixed, see below) | `/documents` → **Continue**, or `/reading?reading=normal` / `?reading=fail` | Opus |
 | **6** | **Review screen** | "Check your details": one document per screen (passport, I-94, then income), "2 of n", file placeholder left (iPad/laptop) or "View document" sheet (phone), editable fields, tick rule, masked IDs with Show, Confirm and continue (locked, says what's left), Skip for now, summary → "Looks good" → `/result`; saved on the server as you go, resumes; states: needs review, all ticked, couldn't read, wrong document, being read after Replace; `check:review` | **Built, waiting for your "next"** | `/review` after the Reading page; states: `/motion` → "Review" or `/review?review=needs` etc. See "How to see step 6". | Opus |
-| R1 | Transcription | Fix the field list to the IRS boxes (1042-S Box 10); turn confirmed values into tax input; `check:taxinput` | Not started | Nothing on screen | Opus |
+| **R1** | **Transcription** | Confirmed Review values → `TaxInput` (cents, `buildTaxInput` in `src/tax/input.ts`); only ticked values go in; blockers link to the screen to fix; no ID numbers in the output; 1042-S boxes fixed (Box 10, Box 12d); realistic fake W-2; `check:taxinput` | **Built, waiting for your "next"** | `/motion` → "Tax input (R1)". See "How to see R1". | Sonnet |
 | R2 | Engine core, 2025 | 2025 tables with sources, Tax Table method, wages-only; `check:tax` | Not started | Nothing on screen | Opus |
 | R5 | Estimate endpoint | `POST /api/estimate`, stale detection, number switch on the server | Not started | Nothing on screen | Opus |
 | R6 | Result screen | All states (blocked, refund, owed, zero, needs review, stale), the visible switch that hides the number. **Also replaces the old step 7** (summary and download lock). | Not started | `/result` (`?result=refund` etc.) | Opus for states, Sonnet for UI |
@@ -33,6 +33,53 @@ Open the app with `npm run dev`, then http://localhost:5173.
 | 8 | Real provider | A real reading service behind the same interface | Not started (waits on legal and the vendor) | Nothing different on screen | Opus |
 
 Old step 7 (summary, download lock) no longer exists as its own step: it is part of R6.
+
+## Final scope (replaces earlier plans where they conflict)
+
+Review → "Looks good" → `/result` → downloads. The flow ends there. **Not built:**
+how-to-pay, the state-return-coming-soon card, deleting documents, treaty logic
+(`/result` will say "Treaty benefits aren't included yet."). Order: R1 → R2 (federal
+engine, wages first, IRS 2025 figures cited) → state engine (NY, CA) → `/result`
+(Federal and State sections, out-of-date on any change) → downloads (official 2025
+Form 8843 and 1040-NR, filled, every page marked "Prototype estimate, not for filing")
+→ tests. A flaky automated check: investigate once, report, move on.
+
+## How to see R1
+
+1. `npm run dev`. On `/documents` add passport, I-94 and a W-2, press **Continue**, and on
+   Review tick every "This is correct" and **Confirm and continue** on all three.
+2. Open http://localhost:5173/motion, scroll to **Tax input (R1)**, press **Show the tax
+   input for my return**: "Ready for the engine" and the W-2's numbers (fake: wages
+   $38,450.00, federal withheld $3,186.00, state NY, state wages $38,450.00, state tax
+   withheld $1,893.00).
+3. Before confirming (or after editing a confirmed value, or skipping a document) the same
+   button lists what blocks it, e.g. "W-2: not confirmed yet."
+
+## R1: things to know
+
+- **Box numbers checked against the IRS PDFs** (irs.gov/pub/irs-pdf/fw2.pdf and
+  f1042s.pdf). Both are the **2026** forms, the only ones online now; the 2025 layout is
+  believed identical but was not checked. W-2: a SSN, b EIN, c employer, 1 wages, 2
+  federal withheld, 15 state, 16 state wages, 17 state tax: all matched. **1042-S:** two
+  errors fixed: the federal credit is **Box 10** "Total withholding credit" (it said 7a),
+  and the withholding agent's name is **Box 12d** (it said 12a, which is the EIN). The
+  1042-S "country" field is Box 13b "Recipient's country code" (label changed).
+- **The state (W-2 box 15) now needs its own tick**, like an amount, because it decides
+  the state return.
+- **Filing status is assumed single**: there is no marital-status question yet (shown as
+  an assumption). Married or dependents will need that question before the number is
+  trustworthy. Not built, not in the final scope.
+- **The fake W-2 is realistic now** (NY, wages, federal and state withholding), marked
+  "(FAKE)" in the employer name and in `server/extraction/fakeValues.ts`. It is NY only:
+  CA will be tested with synthetic cases in the engine tests.
+- 1042-S and 1099 documents, and self-reported income, are listed as "not read by the
+  engine yet" so the engine can say "no number".
+- The dev route `POST /api/dev/tax-input` sends a small non-sensitive summary of your
+  documents (names of the income types and their status, visa, citizenship) to our
+  server and returns amounts for display on `/motion` only. It doesn't exist outside
+  development. When `/result` uses this for real, that is a privacy decision to
+  confirm (what the browser sends).
+- All `check:taxinput` cases are synthetic (mine); R1 is bookkeeping, not tax math.
 
 ## How to see step 6
 

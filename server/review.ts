@@ -10,6 +10,7 @@
 // memory (prototype): a server restart forgets it. Never logged.
 import { FIELDS, ITEM_FORMS } from '../src/extraction.config.ts'
 import { applyPatch, effectiveValue, EMPTY_REVIEW, formFor, reviewView, type FieldPatch, type ReviewDoc, type SavedReview, type Suggestion, canConfirm } from '../src/review/logic.ts'
+import type { ConfirmedDocument } from '../src/tax/input.ts'
 import type { readingJobs } from './extraction/jobs.ts'
 import type { FileMeta } from './storage.ts'
 
@@ -70,6 +71,22 @@ export function reviewStore(jobs: Jobs, listFiles: (sessionId: string) => Promis
       const spec = FIELDS[form].find((f) => f.key === key)
       if (!spec?.sensitive) return null
       return effectiveValue(s.fields[key], suggestions?.find((x) => x.key === key), s.manual)
+    },
+
+    /** Every document this person has, with each value, tick and "Not on my form" as saved: input for buildTaxInput (R1). Server side only. */
+    async taxDocuments(sessionId: string, year: number): Promise<ConfirmedDocument[]> {
+      const items = new Set((await listFiles(sessionId)).filter((m) => m.year === year && m.itemId && m.itemId in ITEM_FORMS).map((m) => m.itemId!))
+      return [...items].map((itemId) => {
+        const { form, suggestions, s } = parts(sessionId, year, itemId)
+        const fields = Object.fromEntries(
+          FIELDS[form].map((spec) => {
+            const sug = suggestions?.find((x) => x.key === spec.key)
+            const f = s.fields[spec.key]
+            return [spec.key, { value: effectiveValue(f, sug, s.manual), ticked: !!f?.ticked, notOnForm: !!f?.notOnForm, confidence: s.manual ? 'missing' : (sug?.confidence ?? 'missing') }]
+          }),
+        )
+        return { itemId, form, status: s.status, fields } as ConfirmedDocument
+      })
     },
 
     /** Confirmed values for the downloads later (Part 3). Server side only. */
