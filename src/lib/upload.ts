@@ -30,8 +30,20 @@ const ACCEPTED = /^(application\/pdf|image\/)/
 const TYPE_ERROR = 'That file type isn’t supported. Use a PDF or a photo.'
 const SIZE_ERROR = `That file is too big. Use one under ${Math.round(MAX_UPLOAD_BYTES / 1024 / 1024)} MB.` // TODO confirm copy
 
-export function useUpload(endpoint = '/api/files') {
+/** Moments the caller may need to act on right away (events, not state) */
+export type UploadEvents = {
+  /** The server refused the file for lack of consent (the upload went quietly back to idle) */
+  onNeedsConsent?: () => void
+  /** The upload failed in a way another try might fix (network or server error) */
+  onFailed?: () => void
+}
+
+export function useUpload(endpoint = '/api/files', events: UploadEvents = {}) {
   const [state, setState] = useState<UploadState>({ status: 'idle', progress: 0 })
+  const on = useRef(events)
+  useEffect(() => {
+    on.current = events
+  })
   const xhr = useRef<XMLHttpRequest | null>(null)
   const last = useRef<{ file: File; query: string; meta: UploadMeta } | null>(null)
 
@@ -61,12 +73,19 @@ export function useUpload(endpoint = '/api/files') {
         } else if (req.status === 403 && /consent-required/.test(req.responseText)) {
           // Not an error the person caused: the notice needs agreeing to (again). Quietly back to idle; the caller asks, then retries.
           setState((s) => ({ status: 'idle', progress: 0, file: s.file, needsConsent: true }))
+          on.current.onNeedsConsent?.()
         } else if (req.status === 415 || req.status === 413) {
           // The server looked inside the file (or measured it) and can't take it: a different file is needed
           setState((s) => ({ ...s, status: 'error', progress: 0, error: req.status === 415 ? TYPE_ERROR : SIZE_ERROR, retryable: false }))
-        } else setState((s) => ({ ...s, status: 'error', error: undefined, retryable: true }))
+        } else {
+          setState((s) => ({ ...s, status: 'error', error: undefined, retryable: true }))
+          on.current.onFailed?.()
+        }
       }
-      req.onerror = () => setState((s) => ({ ...s, status: 'error', error: undefined, retryable: true }))
+      req.onerror = () => {
+        setState((s) => ({ ...s, status: 'error', error: undefined, retryable: true }))
+        on.current.onFailed?.()
+      }
       req.open('POST', endpoint + query)
       req.setRequestHeader('x-file-name', encodeURIComponent(file.name))
       if (meta.itemId) req.setRequestHeader('x-item-id', meta.itemId)

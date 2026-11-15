@@ -7,8 +7,11 @@
 //                              → 201 { fileId, name, size }
 //                                413 too big · 415 not a PDF or photo · 403 consent needed
 //   DELETE /api/files/:fileId  delete your own file → 204 (404 if it isn't yours)
-//   GET    /api/consent        → { given, version, required, at? }  (at = when this session agreed to this version)
-//   POST   /api/consent        { version } → 204, records the date and notice version
+//   GET    /api/consent        → { given, required, version, notice: { version, fingerprint, copy }, at? }
+//                              The browser shows exactly `notice.copy`; `at` = when this session agreed to it.
+//   POST   /api/consent        { version, fingerprint } of the words shown →
+//                              204 recorded (only for the CURRENT notice) · 409 { error: 'notice-changed', notice }
+//                              (an older notice was shown: show this one, ask again) · 400 unknown or malformed
 //   GET    /api/health         → { ok: true }
 //
 //   Reading (EXTRACTION-PLAN.md; statuses only, never values):
@@ -19,8 +22,10 @@
 //
 // Upload headers x-item-id + x-tax-year start reading that document (D4).
 //
-// Dev test switches on POST /api/files (only when options.dev):
+// Dev test switches on POST /api/files (only when options.dev; REJECTED with 400 otherwise):
 //   ?fail=1 fails halfway · ?kbps=300 another speed · ?dry=1 measure only, nothing stored
+// A refused upload (no consent, dev switch outside dev, too big) is answered at once
+// and the connection is closed, so the rest of the file is never read.
 //
 // Privacy: this file never logs file names, contents, or values. Errors are
 // logged by route and error code only.
@@ -29,7 +34,8 @@ import type { IncomingMessage, ServerResponse } from 'node:http'
 import { DEFAULT_OPTIONS, DEV_FINISH_MS, DEV_UPLOAD_KBPS, type ServerOptions } from './config.ts'
 import { readingJobs, type ExtractionUpdate } from './extraction/jobs.ts'
 import { isScenario, mockProvider, type Scenario } from './extraction/mockProvider.ts'
-import { sniff, storage } from './storage.ts'
+import { fingerprintOf, type Notice } from './notice.ts'
+import { sniff, storage, type ConsentRecord } from './storage.ts'
 
 type Handler = (req: IncomingMessage, res: ServerResponse, next?: () => void) => void
 
@@ -45,6 +51,10 @@ const taxYear = (v: unknown) => {
 export function createApp(overrides: Partial<ServerOptions> = {}): Handler {
   const options = { ...DEFAULT_OPTIONS, ...overrides }
   const store = storage(options.dataDir)
+  // The notice the browser must show, and every notice ever shown (to recognise an older one)
+  const notice: Notice = { version: options.consentVersion, fingerprint: fingerprintOf(options.consentCopy), copy: options.consentCopy }
+  const knownNotices = [...options.consentKnown, { version: notice.version, fingerprint: notice.fingerprint }]
+  const isCurrent = (c: Pick<ConsentRecord, 'version' | 'fingerprint'> | null | undefined) => !!c && c.version === notice.version && c.fingerprint === notice.fingerprint
   // The mock's scenario, per session (dev). One-shot scenarios fail the next uploaded document once.
   const scenarios = new Map<string, { scenario: Scenario; armed: boolean }>()
   const jobs = readingJobs({
@@ -82,14 +92,21 @@ export function createApp(overrides: Partial<ServerOptions> = {}): Handler {
     if (path === '/api/consent') {
       if (req.method === 'GET') {
         const c = await store.consent(sessionId)
-        const given = c?.version === options.consentVersion
-        return send(res, 200, { given, version: options.consentVersion, required: options.consentRequired, ...(given && c ? { at: c.at } : {}) })
+        const given = isCurrent(c)
+        return send(res, 200, { given, required: options.consentRequired, version: notice.version, notice, ...(given && c ? { at: c.at } : {}) })
       }
       if (req.method === 'POST') {
         const body = await readJson(req)
-        if (body?.version !== options.consentVersion) return send(res, 400, { error: 'version' })
-        await store.recordConsent(sessionId, { version: options.consentVersion, at: new Date().toISOString() })
-        return send(res, 204)
+        const shown = { version: body?.version, fingerprint: body?.fingerprint }
+        if (typeof shown.version !== 'string' || typeof shown.fingerprint !== 'string') return send(res, 400, { error: 'malformed' })
+        // Record agreement ONLY to the exact words currently in force
+        if (isCurrent(shown as ConsentRecord)) {
+          await store.recordConsent(sessionId, { version: notice.version, fingerprint: notice.fingerprint, at: new Date().toISOString() })
+          return send(res, 204)
+        }
+        // The browser showed an older notice: send the current one, so it can be read and agreed to afresh
+        if (knownNotices.some((n) => n.version === shown.version && n.fingerprint === shown.fingerprint)) return send(res, 409, { error: 'notice-changed', notice })
+        return send(res, 400, { error: 'unknown-notice' })
       }
     }
 
@@ -111,19 +128,14 @@ export function createApp(overrides: Partial<ServerOptions> = {}): Handler {
 
   async function upload(req: IncomingMessage, res: ServerResponse, url: URL, sessionId: string) {
     const dev = options.dev
+    // The dev test switches are rejected outside development, never silently ignored
+    // (an ignored ?dry=1 would quietly STORE a file meant to be thrown away)
+    if (!dev && ['dry', 'fail', 'kbps'].some((k) => url.searchParams.has(k))) return refuseUpload(req, res, 400, { error: 'dev-only' })
     const dry = dev && url.searchParams.has('dry')
     // A measured-only dev upload stores nothing, so it needs no consent
-    if (!dry && options.consentRequired && (await store.consent(sessionId))?.version !== options.consentVersion) {
-      req.resume()
-      return send(res, 403, { error: 'consent-required' })
-    }
+    if (!dry && options.consentRequired && !isCurrent(await store.consent(sessionId))) return refuseUpload(req, res, 403, { error: 'consent-required' })
     const declared = Number(req.headers['content-length'] ?? 0)
-    if (declared > options.maxFileBytes) {
-      res.setHeader('connection', 'close')
-      send(res, 413, { error: 'too-big' })
-      req.destroy()
-      return
-    }
+    if (declared > options.maxFileBytes) return refuseUpload(req, res, 413, { error: 'too-big' })
 
     const fail = dev && url.searchParams.has('fail')
     const rate = (dev ? Number(url.searchParams.get('kbps') ?? DEV_UPLOAD_KBPS) : 0) * 1024
@@ -234,6 +246,18 @@ export function createApp(overrides: Partial<ServerOptions> = {}): Handler {
 }
 
 // ---------- helpers ----------
+
+/**
+ * Refuse an upload before reading it: answer at once, ask the browser to close the
+ * connection, and stop reading once the answer has gone out. The rest of the file
+ * is never read (the browser may still be sending; those bytes are dropped).
+ */
+function refuseUpload(req: IncomingMessage, res: ServerResponse, status: number, body: unknown) {
+  req.pause()
+  res.setHeader('connection', 'close')
+  res.on('finish', () => req.destroy())
+  send(res, status, body)
+}
 
 function send(res: ServerResponse, status: number, body?: unknown) {
   if (res.writableEnded) return

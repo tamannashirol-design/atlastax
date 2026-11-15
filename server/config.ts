@@ -1,6 +1,6 @@
 // Server settings. Change values here only.
 import { join } from 'node:path'
-import { CONSENT_VERSION } from '../src/consent.config.ts'
+import { CONSENT_COPY, CONSENT_NOTICES, CONSENT_VERSION } from '../src/consent.config.ts'
 import { MAX_UPLOAD_BYTES } from '../src/config.ts'
 
 export type ServerOptions = {
@@ -16,10 +16,15 @@ export type ServerOptions = {
   consentRequired: boolean
   /** The privacy notice version people agree to: src/consent.config.ts (bump it when the words change; everyone is asked again). */
   consentVersion: string
+  /** The notice's words, sent to the browser and fingerprinted (src/consent.config.ts) */
+  consentCopy: unknown
+  /** Every earlier notice (version + fingerprint), to recognise a browser that showed an older one */
+  consentKnown: { version: string; fingerprint: string }[]
   /**
    * Development only: slows uploads down so the folder animation shows real
    * progress on a fast local connection, and allows the test switches
-   * (?fail=1, ?kbps=300, ?dry=1). Never on in production.
+   * (?fail=1, ?kbps=300, ?dry=1). Never on in production, where those switches
+   * are REJECTED (400), not ignored.
    */
   dev: boolean
 }
@@ -29,6 +34,8 @@ export const DEFAULT_OPTIONS: ServerOptions = {
   maxFileBytes: MAX_UPLOAD_BYTES,
   consentRequired: true,
   consentVersion: CONSENT_VERSION,
+  consentCopy: CONSENT_COPY,
+  consentKnown: CONSENT_NOTICES,
   dev: false,
 }
 

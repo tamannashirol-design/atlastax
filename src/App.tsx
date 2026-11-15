@@ -2,7 +2,7 @@ import DocumentsPage from './documents/DocumentsPage'
 import FlowPage from './flow/FlowPage'
 import { STOP_PATH, isFlowPath, isGatedPath } from './flow/screens'
 import { useAnswers, useFilingYear } from './flow/answers'
-import { useEffect } from 'react'
+import { lazy, Suspense, useEffect } from 'react'
 import HomePage from './home/HomePage'
 import ProfilePage from './profile/ProfilePage'
 import LandingPage from './landing/LandingPage'
@@ -10,8 +10,12 @@ import { useLoggedIn } from './lib/auth'
 import PlaceholderPage from './pages/PlaceholderPage'
 import { isPlaceholderPath } from './pages/placeholders'
 import { Link, navigate, usePath } from './lib/router'
-import MotionPage from './motion/MotionPage'
-import Styleguide from './styleguide/Styleguide'
+
+// Design and testing tools (/styleguide, /motion): DEVELOPMENT ONLY. In a production
+// build import.meta.env.DEV is false, so these pages (and their test uploads) aren't
+// even included; the addresses show "This screen is coming soon."
+const Styleguide = import.meta.env.DEV ? lazy(() => import('./styleguide/Styleguide')) : null
+const MotionPage = import.meta.env.DEV ? lazy(() => import('./motion/MotionPage')) : null
 
 // Picks a page from the address bar. Flow screens share one FlowPage so the
 // shell and stepper stay mounted as you move between questions.
@@ -26,8 +30,18 @@ export default function App() {
     if (gated) navigate(STOP_PATH, null, { replace: true })
   }, [gated])
   if (gated) return null
-  if (path === '/styleguide') return <Styleguide />
-  if (path === '/motion') return <MotionPage />
+  if (Styleguide && path === '/styleguide')
+    return (
+      <Suspense fallback={null}>
+        <Styleguide />
+      </Suspense>
+    )
+  if (MotionPage && path === '/motion')
+    return (
+      <Suspense fallback={null}>
+        <MotionPage />
+      </Suspense>
+    )
   if (isFlowPath(path)) return <FlowPage path={path} />
   // One Documents page for the tab and the flow (the flow opens it with { fromFlow: true })
   if (path === '/documents') return <DocumentsPage />
@@ -44,9 +58,11 @@ export default function App() {
       <Link href="/" className="flex min-h-11 items-center text-body font-semibold underline underline-offset-4">
         Go to Home
       </Link>
-      <Link href="/styleguide" className="flex min-h-11 items-center text-body font-semibold underline underline-offset-4">
-        Style guide
-      </Link>
+      {import.meta.env.DEV && (
+        <Link href="/styleguide" className="flex min-h-11 items-center text-body font-semibold underline underline-offset-4">
+          Style guide
+        </Link>
+      )}
     </main>
   )
 }

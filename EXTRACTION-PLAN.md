@@ -209,28 +209,78 @@ Placeholders to show the shape, not a tax decision:
 - Readable later from Profile.
 
 **Built in step 4 (Nov 2026)** — how it works:
-- The notice's words and version live ONLY in `src/consent.config.ts` (the server
-  reads the version from there too). `npm run check:consent` fails if the words
-  change without a new `CONSENT_VERSION` and fingerprint, so a changed notice
-  always asks everyone again. All wording is placeholder, TODO confirm with legal.
+- The notice's words and version live ONLY in `src/consent.config.ts`, with a list
+  of every version ever published (`CONSENT_NOTICES`: version + fingerprint, a
+  short hash of the exact words). `npm run check:consent` fails if the words change
+  without a new version added to that list, so a changed notice always asks
+  everyone again. All wording is placeholder, TODO confirm with legal.
+- **The server is the source of the words.** `GET /api/consent` sends the notice
+  (words, version, fingerprint); the sheet shows exactly that. Agreeing sends back
+  the version and fingerprint **of the words on screen**; the server records
+  agreement (version + fingerprint + time) **only if they are the current notice**.
+  An older, known notice gets 409 with the new words: the sheet shows "The notice
+  has changed" above them (focus moves there) and asks afresh. Anything unknown or
+  tampered gets 400. So nobody is ever recorded as agreeing to words they didn't see.
 - The sheet (`src/consent/ConsentSheet.tsx`) opens over any upload control that
   stores files (`UploadAnswer` with `upload`), the first time it shows: income
   upload sheets, the Documents sheet, the previous-return sheet, and the
   travel-history section when it's opened. A file dropped on a card waits for it.
-  /motion and the style guide uploads store nothing, so they never ask.
-- "Continue to upload" records agreement (date + version) on the server, starts
-  any waiting file and moves focus to the zone. "Not now", the X, Escape and a tap
-  outside all mean the same: close the sheet that opened the upload, upload nothing.
-- If the server ever refuses an upload for lack of consent (new version, lost
-  cookie) the control goes quietly back to idle, asks, then retries the same file.
-- The server now requires consent for stored uploads (on by default); measured-only
-  dev uploads (`?dry=1`) are exempt.
+  /motion and the style guide uploads store nothing, so they never ask (and those
+  two pages exist only in development, see below).
+- **No file bytes leave the browser until the server has confirmed agreement.**
+  While the status is unknown, chosen or dropped files wait. If the status can't be
+  loaded, the zone is replaced by "We couldn't check your privacy settings." and a
+  **Try again** button, and files keep waiting.
+- "Continue to upload" records agreement, starts any waiting file and moves focus to
+  the zone. If saving fails: "We couldn't save your agreement. Try again." "Not
+  now", the X, Escape and a tap outside all mean the same: close the sheet (and the
+  sheet that opened the upload, when it provides a close), upload nothing. "Not now"
+  closes it even when nothing else closes the control.
+- If the server still refuses an upload for lack of consent (new notice, lost
+  cookie), or an upload fails and a re-check shows the agreement is gone, the
+  control goes quietly back to idle, asks, then retries the same file. A file
+  dropped on a card is sent **once**: a second round of agreement never re-sends it.
+- The server requires consent for stored uploads (on by default). A refused upload
+  is answered at once and the connection closed, so the rest of the file isn't read.
+  Measured-only dev uploads (`?dry=1`) are exempt in development; **outside
+  development the dev switches (`?dry=1`, `?fail=1`, `?kbps=`) are rejected (400)**,
+  never ignored, and **/styleguide and /motion aren't in production builds** at all
+  (checked after every build by `scripts/check-prod-build.mjs`).
 - Profile has a **Privacy** section: the same words, read-only, and "You agreed on
   <date>" once they have. Withdrawing consent is not built (legal, see below).
 - Consequence of "Not now" (Q-E, still open): the document stays "not added", and
   Continue on Documents needs every required document, so someone who keeps
   declining can't get past Documents until we decide on a way to enter details by
   hand from there ("Enter it myself" exists only on Review, step 6).
+
+### File names: proposal (not built)
+
+Today the real file name (e.g. "W2_Jane_Doe_2025.pdf") is shown and stored, and
+names often contain a person's name or numbers. It is never logged.
+
+| Where the real name is today | |
+|---|---|
+| Shown | the upload zone while uploading, the file list, "Remove <file>?", announcements ("<file> uploaded / removed") |
+| Stored in the browser tab | upload answers (`details`), the previous return (`priorReturn.fileName`), travel history (`cbpFiles`) |
+| Sent to and stored on the server | the `x-file-name` header, kept in each file's record (`.data/files/<id>.json`) |
+
+**Proposal: a generic label everywhere, built from what we already know:** the
+document, its number and kind, plus size and time to tell files apart, e.g.
+"W-2 · file 1 · PDF, 240 KB" or "Passport · photo 1 · added 3:14 PM". One function
+makes the label; nothing else formats it.
+- **Server:** stop sending and storing the name (no `x-file-name`); keep kind, size
+  and time; the label is made from those.
+- **Browser storage:** keep file ids and labels, never names.
+- **Screens and announcements:** show the label. The "Remove" sheet names the label
+  (CLAUDE.md's "naming the exact file" becomes "naming the exact file by its label").
+- **Where the real name is actually needed:** only at the moment of choosing, so the
+  person can recognise they picked the right file. Proposal: show it in the zone
+  and on the new row **during that upload only, from memory** (never stored, never
+  sent), then the label. The server, the reader, the return and the forms never need it.
+- Note: the file's contents can still carry a name (it's the document itself); that's
+  covered by the consent and retention rules, not by labels.
+- Tests: no `x-file-name` sent; no name in any server record; no original name in the
+  tab's storage after the upload moment.
 
 ---
 
@@ -390,7 +440,18 @@ and 1099-B fields; which fields may be "Not on my form".
 
 **For legal** (add to the list): consent and privacy wording, how long files
 and values are kept, the provider's data agreement, whether showing the
-document back on Review is fine.
+document back on Review is fine, and (behavior unchanged for now):
+- **Consent is per browser, not per person.** It's tied to a browser cookie, so
+  someone else using the same browser inherits it, and switching the (fake) login
+  doesn't reset it. Real accounts would tie it to the person. Only the latest
+  agreement is kept (no history of earlier versions).
+- **A changed notice and already-uploaded files.** After a new notice, new uploads
+  wait for fresh agreement, but files already uploaded are still read again when a
+  reading is retried or resumed. Does a changed notice need fresh agreement before
+  those files are processed again?
+- **Withdrawing consent, tied to deletion.** There is no way to withdraw yet. Should
+  withdrawing delete the person's files and extracted values (and stop any reading),
+  and how should that be worded?
 
 ---
 

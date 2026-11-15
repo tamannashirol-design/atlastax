@@ -1,8 +1,10 @@
-// Consent in the browser (EXTRACTION-PLAN.md §4). The server is the record: this
-// only caches what it said, and agrees by POSTing the notice version the person saw.
+// Consent in the browser (EXTRACTION-PLAN.md §4). The server is the record and the
+// source of the notice's words: this only caches what it said. Agreeing sends back
+// the version and fingerprint of the notice that was on screen, never anything
+// else, so the server can't record agreement to words that weren't shown.
 // Decisions live in ./logic.ts.
 import { useEffect, useSyncExternalStore } from 'react'
-import { afterAgree, afterRefusal, fromServer, INITIAL_CONSENT, type ConsentState } from './logic.ts'
+import { afterAgree, afterNoticeChanged, afterRefusal, fromServer, INITIAL_CONSENT, isNotice, type ConsentState } from './logic.ts'
 
 let state: ConsentState = INITIAL_CONSENT
 const listeners = new Set<() => void>()
@@ -13,10 +15,15 @@ function set(next: ConsentState) {
   listeners.forEach((l) => l())
 }
 
-/** Ask the server once (and again when forced). Safe to call from many places. */
+/**
+ * Ask the server (once, or again when forced: "Try again", or after a failed
+ * upload). One request at a time. While re-checking after an error the state
+ * stays "error", so the message doesn't flicker.
+ */
 export function loadConsent(force = false): Promise<void> {
-  if (!force && (state.status === 'ready' || loading)) return loading ?? Promise.resolve()
-  if (state.status !== 'ready') set({ ...state, status: 'loading' })
+  if (loading) return loading
+  if (!force && state.status === 'ready') return Promise.resolve()
+  if (state.status === 'unknown') set({ ...state, status: 'loading' })
   loading = fetch('/api/consent')
     .then((r) => (r.ok ? r.json() : Promise.reject(new Error('consent'))))
     .then((body) => set(fromServer(body)))
@@ -27,16 +34,32 @@ export function loadConsent(force = false): Promise<void> {
   return loading
 }
 
-/** Agree to the current notice. Resolves true when the server recorded it. */
-export async function giveConsent(): Promise<boolean> {
+export type AgreeResult = 'agreed' | 'changed' | 'failed'
+
+/**
+ * Agree to the notice ON SCREEN. "changed": the server has a newer notice; its
+ * words are now in the state (shown with "The notice has changed") and nothing
+ * was recorded. "failed": nothing was recorded; the person can try again.
+ */
+export async function giveConsent(): Promise<AgreeResult> {
+  const shown = state.notice
+  if (!shown) return 'failed'
   try {
-    if (!state.version) await loadConsent(true)
-    const r = await fetch('/api/consent', { method: 'POST', body: JSON.stringify({ version: state.version }) })
-    if (!r.ok) return false
-    set(afterAgree(state, new Date().toISOString()))
-    return true
+    const r = await fetch('/api/consent', { method: 'POST', body: JSON.stringify({ version: shown.version, fingerprint: shown.fingerprint }) })
+    if (r.ok) {
+      set(afterAgree(state, new Date().toISOString()))
+      return 'agreed'
+    }
+    if (r.status === 409) {
+      const body = (await r.json().catch(() => null)) as { notice?: unknown } | null
+      if (isNotice(body?.notice)) {
+        set(afterNoticeChanged(state, body.notice))
+        return 'changed'
+      }
+    }
+    return 'failed'
   } catch {
-    return false
+    return 'failed'
   }
 }
 

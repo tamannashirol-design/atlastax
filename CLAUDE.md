@@ -136,7 +136,8 @@ Rules:
   768 (`IntroPhone`), wide 768+ (`IntroWide`: tablist + `LaptopPreview`;
   stacked tabs below 1024, split 5/7 columns from 1024). Modes: "page"
   (logo, who-it's-for, Get started, Log in, footer) and "replay" (Skip).
-  /motion previews both; FormCard, StepDots, LaptopPreview, Logo on /styleguide.
+  /motion previews both; FormCard, StepDots, LaptopPreview, Logo on /styleguide
+  (both pages are development-only).
 - Required documents: rules ONLY in `src/documents.config.ts` (TODO
   confirm with CPA). Everything (flow upload questions, income card form
   codes, Documents page, stepper, Home) reads them through
@@ -268,19 +269,27 @@ Rules:
   `src/config.ts` (shared with the browser).
 - Files: checked by their first bytes (PDF or photo), stored privately in
   `.data/` (git-ignored), owned by a session cookie; only the owner can
-  delete. Consent is recorded per session; `consentRequired` stays off until
-  the consent sheet exists (extraction step 4).
+  delete. Consent is recorded per session (on since extraction step 4).
 - Never log file names, contents or values (route + error code only).
-- Consent (`src/consent.config.ts`, `src/consent/`): the notice's words and
-  version live ONLY in `src/consent.config.ts` (placeholder wording, TODO
-  confirm with legal); changing the words needs a new `CONSENT_VERSION` and
-  fingerprint (`npm run check:consent`, part of the build). Any `UploadAnswer`
-  with an `upload` prop asks first (`ConsentSheet`) and the server refuses stored
-  uploads without it; hosts that open an upload provide
-  `UploadHostContext` so "Not now" can close them. Measured-only uploads
-  (no `upload` prop, `?dry=1`) never ask. Readable later on Profile.
+- Consent (`src/consent.config.ts`, `src/consent/`): the notice's words, version
+  and the list of every published version (`CONSENT_NOTICES`, with a fingerprint
+  of the exact words) live ONLY in `src/consent.config.ts` (placeholder wording,
+  TODO confirm with legal). Changing the words needs a new version added to that
+  list (`npm run check:consent`, part of the build). The SERVER sends the words;
+  the sheet shows exactly them; agreeing echoes their version + fingerprint and
+  the server records it only for the current notice (older → 409 + new words,
+  "The notice has changed"). Never record agreement to words that weren't shown.
+- Any `UploadAnswer` with an `upload` prop sends NO file bytes until the server
+  has confirmed agreement (unknown → files wait; can't check → "We couldn't
+  check your privacy settings." + Try again). Rules in `src/consent/logic.ts`.
+  Hosts that open an upload provide `UploadHostContext` so "Not now" can close
+  them; "Not now" closes the sheet even without one. A dropped file is sent
+  once. Readable later on Profile.
 - Dev switches: `?fail=1`, `?kbps=300`, `?dry=1` (measured, not stored;
-  /motion uses it). `npm run check:server` tests the safety rules.
+  /motion uses it), development only: outside development the server REJECTS
+  them (400). `/styleguide` and `/motion` are development-only pages, not in
+  production builds (`scripts/check-prod-build.mjs` runs after every build).
+  `npm run check:server` tests the safety rules.
 - Reading (`server/extraction/`): providers behind one interface
   (`provider.ts`); the mock (`mockProvider.ts`, scenarios set on /motion,
   one per session) is the only one so far. `jobs.ts` reads a document as

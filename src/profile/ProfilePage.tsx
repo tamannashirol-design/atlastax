@@ -1,7 +1,7 @@
 import { AnimatePresence } from 'framer-motion'
 import { useEffect, useRef, useState } from 'react'
 import { AppShell } from '../components/AppShell'
-import { useConsent } from '../consent/client'
+import { loadConsent, useConsent } from '../consent/client'
 import { ConsentSheet } from '../consent/ConsentSheet'
 import { Intro } from '../intro/Intro'
 import { navigate } from '../lib/router'
@@ -55,7 +55,7 @@ export default function ProfilePage() {
         </div>
       </div>
       <AnimatePresence onExitComplete={() => noticeButton.current?.focus()}>
-        {notice && <ConsentSheet mode="read" onClose={() => setNotice(false)} />}
+        {notice && <ConsentSheet mode="read" notice={consent.notice} onClose={() => setNotice(false)} onRetry={() => void loadConsent(true)} />}
       </AnimatePresence>
       <AnimatePresence onExitComplete={() => after.current()}>
         {intro && (

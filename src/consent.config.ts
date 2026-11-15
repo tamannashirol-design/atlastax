@@ -9,14 +9,21 @@
 //   - how long documents and extracted values are kept
 //   - whether this is enough as consent, and how to word withdrawal
 //
+// The SERVER sends these words to the browser (GET /api/consent), and the sheet
+// shows exactly what it received, with its version and fingerprint (a short hash
+// of the words). Agreeing sends that version and fingerprint back; the server
+// records them only if they are the current notice. So nobody can be recorded as
+// agreeing to words they weren't shown.
+//
 // RULE: when the words change, bump CONSENT_VERSION (everyone is asked again)
-// and update CONSENT_COPY_FINGERPRINT. `npm run check:consent` fails until you
-// do both, so a changed notice can never go out under an old version.
+// and ADD a new line to CONSENT_NOTICES (keep the old lines: the server uses them
+// to tell "you saw an older notice" from "unknown"). `npm run check:consent`
+// fails until you do both, and prints the new fingerprint.
 
 export const CONSENT_VERSION = 'draft-1'
 
-/** First 12 characters of the SHA-256 of JSON.stringify(CONSENT_COPY). `npm run check:consent` prints the new value. */
-export const CONSENT_COPY_FINGERPRINT = 'a0fa8e834a8d'
+/** Every notice ever published, oldest first; the last one is the current one. fingerprint = first 12 characters of the SHA-256 of JSON.stringify(CONSENT_COPY). */
+export const CONSENT_NOTICES: { version: string; fingerprint: string }[] = [{ version: 'draft-1', fingerprint: 'a0fa8e834a8d' }]
 
 export const CONSENT_COPY = {
   title: 'Before you add a document',

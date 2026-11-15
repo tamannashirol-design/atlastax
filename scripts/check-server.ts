@@ -1,11 +1,13 @@
 // Checks the API's safety rules (server/app.ts) against a real HTTP server on
 // a spare port, with a throwaway data folder. Only made-up bytes are uploaded.
 // Run: npm run check:server
-import { createServer } from 'node:http'
-import { mkdtemp, readdir, rm, stat } from 'node:fs/promises'
+import { createServer, request as httpRequest } from 'node:http'
+import { mkdtemp, readdir, readFile, rm, stat } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { createApp } from '../server/app.ts'
+import { fingerprintOf } from '../server/notice.ts'
+import { CONSENT_COPY } from '../src/consent.config.ts'
 
 const dataDir = await mkdtemp(join(tmpdir(), 'atlastax-check-'))
 // consentRequired is on by default; this main test server opts out so the upload and reading tests need no agreement step (consent has its own section)
@@ -72,53 +74,102 @@ check('you can delete your own file (204)', del.status === 204)
 check('…and it’s gone from the disk', !(await filesOnDisk()).includes(body.fileId))
 
 console.log('\nCONSENT\n')
-const before = (await (await fetch(`${base}/api/consent`, { headers: { cookie } })).json()) as { given: boolean; version: string }
-check('consent starts as not given', before.given === false && before.version === 'test-1')
-const wrong = await fetch(`${base}/api/consent`, { method: 'POST', headers: { cookie }, body: JSON.stringify({ version: 'old' }) })
-check('agreeing to an old notice version is refused (400)', wrong.status === 400)
-await fetch(`${base}/api/consent`, { method: 'POST', headers: { cookie }, body: JSON.stringify({ version: 'test-1' }) })
-const after = (await (await fetch(`${base}/api/consent`, { headers: { cookie } })).json()) as { given: boolean }
+type ConsentGet = { given: boolean; required: boolean; version: string; at?: string; notice: { version: string; fingerprint: string; copy: { lead: string } } }
+const getConsent = async (b: string, c = cookie) => (await (await fetch(`${b}/api/consent`, { headers: c ? { cookie: c } : {} })).json()) as ConsentGet
+const postConsent = (b: string, shown: { version: string; fingerprint: string }, c = cookie) => fetch(`${b}/api/consent`, { method: 'POST', headers: { cookie: c }, body: JSON.stringify(shown) })
+/** Agree to whatever notice that server shows (what a browser does after showing it) */
+const agreeTo = async (b: string, c = cookie) => postConsent(b, (await getConsent(b, c)).notice, c)
+
+const before = await getConsent(base)
+check('consent starts as not given', before.given === false)
+check('the server sends the notice to show: version, fingerprint and the words', before.notice.version === 'test-1' && before.notice.fingerprint === fingerprintOf(CONSENT_COPY) && before.notice.copy.lead === CONSENT_COPY.lead)
+check('a body without version and fingerprint is refused (400)', (await fetch(`${base}/api/consent`, { method: 'POST', headers: { cookie }, body: JSON.stringify({ version: 'test-1' }) })).status === 400)
+check('the right version with the WRONG words (fingerprint) is refused (400)', (await postConsent(base, { version: 'test-1', fingerprint: 'tampered0000' })).status === 400)
+check('a notice the server never published is refused (400)', (await postConsent(base, { version: 'made-up', fingerprint: 'abcdef123456' })).status === 400)
+check('…and none of those recorded anything', (await getConsent(base)).given === false)
+check('agreeing to the notice shown records it (204)', (await agreeTo(base)).status === 204)
+const after = await getConsent(base)
 check('consent is recorded for this session', after.given === true)
-const afterFull = (await (await fetch(`${base}/api/consent`, { headers: { cookie } })).json()) as { at?: string }
-check('…with the time it was recorded', typeof afterFull.at === 'string' && !Number.isNaN(Date.parse(afterFull.at)))
-const beforeFull = (await (await fetch(`${base}/api/consent`)).json()) as { at?: string }
-check('…and no time is shown to someone who hasn’t agreed', beforeFull.at === undefined)
+check('…with the time it was recorded', typeof after.at === 'string' && !Number.isNaN(Date.parse(after.at)))
+const sessionId = cookie.split('=')[1]
+const record = JSON.parse(await readFile(join(dataDir, 'sessions', `${sessionId}.json`), 'utf8')) as { consent: { version: string; fingerprint: string } }
+check('FIX 1: the stored record holds the version AND the fingerprint of the exact words', record.consent.version === 'test-1' && record.consent.fingerprint === fingerprintOf(CONSENT_COPY))
+check('…and no time is shown to someone who hasn’t agreed', (await getConsent(base, '')).at === undefined)
 
 const strict = createApp({ dataDir, consentRequired: true, consentVersion: 'test-1', dev: true })
 const strictServer = createServer((req, res) => strict(req, res))
 await new Promise<void>((r) => strictServer.listen(0, r))
 const strictBase = `http://localhost:${(strictServer.address() as { port: number }).port}`
-const noConsent = await fetch(strictBase + '/api/files', { method: 'POST', body: PDF() })
-check('with consent required, an upload without consent is refused (403)', noConsent.status === 403)
-const withConsent = await fetch(strictBase + '/api/files?kbps=100000', { method: 'POST', body: PDF(), headers: { cookie } })
-check('…and accepted once consent is recorded', withConsent.status === 201)
+check('with consent required, an upload without consent is refused (403)', (await fetch(strictBase + '/api/files', { method: 'POST', body: PDF() })).status === 403)
+check('…and accepted once consent is recorded', (await fetch(strictBase + '/api/files?kbps=100000', { method: 'POST', body: PDF(), headers: { cookie } })).status === 201)
 
-// A changed notice: the same person is asked again
-const bumped = createApp({ dataDir, consentRequired: true, consentVersion: 'test-2', dev: true })
+console.log('\n  — the notice changes while a tab is open —')
+// Same person (cookie), same storage; the server now has new words (as after a deploy)
+const newCopy = { ...CONSENT_COPY, lead: 'A changed notice.' }
+const bumped = createApp({ dataDir, consentRequired: true, consentVersion: 'test-2', consentCopy: newCopy, consentKnown: [{ version: 'test-1', fingerprint: fingerprintOf(CONSENT_COPY) }], dev: true })
 const bumpedServer = createServer((req, res) => bumped(req, res))
 await new Promise<void>((r) => bumpedServer.listen(0, r))
 const bumpedBase = `http://localhost:${(bumpedServer.address() as { port: number }).port}`
-const bumpedGet = (await (await fetch(`${bumpedBase}/api/consent`, { headers: { cookie } })).json()) as { given: boolean; version: string }
-check('a new notice version asks the same person again', bumpedGet.given === false && bumpedGet.version === 'test-2')
-check('…and an upload is refused until they agree to it', (await fetch(bumpedBase + '/api/files?kbps=100000', { method: 'POST', body: PDF(), headers: { cookie } })).status === 403)
-await fetch(`${bumpedBase}/api/consent`, { method: 'POST', headers: { cookie }, body: JSON.stringify({ version: 'test-2' }) })
-check('…then accepted', (await fetch(bumpedBase + '/api/files?kbps=100000', { method: 'POST', body: PDF(), headers: { cookie } })).status === 201)
+check('their old agreement no longer counts', (await getConsent(bumpedBase)).given === false)
+check('…uploads are refused until they agree again', (await fetch(bumpedBase + '/api/files?kbps=100000', { method: 'POST', body: PDF(), headers: { cookie } })).status === 403)
+// The open tab still shows test-1 and the person presses Continue
+const stale = await postConsent(bumpedBase, { version: 'test-1', fingerprint: fingerprintOf(CONSENT_COPY) })
+const staleBody = (await stale.json()) as { error: string; notice: ConsentGet['notice'] }
+check('FIX 1: agreeing to the OLD words is not recorded: 409 "notice-changed"', stale.status === 409 && staleBody.error === 'notice-changed')
+check('…the answer carries the new words to show', staleBody.notice.version === 'test-2' && staleBody.notice.copy.lead === 'A changed notice.' && staleBody.notice.fingerprint === fingerprintOf(newCopy))
+check('…still not agreed', (await getConsent(bumpedBase)).given === false)
+check('agreeing to the new words (version + fingerprint) is recorded', (await postConsent(bumpedBase, staleBody.notice)).status === 204)
+check('…then uploads are accepted', (await fetch(bumpedBase + '/api/files?kbps=100000', { method: 'POST', body: PDF(), headers: { cookie } })).status === 201)
 
-// Measured-only dev uploads (the /motion page, the style guide) store nothing, so they need no consent
-const dryNoConsent = await fetch(strictBase + '/api/files?dry=1&kbps=100000', { method: 'POST', body: PDF() })
-check('a measured-only (?dry=1) upload needs no consent', dryNoConsent.status === 201)
+console.log('\n  — measured-only uploads, the default, early refusal —')
+check('a measured-only (?dry=1) upload needs no consent in development', (await fetch(strictBase + '/api/files?dry=1&kbps=100000', { method: 'POST', body: PDF() })).status === 201)
 check('…but a real one in the same server still does', (await fetch(strictBase + '/api/files?kbps=100000', { method: 'POST', body: PDF() })).status === 403)
-
-// The default is on
 const defaults = createApp({ dataDir, dev: true })
 const defaultsServer = createServer((req, res) => defaults(req, res))
 await new Promise<void>((r) => defaultsServer.listen(0, r))
 const defaultsBase = `http://localhost:${(defaultsServer.address() as { port: number }).port}`
 check('consent is required by default', (await fetch(defaultsBase + '/api/files?kbps=100000', { method: 'POST', body: PDF() })).status === 403)
-const defaultsGet = (await (await fetch(`${defaultsBase}/api/consent`)).json()) as { required: boolean }
-check('…and the browser is told so', defaultsGet.required === true)
+check('…and the browser is told so', (await getConsent(defaultsBase, '')).required === true)
+
+// FIX 2: a refused upload is answered at once and not read further. Send only the first 64 KB of a
+// "5 MB" upload and wait: the server must answer 403 and close the connection without the rest.
+const early = await new Promise<{ status?: number; closed: boolean; ms: number }>((resolve) => {
+  const t0 = Date.now()
+  const out = { status: undefined as number | undefined, closed: false, ms: 0 }
+  const req = httpRequest(`${strictBase}/api/files`, { method: 'POST', headers: { 'content-length': String(5 * 1024 * 1024), 'x-file-name': 'big.pdf' } }, (res) => {
+    out.status = res.statusCode
+    res.resume()
+  })
+  req.on('error', () => {})
+  req.on('close', () => {
+    out.closed = true
+    out.ms = Date.now() - t0
+    resolve(out)
+  })
+  req.write(Buffer.concat([Buffer.from('%PDF-1.4\n'), Buffer.alloc(64 * 1024)]))
+  setTimeout(() => resolve({ ...out, ms: Date.now() - t0 }), 3000) // never finishing the body
+})
+check('FIX 2: a refused upload is answered before the file finishes (403 after 64 KB of 5 MB)', early.status === 403)
+check('…and the server closes the connection instead of reading the rest', early.closed && early.ms < 3000)
+
+console.log('\n  — development switches outside development —')
+const prodDir = await mkdtemp(join(tmpdir(), 'atlastax-prod-'))
+const prodish = createApp({ dataDir: prodDir, consentRequired: false, dev: false })
+const prodServer = createServer((req, res) => prodish(req, res))
+await new Promise<void>((r) => prodServer.listen(0, r))
+const prodBase = `http://localhost:${(prodServer.address() as { port: number }).port}`
+for (const q of ['?dry=1', '?fail=1', '?kbps=300']) {
+  const r = await fetch(prodBase + '/api/files' + q, { method: 'POST', body: PDF() })
+  check(`FIX 3: outside development "${q}" is REJECTED (400), not ignored`, r.status === 400 && ((await r.json()) as { error: string }).error === 'dev-only')
+}
+const storedIn = async () => (await readdir(join(prodDir, 'files')).catch(() => [] as string[])).filter((f) => !f.endsWith('.json')).length
+check('…and nothing was stored by those', (await storedIn()) === 0)
+check('a normal upload still works there, and is stored', (await fetch(prodBase + '/api/files', { method: 'POST', body: PDF() })).status === 201 && (await storedIn()) === 1)
+
 bumpedServer.close()
 defaultsServer.close()
+prodServer.close()
+await rm(prodDir, { recursive: true, force: true })
 
 console.log('\nREADING (mock provider)\n')
 type Snap = { capabilities: { stages: boolean }; documents: { itemId: string; status: string; failure?: string; files: number }[] }

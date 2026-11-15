@@ -12,10 +12,10 @@ Open the app with `npm run dev`, then http://localhost:5173.
 
 | # | Step | What it builds | Status | What you can see (URL) | Model |
 |---|---|---|---|---|---|
-| 1 | Masking, field list | Masking helper for SSN, ITIN, EIN, passport (last 4 only); fields per form; `check:extraction` | **Done** (`3aa5026`) | `/styleguide` → "Masked ID numbers" | Opus |
+| 1 | Masking, field list | Masking helper for SSN, ITIN, EIN, passport (last 4 only); fields per form; `check:extraction` | **Done** (`3aa5026`) | `/styleguide` → "Masked ID numbers" (development only) | Opus |
 | 2 | Server | Uploads stored privately, checked by content, deletable; consent recorded; `check:server` | **Done** (`1eced11`) | Nothing new on screen; uploads work as before | Opus |
 | 3 | Mock reader | Mock provider (10 scenarios), live reading status, Remove deletes on the server | **Done** (`c00e141`) | `/motion` → "Reading (mock)"; `/documents` → Reading, Added, Couldn't read, Try again on cards | Opus, Sonnet for the pills |
-| **4** | **Consent sheet** | Notice shown before the first upload; "Continue to upload" / "Not now"; server requires it; read again on Profile; `check:consent` | **Built, waiting for your OK to commit** | `/documents` → **Add** on any card (first time). `/profile` → **Privacy**. `/trips` → open "Fill this in from your I-94 travel history". See "How to see step 4" below. | Sonnet for the sheet, Opus for the logic (see note) |
+| **4** | **Consent sheet** | Notice shown before the first upload; "Continue to upload" / "Not now"; server requires it; read again on Profile; `check:consent`. **Plus the consent review fixes** (below). | **Done** (`5cdf3b4`, review fixes in the commit after it) | `/documents` → **Add** on any card (first time). `/profile` → **Privacy**. `/trips` → open "Fill this in from your I-94 travel history". See "How to see step 4" below. | Sonnet for the sheet, Opus for the logic (reviewed and fixed on Opus) |
 | 5 | **Reading page** | The page after Continue on Documents: abstract page-line animation, "2 of 3 documents read", per-document status, Try again / Enter it myself, Continue waits when anything failed. `loop.scan` / `loop.sweep` tokens. | Not started (**approved**) | `/reading` (and `?reading=slow` etc. on `/motion`). Documents → **Continue** already points there; until it's built it shows "This screen is coming soon." | Opus for logic, Sonnet for motion |
 | 6 | Review screen | One document per screen, ticks on every tax-form or identifying value, "Enter it myself" opens it with empty fields, confirmed-values store on the server | Not started | `/review` (shows "coming soon" today) | Opus for logic, Sonnet for polish |
 | R1 | Transcription | Fix the field list to the IRS boxes (1042-S Box 10); turn confirmed values into tax input; `check:taxinput` | Not started | Nothing on screen | Opus |
@@ -48,6 +48,9 @@ Old step 7 (summary, download lock) no longer exists as its own step: it is part
 5. `/profile` → **Privacy** → **Read the privacy notice** shows the same words,
    read-only, and "You agreed on …" once you have.
 6. If the sheet doesn't appear, restart `npm run dev` once (the server code changed).
+7. **"The notice has changed"** and **"We couldn't check your privacy settings"** can't
+   be produced by hand on your machine (they need a deploy or a broken connection). The
+   focus audit plays both: `npm run dev`, then `ONLY=consent npm run audit:focus`.
 
 ## Step 4: things to know
 
@@ -58,12 +61,31 @@ Old step 7 (summary, download lock) no longer exists as its own step: it is part
   document stays "not added", and Continue on Documents needs every required
   document. Someone who keeps declining can't pass Documents until we decide how to
   enter details by hand from there.
-- **Model note:** this step was written entirely on Sonnet 5.5, including the consent
-  logic (`src/consent/logic.ts`, the integration in `UploadAnswer`). It is covered by
-  `check:consent` (23 checks), `check:server` (consent cases) and the focus audit
-  (131 checks, 0 failed), but I recommend an Opus review pass of that logic.
-- The server now requires consent for stored uploads. Measured-only uploads
-  (`/motion`, the style guide) are exempt.
+- **Model note:** the step was first written on Sonnet 5.5, then reviewed on Opus 5.5;
+  the review's findings are fixed (next section).
+- The server requires consent for stored uploads. Measured-only uploads (`/motion`,
+  the style guide) are exempt, in development only.
+
+## Consent review: what was fixed
+
+| # | Finding | Fix | Tested by |
+|---|---|---|---|
+| 1 | Agreement could be recorded for words the person didn't see (a tab open across a notice change) | The server sends the words; the sheet shows exactly them; agreeing sends their version + fingerprint; the server records only the current notice, else 409 with the new words → "The notice has changed". The wrong "Check your connection" message is now "We couldn't save your agreement. Try again." | `check:consent` (tab-open case), `check:server` (stale 409, tampered 400, record holds the fingerprint), audit (note gets focus, new words shown, new version sent) |
+| 2 | If the status couldn't load, files were sent anyway (and refused uploads were read to the end) | Stored uploads wait until agreement is **confirmed**; "We couldn't check your privacy settings." + Try again. The server answers a refused upload at once and closes the connection. | `check:consent` (offline holds), `check:server` (403 after 64 KB of 5 MB, connection closed), audit (dropped file not sent while the check fails) |
+| 3 | "Don't store" test switches were ignored in production (files would be stored) | The server **rejects** them (400) outside development, **and** /styleguide and /motion are left out of production builds | `check:server` (400 for `?dry=1`, `?fail=1`, `?kbps=`, nothing stored), `scripts/check-prod-build.mjs` after every build |
+| 4 | A dropped file could be re-sent on a second agreement; "Not now" relied on the opener closing | The dropped file is sent once; "Not now" always closes the sheet | audit (dropped.pdf sent exactly once), `check:consent` ("Not now" wins, also after a refusal) |
+
+**Why both for #3:** hiding the two pages removes the problem for people (nobody can
+reach a test upload in production), and the server rejection guarantees it even if
+someone sends the request by hand. The cost: the style guide and motion pages can't be
+viewed on a deployed preview, only with `npm run dev`.
+
+**File names** (proposal, not built) and **three new legal items** (consent per browser,
+re-reading files after a notice change, withdrawal tied to deletion) are in
+`EXTRACTION-PLAN.md` §4 and §9.
+
+Checks now: `check:consent` 33, `check:server` all passing (new consent and
+production cases), focus audit **146 checks, 0 failed**, production-build check passing.
 
 ## What changed in the order and why
 

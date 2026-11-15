@@ -116,8 +116,28 @@ const settle = (page) => page.waitForTimeout(700) // longest spring is 400ms
 const agree = (page) =>
   page.evaluate(async () => {
     const c = await (await fetch('/api/consent')).json()
-    await fetch('/api/consent', { method: 'POST', body: JSON.stringify({ version: c.version }) })
+    await fetch('/api/consent', { method: 'POST', body: JSON.stringify({ version: c.notice.version, fingerprint: c.notice.fingerprint }) })
   })
+
+/** Every file the browser actually sent (POST /api/files), by name, with the server's answer */
+function watchUploads(page) {
+  const sent = []
+  page.on('requestfinished', async (r) => {
+    if (r.method() === 'POST' && r.url().includes('/api/files')) sent.push({ name: decodeURIComponent(r.headers()['x-file-name'] ?? ''), status: (await r.response())?.status() })
+  })
+  return sent
+}
+
+/** Drop a file on an element, like dragging it from the desktop */
+async function dropFile(page, selector, name) {
+  const dt = await page.evaluateHandle((n) => {
+    const d = new DataTransfer()
+    d.items.add(new File(['%PDF-1.4 ' + 'x'.repeat(4000)], n, { type: 'application/pdf' }))
+    return d
+  }, name)
+  await page.locator(selector).dispatchEvent('dragenter', { dataTransfer: dt })
+  await page.locator(selector).dispatchEvent('drop', { dataTransfer: dt })
+}
 
 /** A check that isn't about focus. */
 function assert(where, step, ok, detail = '') {
@@ -391,6 +411,92 @@ if (!only || 'consent sheet'.includes(only)) {
   await settle(page)
   await check(page, where, 'Escape → the card', { focus: /^W\u2060?-\u2060?2/ })
   assert(where, 'Escape also closed both sheets', (await page.locator('dialog[open]').count()) === 0)
+  await page.close()
+
+  // FIX 1: the notice changes while the sheet is open (the server is faked for this part)
+  page = await browser.newPage({ viewport: { width: 390, height: 844 } })
+  await page.goto(BASE + '/documents', { waitUntil: 'networkidle' })
+  const real = await page.evaluate(async () => (await (await fetch('/api/consent')).json()).notice)
+  const oldNotice = real
+  const newNotice = { version: 'audit-new', fingerprint: 'auditnew0000', copy: { ...real.copy, lead: 'NEW WORDS: the notice changed while you were reading.' } }
+  const posted = []
+  await page.route('**/api/consent', async (route) => {
+    if (route.request().method() === 'GET') return route.fulfill({ json: { given: false, required: true, version: oldNotice.version, notice: oldNotice } })
+    const shown = route.request().postDataJSON()
+    posted.push(shown.version)
+    if (shown.version === newNotice.version && shown.fingerprint === newNotice.fingerprint) return route.fulfill({ status: 204, body: '' })
+    return route.fulfill({ status: 409, json: { error: 'notice-changed', notice: newNotice } })
+  })
+  await page.evaluate(seed)
+  await page.reload({ waitUntil: 'networkidle' })
+  await page.evaluate(watchBody)
+  await tabTo(page, /^Add W-2$/)
+  await page.keyboard.press('Enter')
+  await settle(page)
+  await tabTo(page, /^Continue to upload$/)
+  await page.keyboard.press('Enter')
+  await settle(page)
+  await check(page, where, 'notice changed → the note', { focus: /^The notice has changed/ })
+  assert(where, 'the NEW words are on screen', (await page.getByText('NEW WORDS: the notice changed while you were reading.').count()) === 1)
+  assert(where, 'the sheet stays open (nothing agreed)', await consentOpen(page))
+  assert(where, 'it sent the version that was on screen (the old one)', posted.join() === oldNotice.version, posted.join())
+  await tabTo(page, /^Continue to upload$/)
+  await page.keyboard.press('Enter')
+  await settle(page)
+  await check(page, where, 'agreed to new words → zone', { focus: /^Choose a file$/ })
+  assert(where, 'the second agreement sent the NEW version', posted.join() === `${oldNotice.version},${newNotice.version}`, posted.join())
+  await page.close()
+
+  // FIX 2: the agreement status can't be loaded: everything is held, nothing is sent
+  page = await browser.newPage({ viewport: { width: 390, height: 844 } })
+  let sent = watchUploads(page)
+  await page.route('**/api/consent', (route) => route.abort())
+  await page.goto(BASE + '/documents', { waitUntil: 'networkidle' })
+  await page.evaluate(seed)
+  await page.reload({ waitUntil: 'networkidle' })
+  await page.evaluate(watchBody)
+  await dropFile(page, '#item-opt-cpt', 'held.pdf')
+  await settle(page)
+  await check(page, where, 'status unavailable → message', { focus: /^We couldn’t check your privacy settings\.$/ })
+  assert(where, 'no upload zone while it can’t check', (await page.getByRole('button', { name: 'Choose a file' }).count()) === 0)
+  await page.waitForTimeout(1500)
+  assert(where, 'the dropped file was NOT sent', sent.length === 0, JSON.stringify(sent))
+  await page.unroute('**/api/consent')
+  await tabTo(page, /^Try again$/)
+  await page.keyboard.press('Enter')
+  await settle(page)
+  assert(where, 'Try again → the consent sheet', await consentOpen(page))
+  assert(where, 'still nothing sent before agreeing', sent.length === 0, JSON.stringify(sent))
+  await tabTo(page, /^Continue to upload$/)
+  await page.keyboard.press('Enter')
+  await page.waitForTimeout(2500)
+  assert(where, 'after agreeing, the held file is sent once', sent.map((x) => x.name).join() === 'held.pdf', JSON.stringify(sent))
+  await page.close()
+
+  // FIX 4: a dropped file is sent once, even when agreement is asked a second time
+  page = await browser.newPage({ viewport: { width: 390, height: 844 } })
+  sent = watchUploads(page)
+  await page.goto(BASE + '/documents', { waitUntil: 'networkidle' })
+  await page.evaluate(seed)
+  await page.reload({ waitUntil: 'networkidle' })
+  await page.evaluate(watchBody)
+  await dropFile(page, '#item-opt-cpt', 'dropped.pdf')
+  await settle(page)
+  await page.getByRole('button', { name: 'Continue to upload' }).click()
+  await waitRow(page, 'dropped.pdf')
+  await settle(page)
+  await page.context().clearCookies() // the server forgets this browser: the next upload is refused
+  await tabTo(page, /^Add another file$/)
+  await pick(page, pdf('second.pdf'))
+  await settle(page)
+  assert(where, 'refused → asked again', await consentOpen(page))
+  await tabTo(page, /^Continue to upload$/)
+  await page.keyboard.press('Enter')
+  await waitRow(page, 'second.pdf')
+  await settle(page)
+  const names = sent.map((x) => `${x.name}:${x.status}`).join(', ')
+  assert(where, 'dropped.pdf was sent exactly once', sent.filter((x) => x.name === 'dropped.pdf').length === 1, names)
+  assert(where, 'second.pdf: refused once, then sent after agreeing', names.endsWith('second.pdf:403, second.pdf:201'), names)
   await page.close()
 }
 

@@ -28,7 +28,8 @@ export type FileMeta = {
   createdAt: string
 }
 
-export type ConsentRecord = { version: string; at: string }
+/** What a session agreed to: the notice version AND the fingerprint of the exact words shown, and when */
+export type ConsentRecord = { version: string; fingerprint: string; at: string }
 
 const FILE_ID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/
 export const isFileId = (id: string) => FILE_ID.test(id)
