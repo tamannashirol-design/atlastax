@@ -48,7 +48,7 @@ const column = (fromFlow: boolean) => `col-span-full tablet:col-span-6 tablet:co
 const focusRing = 'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-text'
 const quietLink = `flex min-h-11 min-w-12 items-center justify-center rounded-sm text-body font-semibold underline underline-offset-4 ${focusRing}`
 
-// TODO confirm wording
+// Group headings and lines: wording approved by the designer
 const GROUPS = [
   { id: 'identity', title: 'Identity', line: 'These show who you are. A clear photo or a PDF works.' },
   { id: 'income', title: 'Income documents', line: 'Forms from your employer, school or bank.' },
