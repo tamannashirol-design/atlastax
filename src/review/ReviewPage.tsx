@@ -9,7 +9,7 @@ import { retryReading, useExtraction } from '../extraction/client'
 import { ITEM_FORMS } from '../extraction.config'
 import { setAnswers, useAnswers, useFilingYear } from '../flow/answers'
 import { requiredItems, type DocumentItem } from '../flow/requiredDocuments'
-import { AFTER_FLOW, REVIEW_PATH, pathForSection } from '../flow/screens'
+import { AFTER_FLOW, RESULT_PATH, REVIEW_PATH, pathForSection } from '../flow/screens'
 import { navigate, useHistoryState } from '../lib/router'
 import { ReadingPill } from '../reading/ReadingPill'
 import { refreshReview, saveReview, serverBackend, useReviewBackend, useReviewState } from './client'
@@ -397,7 +397,7 @@ function Summary({ year, items, docs, backState, onNavigate, onEdit }: { year: n
             )
           })}
         </ul>
-        <PrimaryButton onClick={() => navigate('/result')}>Looks good</PrimaryButton>
+        <PrimaryButton onClick={() => navigate(RESULT_PATH)}>Looks good</PrimaryButton>
       </div>
     </ReviewLayout>
   )

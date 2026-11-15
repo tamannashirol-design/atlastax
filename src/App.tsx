@@ -1,8 +1,9 @@
 import DocumentsPage from './documents/DocumentsPage'
 import FlowPage from './flow/FlowPage'
-import { READING_PATH, REVIEW_PATH, STOP_PATH, isFlowPath, isGatedPath } from './flow/screens'
+import { READING_PATH, RESULT_PATH, REVIEW_PATH, STOP_PATH, isFlowPath, isGatedPath } from './flow/screens'
 import ReadingPage from './reading/ReadingPage'
 import ReviewPage from './review/ReviewPage'
+import ResultPage from './result/ResultPage'
 import { useAnswers, useFilingYear } from './flow/answers'
 import { lazy, Suspense, useEffect } from 'react'
 import HomePage from './home/HomePage'
@@ -51,6 +52,8 @@ export default function App() {
   if (path === READING_PATH) return <ReadingPage />
   // Check your details (after the Reading page)
   if (path === REVIEW_PATH) return <ReviewPage />
+  // Your estimate and downloads (after Review's "Looks good"); the flow ends here
+  if (path === RESULT_PATH) return <ResultPage />
   // Logged out: the intro is the entry page. Logged in: Home (fake auth, see lib/auth)
   if (path === '/') return loggedIn ? <HomePage /> : <LandingPage />
   // The intro, always (logged in or not)

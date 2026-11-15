@@ -668,6 +668,45 @@ if (!only || 'review'.includes(only)) {
   await page.close()
 }
 
+// Result (/result), by keyboard (test inputs: no uploads needed)
+if (!only || 'result'.includes(only)) {
+  const where = 'result'
+  console.log(where)
+  const page = await browser.newPage({ viewport: { width: 390, height: 844 } })
+  await page.goto(BASE + '/result?result=blocked', { waitUntil: 'load' })
+  await page.waitForTimeout(700)
+  await page.evaluate(watchBody)
+  await check(page, where, 'arrive → the headline', { focus: /^We can.t give an estimate yet$/, ring: false })
+  await tabTo(page, /^Show estimate number$/)
+  await check(page, where, 'Tab → the prototype switch', { focus: /^Show estimate number$/ })
+  await tabTo(page, /^Check your I.?-.?94$/)
+  await check(page, where, 'Tab → the first fix link', { focus: /^Check your I.?-.?94$/ })
+  await tabTo(page, /^Fix what.s missing$/)
+  await page.keyboard.press('Enter')
+  await page.waitForTimeout(500)
+  // (No documents exist in this test, so Review sends it on to Documents; what matters is that it left the result)
+  assert(where, 'Fix what’s missing → leaves for the first thing to fix', new URL(page.url()).pathname !== '/result')
+  await page.goto(BASE + '/result?result=refund', { waitUntil: 'load' })
+  await page.waitForTimeout(700)
+  assert(where, 'refund: both sections labelled "Estimate (prototype)"', (await page.getByText('Estimate (prototype)', { exact: true }).count()) === 2)
+  assert(where, 'refund: a combined total', (await page.getByRole('heading', { name: 'Federal and state together' }).count()) === 1)
+  await tabTo(page, /^Show how we got this$/)
+  await page.keyboard.press('Enter')
+  await page.waitForTimeout(500)
+  assert(where, 'Show how we got this → opens, button says Hide', (await page.getByRole('button', { name: 'Hide how we got this' }).count()) === 1 && (await page.getByText('Federal tax withheld').count()) === 1)
+  await tabTo(page, /^Show estimate number$/, 60).catch(() => {})
+  await page.getByRole('switch', { name: /Show estimate number/ }).focus()
+  await page.keyboard.press('Space')
+  await page.waitForTimeout(600)
+  assert(where, 'switch off → no amount anywhere on the page', !/\$\d/.test(await page.locator('main').innerText()))
+  assert(where, '…and no combined total', (await page.getByRole('heading', { name: 'Federal and state together' }).count()) === 0)
+  await page.keyboard.press('Space')
+  await page.waitForTimeout(600)
+  assert(where, 'switch on again → amounts back', /\$407/.test(await page.locator('main').innerText()))
+  assert(where, 'both forms say "Not ready yet"', (await page.getByText('Not ready yet', { exact: true }).count()) === 2)
+  await page.close()
+}
+
 // Time in the U.S.: trips out of the U.S., by keyboard
 if (!only || 'trips'.includes(only)) {
   const where = 'trips'

@@ -11,6 +11,13 @@
 export const TAX_YEAR = 2025
 
 /**
+ * Does /result show the estimate number by default? The person can turn it off with the visible
+ * "Show estimate number" switch on /result (this browser only). Off: no amount anywhere, and the
+ * server doesn't send any. Never on Home or in marketing.
+ */
+export const ESTIMATE_NUMBER_VISIBLE = true
+
+/**
  * Earlier years offered on Home as a quiet secondary row. Only years listed
  * here appear; an empty list hides the row. Each runs the same flow.
  */

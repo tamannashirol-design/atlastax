@@ -176,6 +176,16 @@ Rules:
   is a placeholder card ("Passport, file 1"); phone: "View document" sheet.
   Dev: `/review?review=needs|ticked|failed|wrongtype|replace|summary` (fixtures
   load only in development).
+- Result (`src/result/`, `/result`, `npm run check:result`): after Review's "Looks good"; the
+  flow ends here. The page reads ONE interface, `Estimate` (`src/tax/estimate.ts`), and
+  decides nothing about tax. Federal and State sections, each "Estimate (prototype)":
+  refund (calm, success check), amount owed (neutral), not calculated (says what's
+  missing, never a made-up number) or not supported. Combined total only when both are
+  calculated. R1 blockers show with links to fix. Notes: "Assumes single filing status.",
+  "Treaty benefits aren't included yet." Forms: "Not ready yet" until built. The visible
+  "Show estimate number" switch (`ESTIMATE_NUMBER_VISIBLE`) removes every amount, also on
+  the server (`hideNumbers`). Test inputs for `?result=refund|owed|blocked|waiting`
+  (`src/tax/fixtures.ts`) are development only and labelled TEST on screen.
 - Tax input (R1, `src/tax/input.ts`, `npm run check:taxinput`): the ONLY place confirmed
   Review values become tax input (`buildTaxInput`, cents). Only values the person
   confirmed go in (ticked where a tick is needed); anything else is a blocker with the

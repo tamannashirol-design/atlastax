@@ -274,6 +274,14 @@ check('tax input: no ID number anywhere in it', !/123-45-6789|12-3456789|\d{3}-\
 const editedAgain = await put('opt-cpt', { fields: { wages: { value: '200.00' } } })
 check('tax input: editing a confirmed value reopens it, and it blocks again', editedAgain.status === 200 && (await taxInput(w2Item)).blockers.some((b) => b.id === 'opt-cpt:unconfirmed'))
 check('tax input: refuses a malformed body (400)', (await fetch(`${base}/api/dev/tax-input?year=2025`, { method: 'POST', headers: reader, body: JSON.stringify({ items: 'x' }) })).status === 400)
+// /api/estimate: the engine's output through one interface (the stub today: nothing calculated, nothing invented)
+type Est = { blockers: { id: string }[]; federal: { status: string }; state: { status: string; code: string | null }; forms: { status: string }[]; notes: string[]; numbersHidden: boolean }
+const estimate = async (numbers: number, items: unknown[]) => (await (await fetch(`${base}/api/estimate?year=2025&numbers=${numbers}`, { method: 'POST', headers: reader, body: JSON.stringify({ person: {}, income: [], items }) })).json()) as Est
+const reopened = await estimate(1, w2Item) // the W-2 was reopened by the edit above
+check('estimate: blockers come through, nothing is calculated', reopened.blockers.some((b) => b.id === 'opt-cpt:unconfirmed') && reopened.federal.status === 'not-calculated' && reopened.state.status === 'not-calculated')
+check('estimate: forms are "not-ready", the notes are there', reopened.forms.every((f) => f.status === 'not-ready') && reopened.notes.includes('Treaty benefits aren’t included yet.'))
+check('estimate: numbers=0 marks them hidden', (await estimate(0, w2Item)).numbersHidden === true && reopened.numbersHidden === false)
+check('estimate: refuses a malformed body (400)', (await fetch(`${base}/api/estimate?year=2025`, { method: 'POST', headers: reader, body: '{}' })).status === 400)
 
 const otherYear = (await (await fetch(`${base}/api/extraction?year=2024`, { headers: reader })).json()) as Snap
 check('another tax year sees none of these documents', otherYear.documents.length === 0)

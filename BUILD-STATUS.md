@@ -19,6 +19,7 @@ Open the app with `npm run dev`, then http://localhost:5173.
 | **5** | **Reading page** (redone Nov 15) | One status pill: "Reading your documents" → "Extracting your details" → "Done" (success fill + small settle), each changed only by the mock reader (3–5s per stage); hold 600ms, then Review. Reading starts only when /reading opens (never at upload), every visit reads again. Failures: "Couldn't read" + Try again / Choose another file / Enter it myself, Continue waits. Removed: reading at upload, Reading/Couldn't read on cards, 10s/60s messages, skip-to-Review, minimum display time, Home's "Reading N documents". | **Done** (stall fixed, see below) | `/documents` → **Continue**, or `/reading?reading=normal` / `?reading=fail` | Opus |
 | **6** | **Review screen** | "Check your details": one document per screen (passport, I-94, then income), "2 of n", file placeholder left (iPad/laptop) or "View document" sheet (phone), editable fields, tick rule, masked IDs with Show, Confirm and continue (locked, says what's left), Skip for now, summary → "Looks good" → `/result`; saved on the server as you go, resumes; states: needs review, all ticked, couldn't read, wrong document, being read after Replace; `check:review` | **Built, waiting for your "next"** | `/review` after the Reading page; states: `/motion` → "Review" or `/review?review=needs` etc. See "How to see step 6". | Opus |
 | **R1** | **Transcription** | Confirmed Review values → `TaxInput` (cents, `buildTaxInput` in `src/tax/input.ts`); only ticked values go in; blockers link to the screen to fix; no ID numbers in the output; 1042-S boxes fixed (Box 10, Box 12d); realistic fake W-2; `check:taxinput` | **Built, waiting for your "next"** | `/motion` → "Tax input (R1)". See "How to see R1". | Sonnet |
+| **R6a** | **Result screen (built ahead of the engine)** | `/result`: Federal and State sections ("Estimate (prototype)", refund / amount owed / not calculated / not supported), "Show how we got this", combined total only when both are calculated, notes (single filing status, treaty benefits not included), Download area (both forms "Not ready yet"), R1 blockers with links to fix, "Show estimate number" switch. Reads one interface (`Estimate`, `src/tax/estimate.ts`); today a stub fills it, so nothing is ever calculated or invented. `check:result` | **Built, waiting for your "next"** | Documents → Review → **Looks good** lands on `/result`; test inputs: `/motion` → "Result (test inputs)". See "How to see /result". | Sonnet |
 | R2 | Engine core, 2025 | 2025 tables with sources, Tax Table method, wages-only; `check:tax` | Not started | Nothing on screen | Opus |
 | R5 | Estimate endpoint | `POST /api/estimate`, stale detection, number switch on the server | Not started | Nothing on screen | Opus |
 | R6 | Result screen | All states (blocked, refund, owed, zero, needs review, stale), the visible switch that hides the number. **Also replaces the old step 7** (summary and download lock). | Not started | `/result` (`?result=refund` etc.) | Opus for states, Sonnet for UI |
@@ -43,6 +44,38 @@ engine, wages first, IRS 2025 figures cited) → state engine (NY, CA) → `/res
 (Federal and State sections, out-of-date on any change) → downloads (official 2025
 Form 8843 and 1040-NR, filled, every page marked "Prototype estimate, not for filing")
 → tests. A flaky automated check: investigate once, report, move on.
+
+## How to see /result
+
+1. Real flow: `/documents` → **Continue** → wait for Done → Review. Skip or leave one
+   document unconfirmed, then on the summary press **Looks good**: `/result` says
+   **We can't give an estimate yet** and lists what's in the way, each with a link
+   (**Check your W-2**) and a cobalt **Fix what's missing**.
+2. Confirm everything, **Looks good** again: **Your estimate**, with Federal and State
+   (New York) each saying **Not calculated yet** and what's missing, and both forms
+   **Not ready yet**. This is what you'll see until R2 and the state step exist.
+3. Test inputs (made-up numbers, labelled on screen; development only): `/motion` →
+   **Result (test inputs)**, or `/result?result=refund`, `owed`, `blocked`, `waiting`.
+   Refund and owed show **Show how we got this** and the combined total.
+4. The **Show estimate number** switch (top of the page): off removes every amount, and
+   the server isn't sent a request for them (`numbers=0`).
+
+## /result: things to know
+
+- **Engine interface:** the page reads only `Estimate`. R2 fills in `federal`, the state
+  step fills in `state`; the page won't change. `estimateReturn()` in
+  `src/tax/estimate.ts` is the stub; `POST /api/estimate` serves it.
+- **Recalculating:** it recalculates every time `/result` opens, and when the answers
+  change while it's open (it says "Estimate updated"). Confirmed values change on Review,
+  so the new result shows when you come back. There is no separate "out of date" screen
+  yet; the number is never shown stale because it is recomputed on load.
+- **Privacy:** `/api/estimate` receives a small non-sensitive summary of your documents
+  (types and status, visa, citizenship); confirmed values stay on the server and the
+  browser stores no amounts. Worth a decision before launch.
+- Not built (by your scope): how-to-pay, the state-return card, deleting documents,
+  treaty logic.
+- The test inputs' numbers are made up, add up (tested), and are not in the production
+  bundle.
 
 ## How to see R1
 

@@ -22,7 +22,8 @@
 //   POST   /api/extraction/:itemId/retry?year=2025 → 204
 //   POST   /api/extraction/scenario { scenario }  → 204 (dev only: what the mock does next)
 //
-//   Development only: POST /api/dev/tax-input?year= { person, income, items } → the TaxInput (R1)
+//   POST /api/estimate?year=&numbers=0|1 { person, income, items } → the Estimate (src/tax/estimate.ts)
+//   Development only: POST /api/dev/tax-input?year= (same body) → the TaxInput (R1)
 //
 //   Review (server/review.ts; ID numbers masked except on reveal):
 //   GET    /api/review?year=2025 → { documents } · PUT /api/review/:itemId?year= → document
@@ -45,6 +46,7 @@ import { readingJobs, type ExtractionUpdate } from './extraction/jobs.ts'
 import { isScenario, mockProvider, type Scenario } from './extraction/mockProvider.ts'
 import { fingerprintOf, type Notice } from './notice.ts'
 import { reviewStore } from './review.ts'
+import { estimateReturn, hideNumbers } from '../src/tax/estimate.ts'
 import { buildTaxInput, type TaxItem } from '../src/tax/input.ts'
 import { sniff, storage, type ConsentRecord } from './storage.ts'
 
@@ -126,17 +128,21 @@ export function createApp(overrides: Partial<ServerOptions> = {}): Handler {
 
     if (path.startsWith('/api/extraction')) return extraction(req, res, url, sessionId)
 
-    // Development only (R1): the tax input built from this person's confirmed values, so it can be looked at.
-    // The browser sends the non-sensitive summary of its required documents; amounts come back for display only.
-    if (path === '/api/dev/tax-input' && req.method === 'POST') {
-      if (!options.dev) return send(res, 404, { error: 'not-found' })
+    // The tax input (R1) and the estimate built from this person's confirmed values. The browser sends a small,
+    // non-sensitive summary of its required documents; the confirmed values stay here.
+    if ((path === '/api/estimate' || path === '/api/dev/tax-input') && req.method === 'POST') {
+      if (path.startsWith('/api/dev/') && !options.dev) return send(res, 404, { error: 'not-found' })
       const year = taxYear(url.searchParams.get('year'))
       const body = await readJson(req, 16_384)
       const items = body?.items
       if (!year || !body || !Array.isArray(items) || !items.every((i) => i && typeof i.id === 'string' && typeof i.label === 'string' && typeof i.status === 'string' && (i.kind === 'document' || i.kind === 'income'))) return send(res, 400, { error: 'malformed' })
       const person = (body.person ?? {}) as { citizenship?: string; visa?: string }
       const income = Array.isArray(body.income) ? body.income.filter((x): x is string => typeof x === 'string') : []
-      return send(res, 200, buildTaxInput({ year, person: { citizenship: person.citizenship ? String(person.citizenship) : undefined, visa: person.visa ? String(person.visa) : undefined }, income, items: items as TaxItem[], documents: await review.taxDocuments(sessionId, year) }))
+      const input = buildTaxInput({ year, person: { citizenship: person.citizenship ? String(person.citizenship) : undefined, visa: person.visa ? String(person.visa) : undefined }, income, items: items as TaxItem[], documents: await review.taxDocuments(sessionId, year) })
+      if (path === '/api/dev/tax-input') return send(res, 200, input)
+      const estimate = estimateReturn(input)
+      // "Show estimate number" off: no amount leaves the server
+      return send(res, 200, url.searchParams.get('numbers') === '0' ? hideNumbers(estimate) : estimate)
     }
 
     if (path === '/api/review' || path.startsWith('/api/review/')) {

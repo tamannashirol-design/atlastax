@@ -10,6 +10,7 @@ import type { IntroMode } from '../intro/chrome'
 import { IntroContent } from '../intro/IntroContent'
 import { MOCK_SCENARIOS, READING_SCENARIOS, setMockScenario } from '../extraction/client'
 import { REVIEW_FIXTURES } from '../review/fixtureNames'
+import { RESULT_FIXTURES } from '../tax/fixtureNames'
 import { Link } from '../lib/router'
 import { useAnswers, useFilingYear } from '../flow/answers'
 import { requiredItems } from '../flow/requiredDocuments'
@@ -169,6 +170,7 @@ export default function MotionPage() {
             </section>
 
             <ReadingScenarios />
+            <ResultStates />
             <TaxInputPreview />
 
             <IntroPreview />
@@ -286,6 +288,33 @@ function SecondaryButtonInline({ onClick, children }: { onClick: () => void; chi
     >
       {children}
     </button>
+  )
+}
+
+/** Development only: /result's states, fed by clearly labelled TEST inputs (src/tax/fixtures.ts), not your return. */
+function ResultStates() {
+  return (
+    <section aria-labelledby="result-states" className="mt-12 flex flex-col gap-6 border-t border-border-decorative pt-12">
+      <header className="flex max-w-column flex-col gap-2">
+        <h2 id="result-states" className="font-display text-title">
+          Result (test inputs)
+        </h2>
+        <p className="text-body text-text-muted">
+          The result screen with made-up sample numbers, to check how it looks. They aren’t calculated and aren’t your return; the page says so.
+          refund: federal and state refunds, with a combined total · owed: federal and state amounts owed · blocked: something unconfirmed, with links to fix it ·
+          waiting: everything confirmed but the engine isn’t built, which is what you see in the real flow today.
+        </p>
+      </header>
+      <ul className="flex flex-wrap gap-x-6">
+        {RESULT_FIXTURES.map((r) => (
+          <li key={r}>
+            <a href={`/result?result=${r}`} className="flex min-h-11 items-center text-body font-semibold underline underline-offset-4">
+              {r}
+            </a>
+          </li>
+        ))}
+      </ul>
+    </section>
   )
 }
 
