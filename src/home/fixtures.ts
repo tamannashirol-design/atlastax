@@ -18,7 +18,7 @@ export const HOME_FIXTURES: Record<string, Answers> = {
   notsupported: { visa: 'F-1', enrolled: 'yes', state: 'CA', citizenship: 'IN', residency: { arrivalYear: 2019, yearAbroad: 'no' } },
   progress: aboutAndTime,
   documents: questionsDone,
-  ready: { ...questionsDone, details: { ...questionsDone.details, 'i94-upload': ['I-94.pdf'], 'self-report:freelance': 'later' } },
+  ready: { ...questionsDone, details: { ...questionsDone.details, 'i94-upload': ['I-94.pdf'], 'passport-upload': ['Passport.pdf'], 'self-report:freelance': 'later' } },
 }
 
 export function homeFixture(): Answers | null {

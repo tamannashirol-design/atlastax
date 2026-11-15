@@ -110,7 +110,10 @@ scope).
   website (i94.cbp.dhs.gov) under 'View Travel History'…" (TODO confirm the
   label). "Remove travel history" deletes the files and the trips read from
   them. Travel history stays in this browser tab only.
-- The most recent I-94 is a separate Identity document (Documents page).
+- Identity documents (Documents page, "Identity" group): **Passport** and
+  the **most recent I-94** (required), and a **driver's license or state ID
+  (optional)**: listed, offers "I don't have one", never counted in "x of y
+  documents added" and never holds anything up. TODO confirm with CPA.
 - Check screen (only within scope): one sentence, "2026: year 4 of your
   first 5 calendar years as a student", then the days per year, each with
   Edit, and "These go on Form 8843…". "Show how we counted" (collapsed)

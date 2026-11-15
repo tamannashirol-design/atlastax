@@ -221,12 +221,13 @@ export default function DocumentsPage() {
                           <div className="flex flex-col">
                             <span id={`item-${d.id}-title`} className="text-body font-semibold">
                               {d.form}
+                              {d.optional && <span className="font-normal text-text-muted"> (optional)</span>}
                             </span>
                             <span className="text-small text-text-muted">{d.source}</span>
                           </div>
                           <p className={`flex items-center gap-2 text-small font-semibold ${s.tone}`}>
                             <s.Icon size={24} weight="regular" aria-hidden />
-                            <span className="tabular-nums">{s.text(d)}</span>
+                            <span className="tabular-nums">{d.optional && d.status === 'missing' ? 'Optional' : d.optional && d.status === 'none' ? 'You don’t have one' : s.text(d)}</span>
                           </p>
                           <div className="flex flex-wrap items-center gap-x-6 gap-y-1">
                             <button
@@ -238,7 +239,16 @@ export default function DocumentsPage() {
                               {d.status === 'added' ? 'Manage files' : 'Upload'}
                               <span className="sr-only"> {d.form}</span>
                             </button>
-                            {d.status === 'missing' && (
+                            {d.status === 'missing' && d.optional && (
+                              <button
+                                type="button"
+                                onClick={() => change(d.id, () => setDetail(d.uploadScreen, 'none'), `${d.form}: you don’t have one`)}
+                                className={quietLink}
+                              >
+                                I don’t have one
+                              </button>
+                            )}
+                            {d.status === 'missing' && !d.optional && (
                               <>
                                 <button
                                   type="button"

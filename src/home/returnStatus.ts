@@ -91,7 +91,7 @@ export function returnStatus(a: Answers, year: number): ReturnStatus {
     }
   }
   if (state === 'needs-documents') {
-    const outstanding = items.filter((i) => (i.kind === 'document' ? i.status === 'missing' : i.status === 'details-needed'))
+    const outstanding = items.filter((i) => (i.kind === 'document' ? i.status === 'missing' && !i.optional : i.status === 'details-needed'))
     return {
       ...base,
       state,

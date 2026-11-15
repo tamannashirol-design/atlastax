@@ -24,6 +24,8 @@ export type IncomeItemStatus = 'details-needed' | 'later' | 'provided'
 export type DocumentItem = (DocumentRule | (IdentityRule & Partial<Record<keyof Omit<DocumentRule, keyof IdentityRule>, undefined>>)) & {
   kind: 'document'
   group: 'identity' | 'income'
+  /** Listed but not counted, never holds anything up (e.g. a state ID) */
+  optional?: boolean
   status: DocumentStatus
   files: string[]
 }
@@ -76,7 +78,8 @@ export type ItemsSummary = {
 
 /** Counts for Home, the Documents page and the stepper (documents and income items counted separately). */
 export function summarizeItems(items: RequiredItem[]): ItemsSummary {
-  const docs = items.filter((i): i is DocumentItem => i.kind === 'document')
+  // Optional documents (e.g. a state ID) are listed but never counted
+  const docs = items.filter((i): i is DocumentItem => i.kind === 'document' && !i.optional)
   const income = items.filter((i): i is IncomeItem => i.kind === 'income')
   const added = docs.filter((d) => d.status === 'added').length
   const docDeferred = docs.filter((d) => isDeferred(d.status)).length

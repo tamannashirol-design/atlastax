@@ -153,7 +153,7 @@ export default function HomePage() {
     side.push(yourAnswers(2))
   }
   if (status.state === 'needs-documents') {
-    const outstanding = status.items.filter((i) => (i.kind === 'document' ? i.status === 'missing' : i.status === 'details-needed'))
+    const outstanding = status.items.filter((i) => (i.kind === 'document' ? i.status === 'missing' && !i.optional : i.status === 'details-needed'))
     const later = status.items.filter((i) => i.status === 'later')
     main.push(
       <Card key="missing" id="home-missing" title="What’s missing" motionProps={card(1)}>

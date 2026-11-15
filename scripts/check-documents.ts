@@ -110,11 +110,17 @@ check('12. Contract work, "No" (reportableWithoutForm = false)', { income: ['con
 })
 
 console.log('\nIdentity')
-check('15. F-1 student: the most recent I-94 is an identity document', { visa: 'F-1', income: ['opt-cpt'] }, {
-  items: ['i94:document:missing', 'opt-cpt:document:missing'],
-  documents: '0 of 2 documents added',
+check('15. F-1 student: passport and I-94 required, state ID optional (not counted)', { visa: 'F-1', income: ['opt-cpt'] }, {
+  items: ['passport:document:missing', 'i94:document:missing', 'state-id:document:missing', 'opt-cpt:document:missing'],
+  documents: '0 of 3 documents added',
 })
 check('16. J-1, not a student (not supported yet): no identity document', { visa: 'J-1', residency: { j1Student: 'no' } }, { items: [], documents: 'No documents needed yet' })
+
+check('17. Optional state ID never holds things up', { visa: 'F-1', details: { 'passport-upload': ['p.pdf'], 'i94-upload': ['i.pdf'] } }, {
+  items: ['passport:document:added', 'i94:document:added', 'state-id:document:missing'],
+  documents: '2 of 2 documents added',
+  done: true,
+})
 
 console.log('\n"Or" documents (one item, either form counts)')
 check('13. Investments, 1099-DIV uploaded', { income: ['investments'], details: { 'investments-upload': ['1099-DIV Example Brokerage.pdf'] } }, {
