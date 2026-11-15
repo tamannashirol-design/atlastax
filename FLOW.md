@@ -96,7 +96,7 @@ scope).
   full calendar year outside the U.S.?" (brief: "Was there a full calendar
   year when you weren't in the U.S. at all?").
 - Form 8843 line 4a asks for days in the tax year and the 2 years before it
-  (2026, 2025, 2024 for a 2026 return); only years from the arrival on.
+  (2025, 2024, 2023 for a 2025 return); only years from the arrival on.
 - Trips: No → every day from arrival (or Jan 1) to year end. Yes → "Left on"
   / "Came back on" rows, "Add another". Days in the U.S. = days in the year
   minus days abroad; the days you leave and come back count as days in the
@@ -114,7 +114,7 @@ scope).
   the **most recent I-94** (required), and a **driver's license or state ID
   (optional)**: listed, offers "I don't have one", never counted in "x of y
   documents added" and never holds anything up. TODO confirm with CPA.
-- Check screen (only within scope): one sentence, "2026: year 4 of your
+- Check screen (only within scope): one sentence, "2025: year 4 of your
   first 5 calendar years as a student", then the days per year, each with
   Edit, and "These go on Form 8843…". "Show how we counted" (collapsed)
   holds the working. No jargon.
@@ -281,7 +281,7 @@ or /motion → Intro, with a 390 / 820 / 1032 / 1280 width toggle and
      ?home=new|progress|ready: new (nothing answered); progress (visa,
      state and income answered, one document added); ready (everything
      done, forms ready to download).
-   - Return card (hero): "2026 tax return" (TAX_YEAR), the 5-section
+   - Return card (hero): "2025 tax return" (TAX_YEAR), the 5-section
      progress row from the stepper with the current section labelled, one
      line of status ("Income: 2 of 3 answered" or "3 documents left"). One
      cobalt button: "Start your return" (new), "Continue where you left off"
@@ -339,7 +339,7 @@ documents|ready|notsupported (doesn't change saved answers).
 | ready | Your return is ready | Download your forms (TODO: real forms; goes to Review, not built) | Your forms (PDF buttons, TODO) · Your answers with "Review again" |
 | not-supported | We can't prepare your return yet (+ the 1040-NR / 1040 paragraph; J-1 non-student: "AtlasTax supports students for now…") | Check my answers (to the arrival year; J-1 non-student: to "student?") | Other ways to file (no progress row, documents or What's next) |
 
-- Hero: "2026 tax return", the headline, one plain sentence (TODO confirm),
+- Hero: "2025 tax return", the headline, one plain sentence (TODO confirm),
   the progress row (all 6 sections with names: done = check, current =
   bold), the button. No illustrations in the hero.
 - Layout: phone one column; iPad 5 + 3 columns; laptop 8 + 4. The hero and

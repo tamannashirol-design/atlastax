@@ -27,6 +27,7 @@ import { countries, usStates } from '../data/places'
 import { sections, type FlowPosition } from '../flow/sections'
 import { PrimaryButton } from '../components/PrimaryButton'
 import cssText from '../index.css?raw'
+import { TAX_YEAR } from '../config'
 import { contrastRatio } from '../lib/contrast'
 import { mask, maskSpoken, SENSITIVE_ID_NAMES, type SensitiveId } from '../lib/mask'
 import { DebugStack, useUrlFlag } from '../lib/debug'
@@ -224,7 +225,7 @@ function IntroDemo() {
         </div>
         <span className="pt-4 text-body font-semibold">Form card</span>
         <Label>A finished form, ready to download. Settles in with the soft spring. Never blue.</Label>
-        <FormCard form="Form 1040‑NR" title="U.S. Nonresident Alien Income Tax Return · 2026" note="Example data" />
+        <FormCard form="Form 1040‑NR" title={`U.S. Nonresident Alien Income Tax Return · ${TAX_YEAR}`} note="Example data" />
       </div>
       <div className="col-span-full flex flex-col gap-3 desktop:col-span-6">
         <span className="text-body font-semibold">Step dots</span>

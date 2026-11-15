@@ -91,7 +91,7 @@ check('…and accepted once consent is recorded', withConsent.status === 201)
 console.log('\nREADING (mock provider)\n')
 type Snap = { capabilities: { stages: boolean }; documents: { itemId: string; status: string; failure?: string; files: number }[] }
 const reader = { cookie: '' }
-const snap = async (): Promise<Snap> => (await (await fetch(`${base}/api/extraction?year=2026`, { headers: reader })).json()) as Snap
+const snap = async (): Promise<Snap> => (await (await fetch(`${base}/api/extraction?year=2025`, { headers: reader })).json()) as Snap
 const statusOf = async (itemId: string) => (await snap()).documents.find((d) => d.itemId === itemId)
 async function until(itemId: string, want: string, ms = 4000) {
   const end = Date.now() + ms
@@ -101,7 +101,7 @@ async function until(itemId: string, want: string, ms = 4000) {
   }
   return false
 }
-const upload = (itemId: string) => post('/api/files?kbps=100000', PDF(), { ...reader, 'x-item-id': itemId, 'x-tax-year': '2026' })
+const upload = (itemId: string) => post('/api/files?kbps=100000', PDF(), { ...reader, 'x-item-id': itemId, 'x-tax-year': '2025' })
 const scenario = (name: string) => fetch(`${base}/api/extraction/scenario`, { method: 'POST', headers: reader, body: JSON.stringify({ scenario: name }) })
 
 reader.cookie = cookieOf(await fetch(`${base}/api/consent`))
@@ -110,7 +110,7 @@ await scenario('fast')
 // Listen to the live updates for the whole section, to check what reaches the browser
 const events: string[] = []
 const live = new AbortController()
-const stream = fetch(`${base}/api/extraction/events?year=2026`, { headers: reader, signal: live.signal }).then(async (r) => {
+const stream = fetch(`${base}/api/extraction/events?year=2025`, { headers: reader, signal: live.signal }).then(async (r) => {
   const dec = new TextDecoder()
   for await (const chunk of r.body!) events.push(dec.decode(chunk as Uint8Array))
 }).catch(() => {})
@@ -124,7 +124,7 @@ await scenario('one-fails')
 await upload('passport')
 check('one-fails: the next upload fails', await until('passport', 'failed'))
 check('…with a reason', (await statusOf('passport'))?.failure === 'unreadable')
-const retried = await fetch(`${base}/api/extraction/passport/retry?year=2026`, { method: 'POST', headers: reader })
+const retried = await fetch(`${base}/api/extraction/passport/retry?year=2025`, { method: 'POST', headers: reader })
 check('Try again restarts reading (204)', retried.status === 204)
 check('…and this time it works', await until('passport', 'ready', 8000))
 
@@ -134,9 +134,9 @@ check('adding a second file re-reads the document with both files', (await statu
 await fetch(`${base}/api/files/${w2.fileId}`, { method: 'DELETE', headers: reader })
 check('removing one file re-reads with the file that’s left', (await statusOf('opt-cpt'))?.files === 1 && (await until('opt-cpt', 'ready')))
 
-const otherYear = (await (await fetch(`${base}/api/extraction?year=2025`, { headers: reader })).json()) as Snap
+const otherYear = (await (await fetch(`${base}/api/extraction?year=2024`, { headers: reader })).json()) as Snap
 check('another tax year sees none of these documents', otherYear.documents.length === 0)
-const stranger = (await (await fetch(`${base}/api/extraction?year=2026`)).json()) as Snap
+const stranger = (await (await fetch(`${base}/api/extraction?year=2025`)).json()) as Snap
 check('another session sees none of these documents', stranger.documents.length === 0)
 check('scenarios can’t be set outside development', (await createAppStatus()) === 404)
 

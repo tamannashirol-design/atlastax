@@ -1,18 +1,20 @@
 // App-wide settings. Change values here only; never hard-code them in screens.
 
 /**
- * The current tax year. Home's primary action ("Start your 2026 return") and
+ * The current tax year. Home's primary action ("Start your 2025 return") and
  * every screen that shows a year use it, unless the person chose a previous
  * year on Home (then that year is used; see useFilingYear in flow/answers).
- * Changed to 2026 by design (was 2025).
+ * 2025 by design: the first tax year the estimate is built and verified for
+ * (AFTER-DOCUMENTS-PLAN.md). The IRS has no final 2026 form yet. Never type a
+ * year anywhere else: read this, or the filing year.
  */
-export const TAX_YEAR = 2026
+export const TAX_YEAR = 2025
 
 /**
  * Earlier years offered on Home as a quiet secondary row. Only years listed
  * here appear; an empty list hides the row. Each runs the same flow.
  */
-export const PREVIOUS_TAX_YEARS: number[] = [2025, 2024, 2023]
+export const PREVIOUS_TAX_YEARS: number[] = [2024, 2023]
 
 /**
  * One privacy line on Home, under the actions. Empty = not shown.

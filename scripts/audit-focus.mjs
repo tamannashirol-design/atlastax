@@ -301,7 +301,7 @@ if (!only || 'documents'.includes(only)) {
   const page = await browser.newPage({ viewport: { width: 390, height: 844 } })
   await page.goto(BASE + '/documents', { waitUntil: 'networkidle' })
   await page.evaluate(() =>
-    sessionStorage.setItem('atlastax:returns', JSON.stringify({ year: 2026, years: { 2026: { income: ['opt-cpt', 'freelance'], details: { 'freelance-form': 'no' } } } })),
+    sessionStorage.setItem('atlastax:returns', JSON.stringify({ year: 2025, years: { 2025: { income: ['opt-cpt', 'freelance'], details: { 'freelance-form': 'no' } } } })),
   )
   await page.reload({ waitUntil: 'networkidle' })
   await page.evaluate(watchBody)
@@ -321,7 +321,7 @@ if (!only || 'trips'.includes(only)) {
   const where = 'trips'
   const page = await browser.newPage({ viewport: { width: 390, height: 844 } })
   await page.goto(BASE + '/trips', { waitUntil: 'load' })
-  await page.evaluate(() => sessionStorage.setItem('atlastax:returns', JSON.stringify({ year: 2026, years: { 2026: { visa: 'F-1', residency: { arrivalYear: 2023, left: 'yes', trips: [] } } } })))
+  await page.evaluate(() => sessionStorage.setItem('atlastax:returns', JSON.stringify({ year: 2025, years: { 2025: { visa: 'F-1', residency: { arrivalYear: 2023, arrivalDate: '2023-08-15', left: 'yes', trips: [] } } } })))
   await page.reload({ waitUntil: 'load' })
   await page.evaluate(watchBody)
   console.log(where)
@@ -329,7 +329,7 @@ if (!only || 'trips'.includes(only)) {
   await page.keyboard.press('Enter')
   await page.waitForTimeout(300)
   await check(page, where, 'Add a trip → its first date', { focus: /^$/ })
-  await page.keyboard.type('06012026')
+  await page.keyboard.type('06012025')
   await page.waitForTimeout(300)
   await tabTo(page, /^Yes, I’m still away$/)
   await page.keyboard.press('Enter')

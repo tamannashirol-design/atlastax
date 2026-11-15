@@ -432,7 +432,7 @@ export const REVIEW_PATH = '/review'
 
 export const isFlowPath = (path: string) => flow.some((s) => s.path === path)
 
-/** "2024, 2025 and 2026" */
+/** "2023, 2024 and 2025" */
 export function listYears(years: number[]): string {
   return years.length <= 1 ? String(years[0] ?? '') : `${years.slice(0, -1).join(', ')} and ${years[years.length - 1]}`
 }

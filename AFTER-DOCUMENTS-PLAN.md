@@ -1,6 +1,7 @@
 # After the documents: Review, estimate, forms
 
-**Status: plan only, waiting for your approval. Nothing built.** This updates the
+**Status: APPROVED (Nov 15, 2026), decisions in section 14. Build order in section 13; the
+app's tax year is already switched to 2025.** This updates the
 "After the documents" plan: the result screen now shows a **calculated federal
 estimate** (prototype). It builds on `EXTRACTION-PLAN.md` (§5 Review screen, §6
 changing files, D1–D9) and keeps its sequence, blocking rules, editing after Ready,
@@ -24,7 +25,7 @@ summaries. One search summary gave a wrong number, which is why.
    standard deduction *are* final (Rev. Proc. 2025-32). So the engine takes the tax
    year as a parameter, each year's config says `final` or `draft`, and I recommend
    we **build and verify 2025 first**, because every worked example exists for 2025.
-   (Open question 1.)
+   (Decided, section 14.)
 2. **Most students get no standard deduction.** Nonresident aliens can't take it,
    except students from India under treaty Article 21(2). Everyone else uses itemized
    deductions, which for a typical student is just the state income tax taken out of
@@ -73,7 +74,7 @@ show it. **Nothing below was typed from memory.**
 | Single-filer example ($24,500 → $2,705, dividends $420 / $210) | Pub. 519 (2025), "Arthur Banks" example | **Verified** |
 | Due dates: April 15 with wages subject to withholding; June 15 otherwise | 2025 Instructions, "When and Where Should You File?" | **Verified for 2025**; the 2026 year's dates come from its config |
 | How to pay (Direct Pay, cards, check or money order on a U.S. bank, Form 1040-V, no-U.S.-bank page) | 2025 Instructions, "Line 37" and payments list | **Verified wording**, links to re-check at build time |
-| Form 8843 fields (Parts I and III) | **2026** Form 8843 (current IRS version) | **Verified** |
+| Form 8843 fields (Parts I and III) | **2026** Form 8843 (the version I read) | Verified for 2026 only. **The 2025 form still has to be fetched and checked** (step R8). |
 
 **Could not verify (each is a flag in config or a CPA item):**
 
@@ -129,7 +130,7 @@ Two kinds of "needs review":
   line at the top: "A tax professional should check this before you rely on it."
 
 We **never infer a treaty** from the person's country. We only apply what a 1042-S
-states. (Open question 2.)
+states. (Decided, section 14.)
 
 ---
 
@@ -218,17 +219,20 @@ all.
 
 The same function runs in the test script (Node), so tests and the app can't drift.
 
-### 3.4 Tax year handling
+### 3.4 Tax year handling (decided: 2025 first)
 
-- `useFilingYear()` picks the config. An unsupported year shows the same "needs
-  review" block as an unsupported situation, with the reason "We can't estimate this
-  tax year yet".
-- Today's Home offers 2026, 2025, 2024, 2023. First release supports **2025 and
-  2026** only (open question 1).
-- 2026 is `draft` until the final IRS form and instructions exist. The result screen
-  says so in a plain line, and the number carries a "Needs review" tag.
-- When the IRS posts the final 2026 form, step R10 re-checks the line map. Nothing
-  else changes.
+- **The app's tax year is now 2025** (`TAX_YEAR`), everywhere: Home, the intro, the
+  stepper, sample file names, the Form 8843 day windows (2025, 2024, 2023).
+  Earlier years offered on Home: **2024 and 2023** (2025 is no longer "earlier").
+- `useFilingYear()` picks the config. An unsupported year (2024, 2023, and 2026
+  until step R11) shows the same blocking "needs review" as an unsupported
+  situation: "We can't estimate this tax year yet". Its questions still work.
+- **2026 comes later** (step R11): `draft` until the IRS posts the final form and
+  instructions; then the number carries a "Needs review" tag.
+- **Heads-up:** the 2025 return was due **April 15, 2026** (June 15 for people with no
+  wages withheld). Both dates have passed. Due dates come from the year's config, and
+  the how-to-pay and result text must not say "due" as if it were upcoming.
+  CPA/legal item: late filing, penalties and interest for a 2025 return.
 
 ---
 
@@ -272,7 +276,7 @@ read documents or answers to do tax logic (same rule as `requiredItems()`).
 
 These must be **new questions**, built the normal way (a screen in `screens.tsx`, a
 section in the stepper). They're a step on their own (R8) so we can see them before
-the forms use them. Open question 7.
+the forms use them. (Decided, section 14.)
 
 ---
 
@@ -386,12 +390,15 @@ Every downloaded page is labelled **Estimate (prototype). Not for filing.**
 
 | Form | Plan |
 |---|---|
-| **Form 8843** | The official IRS PDF (public, final for 2026), filled from confirmed values and the new school questions. No calculation. Built first (step R8), since it needs no estimate. |
-| **Form 1040-NR** | Recommended: our own **line-by-line estimate worksheet** (a PDF in our style) using 1040-NR line numbers, not the official form: the 2026 form is only a draft, and a filled official form looks fileable. A 2025 official-form fill can come later. (Open question 6.) |
+| **Form 8843** | The official IRS PDF, filled from confirmed values and the new school questions. No calculation. Built first (step R8). **It must be the 2025 form**: the one I read is the 2026 version, so step R8 starts by fetching the 2025 form and re-checking its fields. |
+| **Form 1040-NR** | Decided: our own **line-by-line estimate worksheet** (a PDF in our style) using 1040-NR line numbers, not the official form: the 2026 form is only a draft, and a filled official form looks fileable. A 2025 official-form fill can come later. (Decided, section 14.) |
 
 Forms are generated **on demand** on the server, sent with `no-store`, never saved,
-never logged. They include the person's confirmed SSN/ITIN and passport number in
-full (they're the person's own forms); legal to confirm (open question 6).
+never logged. **Decided: every ID number on a download shows only its last 4
+digits**, through the same `mask()` as the screens (SSN, ITIN, EIN, passport number;
+nothing else is ever printed in full). So the downloads are estimates, not fileable
+forms. A test reads the text of every generated PDF and fails if any ID number
+appears unmasked.
 
 ---
 
@@ -440,7 +447,7 @@ config is empty, so the card shows for every state.
 | Review | CPA and legal sign-off per state |
 
 Recommendation: **choose the first state from real W-2 data** (box 15) once people
-use the app, not by guessing. Open question 9.
+use the app, not by guessing. (Decided, section 14.)
 
 ---
 
@@ -544,45 +551,33 @@ I'm on **Sonnet 5.5** right now; the logic steps below should run on **Opus 5.5*
 | **R8 New questions + Form 8843** | Section 5 questions; official Form 8843 filled; labels | Download and open it; fake data only | Opus (mapping), Sonnet (screens) |
 | **R9 1040-NR estimate worksheet PDF** | Section 8 | Download and open it | Sonnet |
 | **R10 How to pay + State card** | Sections 9 and 10 | Look at both | Sonnet |
-| **R11 2026 config** | `years/2026.ts` (`draft`), year switch tests; re-check when the IRS posts the final form | check:tax for 2026 | Opus |
+| **R11 2026 config (later)** | `years/2026.ts` (`draft`), year switch tests; re-check when the IRS posts the final form; then `TAX_YEAR` can move to 2026 | check:tax for 2026 | Opus |
 | **R12 Audit and copy** | focus audit Result part, contrast pairs, CLAUDE.md edits (section 12), copy review | all checks green | Sonnet |
 
 ---
 
-## 14. Open questions for you
+## 14. Decisions (approved Nov 15, 2026)
 
-1. **Tax year.** Build and verify **2025 first**, and carry 2026 as `draft` (my
-   recommendation)? Or only 2026 (no final form exists, so the form lines can't be
-   verified)? Support only 2025 and 2026 at first?
-2. **Treaties.** OK that a treaty only applies when the **1042-S itself shows it**,
-   shown with an advisory "needs review" tag? Or should every treaty case block the
-   number until a CPA looks? (I recommend advisory.)
-3. **India standard deduction.** Apply it automatically for citizens of India (greater
-   of that or itemized), tagged advisory? (I recommend yes.)
-4. **Unsupported income types** (freelance, contract, investments, trading, bank
-   interest, donation, child care) **block the number**. OK, or show a number "for
-   the income we can compute"? (I recommend blocking; a partial number reads as a
-   guess.)
-5. **The switch.** Hides the number everywhere including the downloads and the
-   server's response? Where should it sit (result header, always visible)?
-6. **Forms.** Our own 1040-NR **worksheet** (recommended) or the official form filled
-   in? Include the full SSN/ITIN and passport number on downloads (they're the
-   person's own forms), or leave them blank for the person to write in?
-7. **New questions** (marital status and dependents, school, program director,
-   permanent-residence question): one short screen for the school and director, or
-   separate screens?
-8. **Copy exception** in CLAUDE.md (section 12): approved?
-9. **First state.** Decide later from W-2 data (recommended)?
-10. **Where the engine runs.** Server (recommended, section 3.3) or in the browser?
-11. **The primary button on "Amount owed".** I made it **Download your forms** with
-    **How to pay** secondary, to keep one cobalt button doing the same job in every
-    state. OK?
+| # | Question | Decision |
+|---|---|---|
+| 1 | Tax year | **2025 first**, and the whole app reflects 2025 (done). 2026 later as `draft` (R11). |
+| 2 | Treaties | Applied only when the **1042-S itself shows it**; advisory "needs review" tag. |
+| 3 | India standard deduction | Applied automatically for citizens of India (greater of that or itemized); advisory tag. |
+| 4 | Unsupported income types | **Block the number** (no partial number). |
+| 5 | The switch | Hides the number **everywhere** (screen, breakdown, live region, downloads, server response); visible on the result header. |
+| 6 | Forms | Our own 1040-NR **estimate worksheet**; Form 8843 official (2025 version). **Every ID number shows only its last 4 digits, including on downloads.** |
+| 7 | New questions | One short screen for school and program director (R8). Marital status and dependents, and the permanent-residence question, as in section 5. |
+| 8 | Copy exception | **Approved**, written into CLAUDE.md ("Copy"). |
+| 9 | First state | Decided later, from real W-2 data. |
+| 10 | Where the engine runs | **Server**. |
+| 11 | Primary button when owed | **Download your forms**; **How to pay** secondary. |
 
 **Add to the CPA list:** the full list in section 11.4, plus: bank interest for
 nonresidents, whether 1040-NR is required with no income, FICA withheld in error
 (W-2 boxes 4 and 6, not refunded on this return), the June 15 rule and the payment
 date, estimated-tax penalty and interest, Schedule 1-A eligibility, Form 8843 filed
-alone (due date and address).
+alone (due date and address), and **late filing of a 2025 return** (due dates have
+passed).
 
 **Add to the legal list:** whether showing a computed estimate counts as tax advice or
 preparation (and any registration, disclosure or consent rules that apply to tax

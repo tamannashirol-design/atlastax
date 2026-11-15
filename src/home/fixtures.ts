@@ -14,7 +14,7 @@ const questionsDone: Answers = {
 
 export const HOME_FIXTURES: Record<string, Answers> = {
   new: {},
-  // Arrived 2019, no full year abroad: 2026 is past the first five calendar years
+  // Arrived 2019, no full year abroad: 2025 is past the first five calendar years
   notsupported: { visa: 'F-1', enrolled: 'yes', state: 'CA', citizenship: 'IN', residency: { arrivalYear: 2019, yearAbroad: 'no' } },
   progress: aboutAndTime,
   documents: questionsDone,

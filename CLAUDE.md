@@ -189,6 +189,11 @@ Rules:
   flow/answers). Never hard-code a year: use the filing year.
 - Copy: no promises (refunds, speed, savings, "free"), no invented numbers;
   unconfirmed claims are marked "TODO confirm" in code and FLOW.md.
+  ONE approved exception: the result screen (`/result`, AFTER-DOCUMENTS-PLAN.md)
+  may show a calculated federal estimate, always labelled "Estimate (prototype)",
+  with no promise wording, hidden by the visible switch
+  (`ESTIMATE_NUMBER_VISIBLE`), and NEVER on Home or in marketing. Every other
+  screen still follows the rule above.
 
 ## Upload animation (rules)
 - Any reference is for timing, sequence and behavior only; rebuild all visuals
@@ -250,8 +255,9 @@ Rules:
   111-11-1111 or 555-55-5555. `npm run check:files` enforces both (runs
   before every build). Extraction plan: EXTRACTION-PLAN.md.
 - SSN, ITIN, EIN and passport numbers are shown ONLY through `mask()` /
-  `maskSpoken()` (`src/lib/mask.ts`): screens, announcements, errors; never
-  logged. Which fields each form has, which are masked and which need their
+  `maskSpoken()` (`src/lib/mask.ts`): screens, announcements, errors AND
+  downloaded forms (last 4 digits only, everywhere, no "Show" for downloads);
+  never logged. Downloads are therefore estimates, not fileable forms. Which fields each form has, which are masked and which need their
   own tick: ONLY `src/extraction.config.ts` (TODO confirm with CPA).
   `npm run check:extraction` tests both.
 
@@ -281,6 +287,19 @@ Rules:
 - Documents cards: "Reading" shares the corner spot with "Added" (space
   reserved); "Couldn't read" sits under the name with a reason, plus
   "Try again" when another try can help (else Replace).
+
+## Tax year and the estimate (planned: AFTER-DOCUMENTS-PLAN.md)
+- The app's tax year is **2025** (`TAX_YEAR` in `src/config.ts`): the first
+  year the estimate is built and verified for (final IRS forms exist). Earlier
+  years (2024, 2023) run the questions but show "We can't estimate this tax year
+  yet". 2026 comes later (step R11, `draft` until the IRS posts the final form).
+  Never type a year in screens, copy or tests of the app: read `TAX_YEAR` or the
+  filing year.
+- ALL tax rules (tables, deductions, limits, due dates, line map, "needs review"
+  reasons) live ONLY in `src/tax/years/*` and `src/tax/` (built from step R1),
+  each figure with its IRS source and marked "TODO confirm with CPA". The
+  estimate is a pure function `estimateReturn(input, year)`; components never
+  compute or decide tax. `npm run check:tax` (step R2) tests it.
 
 ## Tech stack
 React + TypeScript + Tailwind CSS + Framer Motion, built with Vite.

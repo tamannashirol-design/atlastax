@@ -5,6 +5,9 @@ import type { Answers } from '../src/flow/answers.ts'
 import { asksArrivalDate, asksIfStudent, asksYearAbroad, daysFor, inScope, isSupportedStudent, studentYearsFor } from '../src/residency/fromAnswers.ts'
 import { STUDENT_LIMIT_YEARS } from '../src/residency.config.ts'
 
+// A FIXED year on purpose: the expected day counts below (leap years included) must
+// not change when the app's current tax year (src/config.ts) does. The functions
+// under test take the year as a parameter.
 const TAX_YEAR = 2026
 let failed = 0
 

@@ -12,9 +12,9 @@
 //   GET    /api/health         → { ok: true }
 //
 //   Reading (EXTRACTION-PLAN.md; statuses only, never values):
-//   GET    /api/extraction?year=2026          → snapshot { capabilities, documents }
-//   GET    /api/extraction/events?year=2026   → live updates (server-sent events), snapshot first
-//   POST   /api/extraction/:itemId/retry?year=2026 → 204
+//   GET    /api/extraction?year=2025          → snapshot { capabilities, documents }
+//   GET    /api/extraction/events?year=2025   → live updates (server-sent events), snapshot first
+//   POST   /api/extraction/:itemId/retry?year=2025 → 204
 //   POST   /api/extraction/scenario { scenario }  → 204 (dev only: what the mock does)
 //
 // Upload headers x-item-id + x-tax-year start reading that document (D4).
