@@ -28,3 +28,6 @@ screenshots/
 
 # Motion reference videos (large, kept locally only)
 references/motion/*.mov
+
+# Uploaded files and server records (development)
+.data/

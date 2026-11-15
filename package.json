@@ -14,7 +14,9 @@
     "check:residency": "node scripts/check-residency.ts",
     "check:files": "node scripts/check-files.ts",
     "illustrations": "node scripts/illustrations.mjs",
-    "check:extraction": "node scripts/check-extraction.ts"
+    "check:extraction": "node scripts/check-extraction.ts",
+    "server": "node server/index.ts",
+    "check:server": "node scripts/check-server.ts"
   },
   "dependencies": {
     "@fontsource-variable/fraunces": "^5.3.0",

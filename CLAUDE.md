@@ -202,8 +202,8 @@ Rules:
 - Cobalt stays reserved for the primary action button.
 - Built: `UploadZone` (src/components) with choreography from
   MOTION-upload.md; play every state on /motion. Progress always comes from a
-  real upload (`useUpload`, XHR progress events); in dev, `/api/upload` is a
-  throttled test endpoint. `Folder` (src/components): approved three-layer
+  real upload (`useUpload`, XHR progress events) to our server
+  (`POST /api/files`, throttled in dev; see Server below). `Folder` (src/components): approved three-layer
   folder (fills only) inside the zone: the sheet slides in behind the front
   panel and the folder lifts on drop, the check draws on the front panel when
   done, and the sheet slides back out on error.
@@ -254,6 +254,19 @@ Rules:
   logged. Which fields each form has, which are masked and which need their
   own tick: ONLY `src/extraction.config.ts` (TODO confirm with CPA).
   `npm run check:extraction` tests both.
+
+## Server (`server/`)
+- `server/app.ts` is the API; `npm run dev` mounts it inside Vite (one
+  command), `npm run server` runs it alone. Settings only in
+  `server/config.ts`; the upload size limit is `MAX_UPLOAD_BYTES` in
+  `src/config.ts` (shared with the browser).
+- Files: checked by their first bytes (PDF or photo), stored privately in
+  `.data/` (git-ignored), owned by a session cookie; only the owner can
+  delete. Consent is recorded per session; `consentRequired` stays off until
+  the consent sheet exists (extraction step 4).
+- Never log file names, contents or values (route + error code only).
+- Dev switches: `?fail=1`, `?kbps=300`, `?dry=1` (measured, not stored;
+  /motion uses it). `npm run check:server` tests the safety rules.
 
 ## Tech stack
 React + TypeScript + Tailwind CSS + Framer Motion, built with Vite.

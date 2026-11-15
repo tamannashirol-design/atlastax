@@ -3,47 +3,66 @@
 //   accepted  → file chosen, request opening (card settles in)
 //   uploading → bytes going out; progress 0–1 (at 1 = "finishing": waiting for the server)
 //   done      → server answered OK
-//   error     → network error, server error, or a file type we can't take
+//   error     → network error, server error, a file type we can't take, or too big
+// Files go to our server (POST /api/files, server/app.ts), which checks them
+// again and answers with a fileId.
 import { useCallback, useEffect, useRef, useState } from 'react'
+import { MAX_UPLOAD_BYTES } from '../config'
 
 export type UploadStatus = 'idle' | 'accepted' | 'uploading' | 'done' | 'error'
-/** size is unknown for files remembered from an earlier visit */
-export type UploadFile = { name: string; size?: number }
+/** size is unknown for files remembered from an earlier visit; fileId is set once the server has stored it */
+export type UploadFile = { name: string; size?: number; fileId?: string }
 /** retryable: the same file can be sent again (network/server failure), not for a file type we can't take */
 export type UploadState = { status: UploadStatus; progress: number; file?: UploadFile; error?: string; retryable?: boolean }
 
 const ACCEPTED = /^(application\/pdf|image\/)/
+const TYPE_ERROR = 'That file type isn’t supported. Use a PDF or a photo.'
+const SIZE_ERROR = `That file is too big. Use one under ${Math.round(MAX_UPLOAD_BYTES / 1024 / 1024)} MB.` // TODO confirm copy
 
-export function useUpload(endpoint = '/api/upload') {
+export function useUpload(endpoint = '/api/files') {
   const [state, setState] = useState<UploadState>({ status: 'idle', progress: 0 })
   const xhr = useRef<XMLHttpRequest | null>(null)
-  const last = useRef<{ file: File; query: string } | null>(null)
+  const last = useRef<{ file: File; query: string; itemId?: string } | null>(null)
 
   const start = useCallback(
-    (file: File, query = '') => {
+    /** itemId: the Documents item this file is for (e.g. "opt-cpt"), stored with the file */
+    (file: File, query = '', itemId?: string) => {
       xhr.current?.abort()
-      if (!ACCEPTED.test(file.type)) {
-        setState({ status: 'error', progress: 0, file: { name: file.name, size: file.size }, error: 'That file type isn’t supported. Use a PDF or a photo.', retryable: false })
-        return
-      }
-      last.current = { file, query }
+      const refuse = (error: string) => setState({ status: 'error', progress: 0, file: { name: file.name, size: file.size }, error, retryable: false })
+      if (!ACCEPTED.test(file.type)) return refuse(TYPE_ERROR)
+      if (file.size > MAX_UPLOAD_BYTES) return refuse(SIZE_ERROR)
+      last.current = { file, query, itemId }
       setState({ status: 'accepted', progress: 0, file: { name: file.name, size: file.size } })
       const req = new XMLHttpRequest()
       xhr.current = req
       req.upload.onprogress = (e) => {
         if (e.lengthComputable) setState((s) => ({ ...s, status: 'uploading', progress: e.loaded / e.total }))
       }
-      req.onload = () =>
-        setState((s) => (req.status >= 200 && req.status < 300 ? { ...s, status: 'done', progress: 1 } : { ...s, status: 'error', error: undefined, retryable: true }))
+      req.onload = () => {
+        if (req.status >= 200 && req.status < 300) {
+          let fileId: string | undefined
+          try {
+            fileId = (JSON.parse(req.responseText) as { fileId?: string }).fileId
+          } catch {
+            /* no id: still uploaded */
+          }
+          setState((s) => ({ ...s, status: 'done', progress: 1, file: s.file && { ...s.file, fileId } }))
+        } else if (req.status === 415 || req.status === 413) {
+          // The server looked inside the file (or measured it) and can't take it: a different file is needed
+          setState((s) => ({ ...s, status: 'error', progress: 0, error: req.status === 415 ? TYPE_ERROR : SIZE_ERROR, retryable: false }))
+        } else setState((s) => ({ ...s, status: 'error', error: undefined, retryable: true }))
+      }
       req.onerror = () => setState((s) => ({ ...s, status: 'error', error: undefined, retryable: true }))
       req.open('POST', endpoint + query)
+      req.setRequestHeader('x-file-name', encodeURIComponent(file.name))
+      if (itemId) req.setRequestHeader('x-item-id', itemId)
       req.send(file)
     },
     [endpoint],
   )
 
   /** Try the last file again (without any test flags). */
-  const retry = useCallback(() => last.current && start(last.current.file), [start])
+  const retry = useCallback(() => last.current && start(last.current.file, '', last.current.itemId), [start])
 
   const reset = useCallback(() => {
     xhr.current?.abort()

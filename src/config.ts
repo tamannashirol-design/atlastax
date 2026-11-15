@@ -25,3 +25,9 @@ export const PRIVACY_LINE = ''
  * they're on. Set to false to fall back to quiet placeholders; ?art=1 previews.
  */
 export const ILLUSTRATIONS_APPROVED = true
+
+/**
+ * Largest file a person can upload (checked in the browser first, and again
+ * by the server). TODO confirm: design + the extraction provider's limit.
+ */
+export const MAX_UPLOAD_BYTES = 20 * 1024 * 1024

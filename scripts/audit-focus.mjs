@@ -154,11 +154,11 @@ async function uploadFlow(page, where) {
   // A wrong file type can't be retried, so the error offers "Choose another file".
   // Pick a real file, but the network fails → error message, then Try again → done
   await tabTo(page, /^Choose another file$/)
-  await page.route('**/api/upload*', (r) => r.abort())
+  await page.route('**/api/files*', (r) => r.abort())
   await pick(page, pdf('W2-retry.pdf'))
   await settle(page)
   await check(page, where, 'network error', { focus: /W2-retry\.pdf.*try again/i })
-  await page.unroute('**/api/upload*')
+  await page.unroute('**/api/files*')
   await tabTo(page, /^Try again$/)
   await page.keyboard.press('Enter')
   await page.waitForTimeout(50)

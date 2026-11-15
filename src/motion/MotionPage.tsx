@@ -11,12 +11,13 @@ import { IntroContent } from '../intro/IntroContent'
 
 // /motion: play each state of the upload moment, scrub progress, and toggle
 // reduced motion. "Upload" and "Error" run REAL uploads to the dev endpoint
-// (/api/upload), so progress comes from bytes actually sent. The slider shows
+// (/api/files?dry=1: measured, never stored), so progress comes from bytes actually sent. The slider shows
 // a chosen progress value instead (scrubbing). Drag states are shown with a
 // forced drag, since a page can't fake a real file drag.
 
 const DOC = 'W-2'
-const sampleFile = () => new File([new Uint8Array(3 * 1024 * 1024)], `W-2 ${TAX_YEAR}.pdf`, { type: 'application/pdf' })
+// 3 MB of nothing behind a PDF header: the server checks a file's first bytes
+const sampleFile = () => new File([new TextEncoder().encode('%PDF-1.4\n'), new Uint8Array(3 * 1024 * 1024)], `W-2 ${TAX_YEAR}.pdf`, { type: 'application/pdf' })
 const scrubFile = { name: `W-2 ${TAX_YEAR}.pdf`, size: 3 * 1024 * 1024 }
 
 type Scene = { state: UploadState; drag?: Drag; label: string }
@@ -45,7 +46,7 @@ export default function MotionPage() {
   const runUpload = (query = '') => {
     cancel()
     setScene(null)
-    upload.start(sampleFile(), query)
+    upload.start(sampleFile(), '?dry=1' + (query ? '&' + query.slice(1) : ''))
   }
   const playAll = () => {
     cancel()
@@ -58,7 +59,7 @@ export default function MotionPage() {
       window.setTimeout(() => {
         timers.current = []
         setScene(null)
-        upload.start(sampleFile())
+        upload.start(sampleFile(), '?dry=1')
       }, 2200),
     ]
   }
@@ -104,7 +105,7 @@ export default function MotionPage() {
                   onFiles={(files) => {
                     cancel()
                     setScene(null)
-                    upload.start(files[0])
+                    upload.start(files[0], '?dry=1')
                   }}
                   onRetry={() => {
                     cancel()

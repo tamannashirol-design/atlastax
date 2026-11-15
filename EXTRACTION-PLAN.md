@@ -315,7 +315,7 @@ going back to an already confirmed document.
 | Step | What | What you'll see | Model |
 |---|---|---|---|
 | 1 ✓ | Masking helper, fixture check, field config (`npm run check:extraction`) | `/styleguide` → "Masked ID numbers" | Opus |
-| 2 | Server skeleton, `/api/files` replaces the dev endpoint, consent recorded | Uploads still animate exactly as before | Opus |
+| 2 ✓ | Server skeleton, `/api/files` replaces the dev endpoint, consent recorded (not yet required) · `npm run check:server` | Uploads still animate as before | Opus |
 | 3 | Mock provider, jobs and events, `answers.extraction` | A "Reading" pill on Documents cards; scenarios on /motion | Opus, then Sonnet for the pill |
 | 4 | Consent sheet (placeholder copy) | Appears before the first upload | Sonnet |
 | 5 | Reading page (section below) | `/reading?reading=slow` etc. | Opus for logic, Sonnet for motion |
