@@ -4,7 +4,7 @@ import { AnswerTile } from '../components/AnswerTile'
 import { FormCard } from '../components/FormCard'
 import { UploadZone, type Drag } from '../components/UploadZone'
 import { TAX_YEAR } from '../config'
-import type { FlowPosition } from '../flow/sections'
+import { at, type FlowPosition } from '../flow/sections'
 import { spring } from '../lib/motion'
 import { PreviewContext } from './previewContext'
 import type { UploadFile, UploadStatus } from '../lib/upload'
@@ -50,7 +50,7 @@ function DemoBox({ children, onReplay, fit = 'box' }: { children: ReactNode; onR
 //   0      Q1 tiles settle in (soft, 60ms stagger)
 //   1000   F-1 pressed (quick) → 1250 selected
 //   2000   cross-fade to Q2 (soft); tiles settle in
-//   3000   "Less than 5 years" pressed → 3250 selected   (moment ends ~3400)
+//   3000   "Yes" pressed → 3250 selected   (moment ends ~3400)
 
 type Q = { question: string; helper: string; position: FlowPosition; options: { code: string; description: string }[]; pick: string }
 
@@ -58,7 +58,7 @@ const QUESTIONS: Q[] = [
   {
     question: 'What is your visa type?',
     helper: 'To personalize the experience and show only visa‑relevant forms',
-    position: { section: 0, step: 0 },
+    position: at('about', 0, 4),
     options: [
       { code: 'F-1', description: 'Academic' },
       { code: 'J-1', description: 'Exchange' },
@@ -67,14 +67,14 @@ const QUESTIONS: Q[] = [
     pick: 'F-1',
   },
   {
-    question: 'How many years have you been on this visa?',
-    helper: 'To determine residency status for correct tax forms ‑ substantial presence',
-    position: { section: 0, step: 2 },
+    question: 'Are you currently enrolled at a U.S. university or college?',
+    helper: 'To check your student status for the right forms',
+    position: at('about', 1, 4),
     options: [
-      { code: '< 5', description: 'Less than 5 years' },
-      { code: '5+', description: '5 years or more' },
+      { code: 'Yes', description: '' },
+      { code: 'No', description: '' },
     ],
-    pick: '< 5',
+    pick: 'Yes',
   },
 ]
 
@@ -147,7 +147,7 @@ function QuestionsRun({ fit }: SceneProps) {
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ ...spring.soft, delay: reduce ? 0 : i * 0.06 }}
                 >
-                  <AnswerTile code={o.code} description={o.description} selected={picked === o.code} forcePressed={pressed === o.code} tabIndex={-1} />
+                  <AnswerTile code={o.code} description={o.description || undefined} selected={picked === o.code} forcePressed={pressed === o.code} tabIndex={-1} />
                 </motion.div>
               ))}
             </div>

@@ -109,6 +109,13 @@ check('12. Contract work, "No" (reportableWithoutForm = false)', { income: ['con
   done: false,
 })
 
+console.log('\nIdentity')
+check('15. F-1 student: the most recent I-94 is an identity document', { visa: 'F-1', income: ['opt-cpt'] }, {
+  items: ['i94:document:missing', 'opt-cpt:document:missing'],
+  documents: '0 of 2 documents added',
+})
+check('16. J-1, not a student (not supported yet): no identity document', { visa: 'J-1', residency: { j1Student: 'no' } }, { items: [], documents: 'No documents needed yet' })
+
 console.log('\n"Or" documents (one item, either form counts)')
 check('13. Investments, 1099-DIV uploaded', { income: ['investments'], details: { 'investments-upload': ['1099-DIV Example Brokerage.pdf'] } }, {
   items: ['investments:document:added'],

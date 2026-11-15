@@ -149,6 +149,14 @@ Rules:
   state)); only then it shows the stepper and Continue. Items link as
   /documents#item-<id>. The stepper's Documents section uses
   `completed={{ 3: documentsDone(answers) }}`.
+- Stepper: sections live in `src/flow/sections.ts` only. Screens name a
+  section; `positionOf()` derives "x of n" from the screens that apply.
+  Never hard-code a step number.
+- Time in the U.S. (`src/residency/`): students only (F-1, J-1 student,
+  M-1). Rules ONLY in `src/residency.config.ts` (TODO confirm with CPA);
+  `fromAnswers.ts` decides which questions apply. Trips out of the U.S. are
+  inverted into stays and counted as a date set. No jargon outside "Show how
+  we counted"; no automatic routing. `npm run check:residency`.
 - Fake auth for testing only (`src/lib/auth.ts`): /motion toggle or
   ?auth=in / ?auth=out. No real authentication yet.
 - Home (`src/home/`): one primary (Start / Continue where you left off),

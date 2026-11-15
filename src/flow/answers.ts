@@ -7,7 +7,6 @@ import { TAX_YEAR } from '../config'
 export type Answers = {
   visa?: 'F-1' | 'J-1' | 'M-1'
   enrolled?: 'yes' | 'no'
-  years?: 'under5' | '5plus'
   state?: string // two-letter code
   taxId?: 'ssn' | 'itin' | 'none'
   filedBefore?: 'yes' | 'no'
@@ -16,6 +15,26 @@ export type Answers = {
   income?: import('../data/income').IncomeId[]
   /** Income follow-up answers, keyed by screen id: a choice, an amount, file names, or "later" (skipped). */
   details?: Record<string, string | string[]>
+  /** Status, arrival, years in the U.S. and days (src/residency). Travel history is sensitive: kept only here, in this tab. */
+  residency?: ResidencyAnswers
+}
+
+export type ResidencyAnswers = {
+  /** J-1 only: "Are you in the U.S. as a student?" (no = not supported yet) */
+  j1Student?: 'yes' | 'no'
+  /** First arrival in the U.S. as a student */
+  arrivalYear?: number
+  /** Asked only when the arrival year is one Form 8843 asks days for (YYYY-MM-DD) */
+  arrivalDate?: string
+  /** Asked only when arrival → tax year spans more than the student limit */
+  yearAbroad?: 'yes' | 'no'
+  abroadYears?: number[]
+  /** "Did you leave the U.S. in …?" and the trips out */
+  left?: 'yes' | 'no'
+  trips?: import('../residency/days').AbroadTrip[]
+  /** Optional: CBP travel history files (travel history is sensitive; kept only in this tab) */
+  cbpFiles?: string[]
+  historyCutOff?: boolean
 }
 
 // Answers are kept per tax year, so starting a previous year never touches
@@ -65,6 +84,11 @@ export function setAnswers(patch: Partial<Answers>) {
 /** Save one income follow-up answer. */
 export function setDetail(id: string, value: string | string[]) {
   setAnswers({ details: { ...answers.details, [id]: value } })
+}
+
+/** Save time-in-the-U.S. answers (merged). */
+export function setResidency(patch: Partial<ResidencyAnswers>) {
+  setAnswers({ residency: { ...answers.residency, ...patch } })
 }
 
 /** Remove one income follow-up answer (e.g. undo "I'll add it later"). */

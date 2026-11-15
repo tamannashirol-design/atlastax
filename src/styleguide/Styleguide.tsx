@@ -10,6 +10,7 @@ import { StepDots } from '../components/StepDots'
 import { Intro } from '../intro/Intro'
 import { LaptopPreview } from '../intro/LaptopPreview'
 import { VisaDemo } from '../intro/scenes'
+import { FlagLine } from '../residency/TimeInUS'
 import { IncomeCard, IncomeRow, Illustration } from '../components/IncomeCard'
 import { extraOptions, incomeOptions } from '../data/income'
 import { SearchSelect } from '../components/SearchSelect'
@@ -20,7 +21,7 @@ import { TileGroup } from '../components/TileGroup'
 import { UploadAnswer } from '../components/UploadAnswer'
 import { Folder } from '../components/Folder'
 import { countries, usStates } from '../data/places'
-import { allSteps } from '../flow/sections'
+import { sections, type FlowPosition } from '../flow/sections'
 import { PrimaryButton } from '../components/PrimaryButton'
 import cssText from '../index.css?raw'
 import { contrastRatio } from '../lib/contrast'
@@ -137,8 +138,12 @@ function PairRow({ pair }: { pair: Pair }) {
 }
 
 // Live stepper demo: move through the flow to see done / current / upcoming and the motion.
+// Every step of a sample person's flow (steps per section as they'd see them)
+const DEMO_STEPS_PER_SECTION = [4, 5, 2, 3, 1, 1]
+const allSteps: FlowPosition[] = sections.flatMap((_, section) => Array.from({ length: DEMO_STEPS_PER_SECTION[section] }, (_, step) => ({ section, step, steps: DEMO_STEPS_PER_SECTION[section] })))
+
 function StepperDemo() {
-  const [index, setIndex] = useState(3) // start in "Tax details" so one section is done
+  const [index, setIndex] = useState(5) // start in "Time in the U.S." so one section is done
   const position = allSteps[index]
   const goToSection = (section: number) => setIndex(allSteps.findIndex((p) => p.section === section))
   return (
@@ -206,9 +211,14 @@ function IntroDemo() {
         <Label>The real laptop layout (rail + question column) at full size, scaled into a card. Not a device frame. Decorative.</Label>
         {/* inert, as in the intro: a scaled preview isn't clickable */}
         <div inert>
-          <LaptopPreview position={{ section: 0, step: 0 }}>
+          <LaptopPreview position={{ section: 0, step: 0, steps: 4 }}>
             <VisaDemo play={0} fit="content" />
           </LaptopPreview>
+        </div>
+        <span className="pt-4 text-body font-semibold">Needs attention (Time in the U.S.)</span>
+        <Label>Only rows that need attention are highlighted: text + icon, never color alone, with a way to fix it.</Label>
+        <div className="rounded-md border border-text bg-sage-100 p-3">
+          <FlagLine message="We couldn’t find when you came back. Are you still outside the U.S.?" />
         </div>
         <span className="pt-4 text-body font-semibold">Intro</span>
         <Label>Logged out, the intro is the “/” page. Logged in, Help on Home replays it in this dialog (Skip / Escape closes). Compare widths on /motion.</Label>
@@ -221,7 +231,7 @@ function IntroDemo() {
 
 // Live form controls: the pieces the question screens are built from.
 function FormControlsDemo() {
-  const [years, setYears] = useState<'under5' | '5plus'>()
+  const [earlier, setEarlier] = useState<string>()
   const [state, setState] = useState<string>()
   const [country, setCountry] = useState<string>()
   const [sheet, setSheet] = useState(false)
@@ -237,11 +247,11 @@ function FormControlsDemo() {
         <div className="flex h-(--answer-h)">
           <TileGroup
             labelledBy="sg-tiles"
-            value={years}
-            onChange={setYears}
+            value={earlier}
+            onChange={setEarlier}
             options={[
-              { value: 'under5', code: '< 5', description: 'Less than 5 years', codeHidden: true },
-              { value: '5plus', code: '5+', description: '5 years or more', codeHidden: true },
+              { value: 'yes', code: 'Yes' },
+              { value: 'no', code: 'No' },
             ]}
           />
         </div>

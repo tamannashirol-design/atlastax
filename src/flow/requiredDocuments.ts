@@ -10,16 +10,23 @@
 //             ("No, I didn't get one" where the config allows it). Needs
 //             details, unless deferred with "I'll add it later".
 // Picking an income card always registers the income, whatever the form answer.
-import { DOCUMENT_RULES, type DocumentRule } from '../documents.config.ts'
+import { DOCUMENT_RULES, IDENTITY_DOCUMENTS, type DocumentRule, type IdentityRule } from '../documents.config.ts'
 import type { IncomeId } from '../data/income.ts'
 import type { Answers } from './answers.ts'
+import { isSupportedStudent } from '../residency/fromAnswers.ts'
 
 /** added · later ("I'll add it later") · none ("I didn't get one / a form") · missing. later and none are deferred. */
 export type DocumentStatus = 'added' | 'later' | 'none' | 'missing'
 /** details-needed · later ("I'll add it later") · provided (once details collection exists; TODO confirm with CPA) */
 export type IncomeItemStatus = 'details-needed' | 'later' | 'provided'
 
-export type DocumentItem = DocumentRule & { kind: 'document'; status: DocumentStatus; files: string[] }
+/** group: "identity" (e.g. the I-94, needed by everyone with a supported status) or "income" */
+export type DocumentItem = (DocumentRule | (IdentityRule & Partial<Record<keyof Omit<DocumentRule, keyof IdentityRule>, undefined>>)) & {
+  kind: 'document'
+  group: 'identity' | 'income'
+  status: DocumentStatus
+  files: string[]
+}
 export type IncomeItem = DocumentRule & { kind: 'income'; status: IncomeItemStatus }
 export type RequiredItem = DocumentItem | IncomeItem
 
@@ -29,8 +36,22 @@ export type SkipValue = 'later' | 'none'
 /** Where a self-reported item's state is saved (answers.details), e.g. "self-report:freelance" = "later" */
 export const selfReportKey = (ruleId: string) => `self-report:${ruleId}`
 
-/** Everything these answers call for, in income-card order. */
+const statusOf = (files: string[], v: unknown): DocumentStatus => (files.length ? 'added' : v === 'later' ? 'later' : v === 'none' ? 'none' : 'missing')
+
+/** Everything these answers call for: identity documents first, then income in income-card order. */
 export function requiredItems(a: Answers): RequiredItem[] {
+  const supported = isSupportedStudent(a)
+  const identity: RequiredItem[] = supported
+    ? IDENTITY_DOCUMENTS.map((r) => {
+        const v = a.details?.[r.uploadScreen]
+        const files = Array.isArray(v) ? v : []
+        return { ...r, kind: 'document', group: 'identity', status: statusOf(files, v), files }
+      })
+    : []
+  return identity.concat(incomeItems(a))
+}
+
+function incomeItems(a: Answers): RequiredItem[] {
   return DOCUMENT_RULES.filter((r) => a.income?.includes(r.income)).map((r): RequiredItem => {
     const saidNoForm = !!r.formQuestion && a.details?.[r.formQuestion] === 'no'
     if (saidNoForm && r.reportableWithoutForm) {
@@ -40,8 +61,7 @@ export function requiredItems(a: Answers): RequiredItem[] {
     // A form is expected (including before the form question is answered)
     const v = a.details?.[r.uploadScreen]
     const files = Array.isArray(v) ? v : []
-    const status: DocumentStatus = files.length ? 'added' : v === 'later' ? 'later' : v === 'none' ? 'none' : 'missing'
-    return { ...r, kind: 'document', status, files }
+    return { ...r, kind: 'document', group: 'income', status: statusOf(files, v), files }
   })
 }
 

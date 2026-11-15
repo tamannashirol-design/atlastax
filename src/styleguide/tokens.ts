@@ -11,9 +11,12 @@ import {
   HouseIcon,
   MagnifyingGlassIcon,
   MinusCircleIcon,
+  PlusIcon,
+  TrashIcon,
   QuestionIcon,
   UploadSimpleIcon,
   UserIcon,
+  WarningCircleIcon,
   XIcon,
   type Icon,
 } from '@phosphor-icons/react'
@@ -123,5 +126,8 @@ export const icons: { name: string; Icon: Icon; reason: string }[] = [
   { name: 'CircleDashed', Icon: CircleDashedIcon, reason: 'Status: not added yet / details needed (with text)' },
   { name: 'Clock', Icon: ClockIcon, reason: 'Status: “I’ll add it later” (with text)' },
   { name: 'MinusCircle', Icon: MinusCircleIcon, reason: 'Status: “I don’t have this” (with text)' },
+  { name: 'WarningCircle', Icon: WarningCircleIcon, reason: 'Needs your attention (with text): a trip that doesn’t add up, past the student years' },
+  { name: 'Plus', Icon: PlusIcon, reason: 'Add a trip' },
+  { name: 'Trash', Icon: TrashIcon, reason: 'Delete a trip (button labelled for screen readers)' },
   { name: 'ArrowSquareOut', Icon: ArrowSquareOutIcon, reason: 'Link opens another website in a new tab (other ways to file)' },
 ]

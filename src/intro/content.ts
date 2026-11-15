@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react'
-import type { FlowPosition } from '../flow/sections'
+import { at, type FlowPosition } from '../flow/sections'
 import { FORM_MOMENT_MS, FormDemo, QUESTIONS_MOMENT_MS, UPLOAD_MOMENT_MS, UploadDemo, VisaDemo, type SceneProps } from './scenes'
 
 // The intro's scenes, in order. Headings are from the design brief.
@@ -30,8 +30,8 @@ export const scenes: Scene[] = [
     title: 'Answer a few simple questions',
     body: 'One question at a time, about your visa, your studies and your income.',
     Demo: VisaDemo,
-    demoText: 'Preview of two questions: for visa type, F‑1 is picked; for years on the visa, less than 5 years is picked.',
-    preview: { position: { section: 0, step: 0 } },
+    demoText: 'Preview of two questions: for visa type, F‑1 is picked; for being enrolled at a U.S. university or college, Yes is picked.',
+    preview: { position: at('about', 0, 4) },
     moment: QUESTIONS_MOMENT_MS,
   },
   {
@@ -40,7 +40,7 @@ export const scenes: Scene[] = [
     body: 'Upload forms like your W-2 as a PDF or a clear photo.',
     Demo: UploadDemo,
     demoText: 'Preview of an upload question: an example W‑2 from Example Employer is uploaded.',
-    preview: { position: { section: 2, step: 0 }, question: 'Upload your W‑2', helper: 'From your employer. One per employer' },
+    preview: { position: at('income'), question: 'Upload your W‑2', helper: 'From your employer. One per employer' },
     moment: UPLOAD_MOMENT_MS,
   },
   {
@@ -49,7 +49,7 @@ export const scenes: Scene[] = [
     body: 'We prepare Form 1040‑NR from your answers for you to download.',
     Demo: FormDemo,
     demoText: 'Preview of a finished Form 1040‑NR with example data, ready to download.',
-    preview: { position: { section: 4, step: 0 }, question: 'Your forms are ready', helper: 'Review your forms to confirm everything is correct before submitting' },
+    preview: { position: at('review'), question: 'Your forms are ready', helper: 'Review your forms to confirm everything is correct before submitting' },
     moment: FORM_MOMENT_MS,
   },
 ]

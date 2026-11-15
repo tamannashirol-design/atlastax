@@ -11,47 +11,88 @@ help link, and Continue.
 
 0. Intro: the logged-out entry page ("/" while logged out)
 1. Home
-2. Q1: Visa type
-   - Enrolled at a U.S. university or college? (added by the designer)
-3. Q2: Years on this visa
-4. Q3: State
-5. Q4: SSN / ITIN
-6. Q5: Filed U.S. taxes before? ("Yes" opens the "Previous return" sheet)
-7. Q6: Income sources (multi-select in two groups; each pick opens a follow-up sheet, then follow-up questions such as Scholarship withholding)
-8. Q7: Country of citizenship
-9. Document checklist (empty, then complete)
-10. Review forms
-11. Ready to submit
+2. **About you:** Visa type (J-1: "Are you in the U.S. as a student?") ·
+   Enrolled · State · Country of citizenship
+3. **Time in the U.S.:** first arrival year · arrival date (sometimes) ·
+   a full year abroad (sometimes) · trips out of the U.S. · check
+4. **Tax details:** SSN / ITIN · Filed U.S. taxes before? ("Yes" opens the
+   "Previous return" sheet)
+5. **Income:** income sources + follow-ups
+6. **Documents** (one page for the tab and the flow)
+7. **Review** (not built yet)
 
 ## Built screens (routes)
 
 | Route | Screen | Answer control |
 |---|---|---|
-| /visa | Q1 Visa type | Tiles F-1 / J-1 / M-1 |
+| /visa | Visa type | Tiles F-1 / J-1 / M-1 |
+| /j1-student | J-1 only: "Are you in the U.S. as a student?" | Tiles Yes / No. No → "We don't support this yet." sheet |
 | /enrolled | Enrolled at a U.S. university or college? | Tiles Yes / No |
-| /years | Q2 Years on this visa | Tiles "< 5" (Less than 5 years) / "5+" (5 years or more) |
-| /state | Q3 State | Dropdown: phone picker below 600px, custom list above |
-| /tax-id | Q4 SSN / ITIN | Tiles SSN / ITIN / N/A |
-| /filed-before | Q5 Filed before | Tiles Yes / No. Continue with Yes opens the previous-return sheet (Upload file / Skip for now); No goes straight on |
-| /citizenship | Q7 Country of citizenship | Searchable country list (placeholder "Search countries") |
-| /income | Q6 Income sources | Multi-select income cards in two groups (see below) |
-
-Continue on /income goes to /income/details (follow-ups, not built yet).
+| /state | State | Dropdown: phone picker below 600px, custom list above |
+| /citizenship | Country of citizenship | Searchable country list |
+| /arrival-year … /time-in-us | Time in the U.S. (see that section) | |
+| /tax-id | SSN / ITIN | Tiles SSN / ITIN / N/A |
+| /filed-before | Filed before | Tiles Yes / No; Yes opens the previous-return sheet |
+| /income | Income sources | Multi-select income cards in two groups (see below) |
 
 ## Stepper sections
 
-The flow is grouped into 5 sections for the stepper (`src/flow/sections.ts`):
+Six sections (`src/flow/sections.ts`, the one section config). Screens name
+their section; the "x of n" and the segment fill are derived from the
+screens that apply to this person, so they always match. One segment per
+section. "2 of 3" is shown only for sections with more than one step.
 
-| # | Section | Steps |
+| # | Section | Steps (when they apply) |
 |---|---|---|
-| 1 | About you | Visa type, Enrolled, Years on this visa, State |
-| 2 | Tax details | SSN or ITIN, Filed before, Country of citizenship* |
-| 3 | Income | Income sources (+ follow-ups) |
-| 4 | Documents | Document checklist |
-| 5 | Review | Review and submit |
+| 1 | About you | Visa type, J-1 student?, Enrolled, State, Country of citizenship |
+| 2 | Time in the U.S. | Arrival year, Arrival date, Full year abroad, Trips, Check |
+| 3 | Tax details | SSN or ITIN, Filed before |
+| 4 | Income | Income sources + follow-ups |
+| 5 | Documents | One page |
+| 6 | Review | Review and submit |
 
-*Placement of Country of citizenship is to confirm (used for the tax-treaty check).
-"2 of 3" is shown only for sections with more than one step.
+## Time in the U.S. (built: `src/residency/`, rules in `src/residency.config.ts`)
+
+Students only for now: F-1 (including OPT and CPT), J-1 student, M-1. A J-1
+who isn't here as a student sees "We don't support this yet." (no
+calculation). The J-1 researcher rules stay in config, unused, marked TODO.
+Every rule is a placeholder: **TODO confirm with CPA**. Each question is its
+own screen in the standard question layout.
+
+| Route | Question | When | Why we ask (helper) |
+|---|---|---|---|
+| /arrival-year | What year did you first arrive in the U.S. as a student? | always | Your first years as a student are counted differently |
+| /arrival-date | What date did you arrive? | the arrival year is one Form 8843 asks days for | To count your days in the U.S. that year |
+| /year-abroad | Did you spend a full calendar year outside the U.S.? (Yes → pick the years) | arrival → tax year spans more than 5 calendar years (5 or fewer: can't change the result) | A full year away isn't counted as one of your student years |
+| /trips | Did you leave the U.S. in {Form 8843 years since arrival}? | always | To count your days in the U.S. for Form 8843 |
+| /time-in-us | Check your time in the U.S. | always | Change anything that doesn't look right |
+
+- Question wording shortened to fit 3 lines on a phone: "Did you spend a
+  full calendar year outside the U.S.?" (brief: "Was there a full calendar
+  year when you weren't in the U.S. at all?").
+- Form 8843 line 4a asks for days in the tax year and the 2 years before it
+  (2026, 2025, 2024 for a 2026 return); only years from the arrival on.
+- Trips: No → every day from arrival (or Jan 1) to year end. Yes → "Left on"
+  / "Came back on" rows, "Add another". Days in the U.S. = days in the year
+  minus days abroad; the days you leave and come back count as days in the
+  U.S. (any part of a day counts). Dates are counted as a set, never twice.
+- Only rows that need attention are highlighted (text + icon): no return
+  date ("Are you still outside the U.S.?" → "Yes, I'm still away"), came
+  back before leaving, overlapping trips, a trip before arrival, a missing
+  departure (from travel history), a history that may be cut off.
+- Optional shortcut: "Fill this in from your I-94 travel history" (upload;
+  reading is a STUB with sample trips). Helper: "Get it from the CBP I-94
+  website (i94.cbp.dhs.gov) under 'View Travel History'…" (TODO confirm the
+  label). "Remove travel history" deletes the files and the trips read from
+  them. Travel history stays in this browser tab only.
+- The most recent I-94 is a separate Identity document (Documents page).
+- Check screen: one sentence, "2026: year 4 of your first 5 calendar years
+  as a student", or past the limit, "This may change how your return is
+  filed. Talk to your school's international office or a tax professional."
+  Then the days per year, each with Edit, and "These go on Form 8843…".
+  "Show how we counted" (collapsed) holds the working and, past the limit,
+  the substantial presence arithmetic. No jargon outside it; no routing.
+- `npm run check:residency` runs the cases.
 
 Persistent across the app (old version): bottom tab bar with 3 tabs (Home,
 Documents/Scan, Profile), a menu button, and a security/trust badge.
@@ -81,7 +122,7 @@ from the array). Generic data only:
 
 | # | Heading (from the brief) | Text (TODO confirm: draft) | Demo |
 |---|---|---|---|
-| 1 | Answer a few simple questions | One question at a time, about your visa, your studies and your income. | Two questions in a row, each with its answer tiles and one tile picked: visa type (F‑1), then years on the visa (less than 5). No Continue button |
+| 1 | Answer a few simple questions | One question at a time, about your visa, your studies and your income. | Two questions in a row, each with its answer tiles and one tile picked: visa type (F‑1), then "Are you currently enrolled at a U.S. university or college?" (Yes). No Continue button |
 | 2 | Add your documents | Upload forms like your W-2 as a PDF or a clear photo. | Upload zone: "W-2 · Example Employer.pdf" drops in, progress draws, check lands (scripted; nothing is uploaded) |
 | 3 | Get your forms, ready to file | We prepare Form 1040‑NR from your answers for you to download. | Form card settles in, "Example data" |
 
@@ -289,40 +330,18 @@ exact same flow; only the tax year changes.
 **Answers (single choice):** Yes, No
 **Why we ask:** "To check your student status for the right forms"
 **Help link:** None
-**Action:** Continue. Both answers go on to Years on this visa; nothing
+**Action:** Continue. Both answers go on to State; nothing
 branches on it yet.
 
 > ⚠️ **Flag for tax review:** confirm the helper wording, and what (if
 > anything) "No" should change: for example, students on OPT after
 > graduation are no longer enrolled.
 
-## 3. Q2: Years on this visa (step 2)
-**Source:** Designer (no reference screen)
-**Question:** "How many years have you been on this visa?"
-**Answers (single choice):** "Less than 5 years", "5 years or more"
-**Rule:** exactly 5 years counts as "5 years or more".
-**"5 years or more" → Continue opens the "We can't file this return" sheet**
-(built, `src/flow/ResidentSheet.tsx`). After 5 years they're likely
-residents for tax purposes and file Form 1040; AtlasTax only prepares
-1040-NR. The sheet doesn't let them continue:
-- Title: "We can't file this return for you"
-- Body: "With 5 years or more on your visa, you're likely a U.S. resident for
-  tax purposes. Residents file Form 1040. AtlasTax only prepares Form 1040-NR,
-  for nonresidents."
-- "Other ways to file": IRS Free File (irs.gov/freefile) · Free help from
-  VITA volunteers (IRS VITA site locator) · A tax professional (ask the
-  international student office)
-- Action: **Change my answer** (closes the sheet). Close (X) does the same.
-**Why we ask:** "To determine residency status for correct tax forms - substantial presence"
-**Help link:** "Calculate how long you have been in the U.S."
-**Action:** Continue
+## 3. (removed) Years on this visa
 
-> ⚠️ **Flag for legal review:** the 5-year boundary decides which forms apply
-> (substantial presence test; F-1 students are exempt for 5 calendar years).
-> Confirm the wording and the "exactly 5 counts as 5 or more" rule before launch.
-> Also confirm the resident sheet's wording, and that the IRS links are the
-> right destinations. J-1 non-students (e.g. researchers) follow a different
-> rule (2 of the last 6 years), which this question doesn't capture.
+Replaced by the "Time in the U.S." section above. The "We can't file this
+return" sheet is gone: there is no automatic routing; the check screen shows
+a neutral sentence instead.
 
 ## 4. Q3: State (step 3)
 **Source:** Designer (no reference screen)

@@ -315,6 +315,36 @@ if (!only || 'documents'.includes(only)) {
   await page.close()
 }
 
+// Time in the U.S.: trips out of the U.S., by keyboard
+if (!only || 'trips'.includes(only)) {
+  const where = 'trips'
+  const page = await browser.newPage({ viewport: { width: 390, height: 844 } })
+  await page.goto(BASE + '/trips', { waitUntil: 'load' })
+  await page.evaluate(() => sessionStorage.setItem('atlastax:returns', JSON.stringify({ year: 2026, years: { 2026: { visa: 'F-1', residency: { arrivalYear: 2023, left: 'yes', trips: [] } } } })))
+  await page.reload({ waitUntil: 'load' })
+  await page.evaluate(watchBody)
+  console.log(where)
+  await tabTo(page, /^Add a trip$/)
+  await page.keyboard.press('Enter')
+  await page.waitForTimeout(300)
+  await check(page, where, 'Add a trip → its first date', { focus: /^$/ })
+  await page.keyboard.type('06012026')
+  await page.waitForTimeout(300)
+  await tabTo(page, /^Yes, I’m still away$/)
+  await page.keyboard.press('Enter')
+  await page.waitForTimeout(300)
+  await check(page, where, 'still away → its row', { focus: /^Left on/ })
+  await tabTo(page, /^Undo$/)
+  await page.keyboard.press('Enter')
+  await page.waitForTimeout(300)
+  await check(page, where, 'Undo → its row', { focus: /^Left on/ })
+  await tabTo(page, /^Delete trip 1$/)
+  await page.keyboard.press('Enter')
+  await page.waitForTimeout(300)
+  await check(page, where, 'delete the only trip → Add a trip', { focus: /^Add a trip$/ })
+  await page.close()
+}
+
 await browser.close()
 console.log(`\n${checks} checks, ${failures.length} failed`)
 if (failures.length) {

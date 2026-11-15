@@ -207,7 +207,7 @@ function Segments({ position, completed }: { position: FlowPosition; completed?:
       {sections.map((s, i) => {
         // Done = full. Current = halfway through the current step. Upcoming = empty.
         const state = sectionState(i, position, completed)
-        const fill = state === 'done' ? 1 : state === 'current' ? (position.step + 0.5) / s.steps.length : 0
+        const fill = state === 'done' ? 1 : state === 'current' ? (position.step + 0.5) / position.steps : 0
         return (
           <span key={s.id} className="flex h-1 flex-1 overflow-hidden rounded-full bg-border-decorative">
             <motion.span

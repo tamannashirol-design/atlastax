@@ -87,6 +87,14 @@ export const DOCUMENT_RULES: DocumentRule[] = [
   },
 ]
 
+/** Identity documents: needed by everyone with a supported status (not tied to income). TODO confirm with CPA. */
+export type IdentityRule = { id: string; form: string; label: string; source: string; uploadScreen: string }
+
+export const IDENTITY_DOCUMENTS: IdentityRule[] = [
+  // Separate from the CBP travel history (which is only used to count days)
+  { id: 'i94', form: 'Most recent I-94', label: 'Your most recent I-94', source: 'From the CBP I-94 website (i94.cbp.dhs.gov)', uploadScreen: 'i94-upload' },
+]
+
 /** Shown above self-reported items on the Documents page. Neutral: no tax advice, amounts or thresholds. */
 export const SELF_REPORTED_INTRO = 'You told us you had this income. We’ll ask for the details here.'
 

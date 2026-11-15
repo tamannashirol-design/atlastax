@@ -6,7 +6,7 @@ import { FlowStepper } from '../components/FlowStepper'
 import { PrimaryButton } from '../components/PrimaryButton'
 import { PREVIOUS_TAX_YEARS, PRIVACY_LINE, TAX_YEAR } from '../config'
 import { hasProgress, setFilingYear, useAllReturns } from '../flow/answers'
-import { flow, resumeTarget } from '../flow/screens'
+import { pathForSection, resumeTarget } from '../flow/screens'
 import { Intro, type IntroExit } from '../intro/Intro'
 import { navigate } from '../lib/router'
 
@@ -70,7 +70,8 @@ export default function HomePage() {
                   position={resume.position}
                   onNavigate={(section) => {
                     setFilingYear(TAX_YEAR)
-                    navigate(flow.find((s) => s.position.section === section)!.path)
+                    const target = pathForSection(section, current ?? {})
+                    navigate(target.path, target.state)
                   }}
                 />
               </div>

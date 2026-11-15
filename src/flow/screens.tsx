@@ -9,26 +9,32 @@ import { TileGroup, type TileOption } from '../components/TileGroup'
 import { UploadAnswer } from '../components/UploadAnswer'
 import type { IncomeId } from '../data/income'
 import { countries, usStates } from '../data/places'
-import { setAnswers, setDetail, type Answers } from './answers'
+import { TAX_YEAR } from '../config'
+import { ARRIVAL_YEARS_BACK } from '../residency.config'
+import { requiredDayYears } from '../residency/days'
+import { asksArrivalDate, asksIfStudent, asksYearAbroad, daysFor, isSupportedStudent } from '../residency/fromAnswers'
+import { ArrivalDate, TimeSummary, TripsStep, YearAbroad } from '../residency/TimeInUS'
+import { setAnswers, setDetail, setResidency, type Answers } from './answers'
 import { documentsDone, ruleForUploadScreen, uploadScreenApplies, type SkipValue } from './requiredDocuments'
-import type { FlowPosition } from './sections'
+import { at, sectionIndex, type FlowPosition, type SectionId } from './sections'
 
 export type FlowScreen = {
   id: string
   path: string
-  position: FlowPosition
+  /** The stepper section; the step number and count are derived (positionOf) */
+  section: SectionId
   /** Fixed text, or text that depends on earlier answers (OPT vs CPT) or the tax year being filed */
   question: string | ((a: Answers, year: number) => string)
   helper?: string
   helpLabel?: string
-  isAnswered: (a: Answers) => boolean
-  /** Show this screen only when this returns true (income follow-ups). */
-  when?: (a: Answers) => boolean
+  isAnswered: (a: Answers, year: number) => boolean
+  /** Show this screen only when this returns true (income follow-ups, residency steps). */
+  when?: (a: Answers, year: number) => boolean
   /** Link under Continue that skips the question: "I'll add it later" (value "later")
    *  or "I didn't get one" (value "none"). Both count as deferred documents. */
   skip?: { label: string; value: SkipValue }
   /** The answer control; must fit the fixed answer area unless answerArea is "auto". */
-  answers: (a: Answers, labelledBy: string) => ReactNode
+  answers: (a: Answers, labelledBy: string, year: number) => ReactNode
   answerArea?: 'fixed' | 'auto' | 'upload'
   /** Card grid: 8 columns wide at 1024px+ (see QuestionLayout). */
   wide?: boolean
@@ -39,7 +45,7 @@ export type FlowScreen = {
 // income types selected, and branch on earlier answers. Items marked
 // "(tax review)" in FLOW.md are intentionally not built yet.
 
-const INCOME: FlowPosition = { section: 2, step: 0 } // Income has no "x of n"
+const INCOME: SectionId = 'income'
 type When = (a: Answers) => boolean
 const has = (id: IncomeId): When => (a) => !!a.income?.includes(id)
 const answered = (screen: string, v: string): When => (a) => a.details?.[screen] === v
@@ -50,7 +56,7 @@ function tiles(id: string, question: string, options: TileOption<string>[], when
   return {
     id,
     path: `/income/${id}`,
-    position: INCOME,
+    section: INCOME,
     question,
     when,
     isAnswered: (a) => typeof detail(a, id) === 'string',
@@ -70,7 +76,7 @@ function upload(id: string, docLabel: string, question: FlowScreen['question'], 
   return {
     id,
     path: `/income/${id}`,
-    position: INCOME,
+    section: INCOME,
     question,
     helper,
     skip,
@@ -98,7 +104,7 @@ function amount(id: string, question: FlowScreen['question'], helper: string, wh
   return {
     id,
     path: `/income/${id}`,
-    position: INCOME,
+    section: INCOME,
     question,
     helper,
     when,
@@ -168,7 +174,7 @@ export const flow: FlowScreen[] = [
   {
     id: 'visa',
     path: '/visa',
-    position: { section: 0, step: 0 },
+    section: 'about',
     question: 'What is your visa type?',
     helper: 'To personalize the experience and show only visa‑relevant forms',
     helpLabel: 'Not sure about your visa type?',
@@ -187,10 +193,23 @@ export const flow: FlowScreen[] = [
     ),
   },
   {
+    // J-1 only. Students only for now: "No" shows "We don't support this yet" (FlowPage)
+    id: 'j1-student',
+    path: '/j1-student',
+    section: 'about',
+    question: 'Are you in the U.S. as a student?',
+    helper: 'AtlasTax supports students for now',
+    when: (a) => asksIfStudent(a),
+    isAnswered: (a) => !!a.residency?.j1Student,
+    answers: (a, id) => (
+      <TileGroup labelledBy={id} value={a.residency?.j1Student} onChange={(j1Student) => setResidency({ j1Student: j1Student as 'yes' | 'no' })} options={yesNo} />
+    ),
+  },
+  {
     // Added by the designer; helper wording to confirm with a tax professional (FLOW.md)
     id: 'enrolled',
     path: '/enrolled',
-    position: { section: 0, step: 1 },
+    section: 'about',
     question: 'Are you currently enrolled at a U.S. university or college?',
     helper: 'To check your student status for the right forms',
     isAnswered: (a) => !!a.enrolled,
@@ -207,31 +226,9 @@ export const flow: FlowScreen[] = [
     ),
   },
   {
-    id: 'years',
-    path: '/years',
-    position: { section: 0, step: 2 },
-    question: 'How many years have you been on this visa?',
-    // FLOW.md wording (wins over the brief, which dropped "- substantial presence")
-    helper: 'To determine residency status for correct tax forms ‑ substantial presence',
-    helpLabel: 'Calculate how long you have been in the U.S.',
-    isAnswered: (a) => !!a.years,
-    answers: (a, id) => (
-      <TileGroup
-        labelledBy={id}
-        value={a.years}
-        onChange={(years) => setAnswers({ years })}
-        options={[
-          // Exactly 5 years counts as "5 years or more" (flagged for legal review in FLOW.md)
-          { value: 'under5', code: '< 5', description: 'Less than 5 years', codeHidden: true },
-          { value: '5plus', code: '5+', description: '5 years or more', codeHidden: true },
-        ]}
-      />
-    ),
-  },
-  {
     id: 'state',
     path: '/state',
-    position: { section: 0, step: 3 },
+    section: 'about',
     question: 'What U.S. state do you currently live or study in?',
     helper: 'To identify if a state tax return is required',
     isAnswered: (a) => !!a.state,
@@ -240,9 +237,93 @@ export const flow: FlowScreen[] = [
     ),
   },
   {
+    id: 'citizenship',
+    path: '/citizenship',
+    section: 'about',
+    question: 'What is your country of citizenship?',
+    helper: 'To automatically check tax‑treaty eligibility',
+    helpLabel: 'What is a tax‑treaty?',
+    isAnswered: (a) => !!a.citizenship,
+    answers: (a, id) => (
+      <SearchSelect
+        labelledBy={id}
+        options={countries()}
+        value={a.citizenship}
+        onChange={(citizenship) => setAnswers({ citizenship })}
+        placeholder="Search countries"
+      />
+    ),
+  },
+  // ---------- Time in the U.S. (rules: residency.config.ts; working: src/residency) ----------
+  {
+    id: 'arrival-year',
+    path: '/arrival-year',
+    section: 'time',
+    question: 'What year did you first arrive in the U.S. as a student?',
+    helper: 'Your first years as a student are counted differently',
+    when: (a) => isSupportedStudent(a),
+    isAnswered: (a) => !!a.residency?.arrivalYear,
+    answers: (a, id, year) => (
+      <SelectField
+        labelledBy={id}
+        options={Array.from({ length: ARRIVAL_YEARS_BACK + 1 }, (_, i) => String(year - i)).map((y) => ({ value: y, label: y }))}
+        value={a.residency?.arrivalYear ? String(a.residency.arrivalYear) : undefined}
+        onChange={(v) => setResidency({ arrivalYear: Number(v) })}
+        placeholder="Choose a year"
+      />
+    ),
+  },
+  {
+    // Only when the arrival year is one Form 8843 asks days for
+    id: 'arrival-date',
+    path: '/arrival-date',
+    section: 'time',
+    question: 'What date did you arrive?',
+    helper: 'To count your days in the U.S. that year',
+    when: (a, year) => isSupportedStudent(a) && asksArrivalDate(a, year),
+    isAnswered: (a) => !!a.residency?.arrivalDate?.startsWith(String(a.residency.arrivalYear)),
+    answers: (a, id) => <ArrivalDate labelledBy={id} year={a.residency!.arrivalYear!} value={a.residency?.arrivalDate ?? ''} onChange={(arrivalDate: string) => setResidency({ arrivalDate })} />,
+  },
+  {
+    // Only when arrival → tax year spans more than the student limit (otherwise the answer can't change anything)
+    id: 'year-abroad',
+    path: '/year-abroad',
+    section: 'time',
+    // Shortened from "Was there a full calendar year when you weren't in the U.S. at all?" to fit 3 lines on a phone (2 from 600px)
+    question: 'Did you spend a full calendar year outside the U.S.?',
+    helper: 'A full year away isn’t counted as one of your student years',
+    when: (a, year) => isSupportedStudent(a) && asksYearAbroad(a, year),
+    isAnswered: (a) => a.residency?.yearAbroad === 'no' || (a.residency?.yearAbroad === 'yes' && (a.residency.abroadYears?.length ?? 0) > 0),
+    answerArea: 'auto',
+    answers: (_a, id, year) => <YearAbroad labelledBy={id} taxYear={year} />,
+  },
+  {
+    id: 'trips',
+    path: '/trips',
+    section: 'time',
+    question: (a, year) => `Did you leave the U.S. in ${listYears(requiredDayYears(year, a.residency?.arrivalYear ?? year))}?`,
+    helper: 'To count your days in the U.S. for Form 8843',
+    when: (a) => isSupportedStudent(a), // always part of the section (reached only after the arrival year)
+    isAnswered: (a, year) => !!daysFor(a, year)?.complete,
+    answerArea: 'auto',
+    answers: (_a, id, year) => <TripsStep labelledBy={id} taxYear={year} />,
+  },
+  {
+    id: 'time-summary',
+    path: '/time-in-us',
+    section: 'time',
+    question: 'Check your time in the U.S.',
+    helper: 'Change anything that doesn’t look right',
+    when: (a) => isSupportedStudent(a), // always part of the section (reached only after the arrival year)
+    isAnswered: () => true,
+    answerArea: 'auto',
+    answers: (_a, _id, year) => <TimeSummary taxYear={year} />,
+  },
+  // ---------- Tax details ----------
+  {
     id: 'tax-id',
     path: '/tax-id',
-    position: { section: 1, step: 0 },
+    section: 'tax',
     question: 'Do you have a Social Security Number (SSN) or ITIN?',
     helper: 'To decide if you can e‑file or must paper file.',
     helpLabel: 'Not sure whether you have it?',
@@ -265,7 +346,7 @@ export const flow: FlowScreen[] = [
   {
     id: 'filed-before',
     path: '/filed-before',
-    position: { section: 1, step: 1 },
+    section: 'tax',
     question: 'Have you filed U.S. taxes before?',
     helpLabel: 'Not sure whether you have filed before?',
     isAnswered: (a) => !!a.filedBefore,
@@ -281,28 +362,11 @@ export const flow: FlowScreen[] = [
       />
     ),
   },
-  {
-    id: 'citizenship',
-    path: '/citizenship',
-    position: { section: 1, step: 2 },
-    question: 'What is your country of citizenship?',
-    helper: 'To automatically check tax‑treaty eligibility',
-    helpLabel: 'What is a tax‑treaty?',
-    isAnswered: (a) => !!a.citizenship,
-    answers: (a, id) => (
-      <SearchSelect
-        labelledBy={id}
-        options={countries()}
-        value={a.citizenship}
-        onChange={(citizenship) => setAnswers({ citizenship })}
-        placeholder="Search countries"
-      />
-    ),
-  },
+  // ---------- Income ----------
   {
     id: 'income',
     path: '/income',
-    position: { section: 2, step: 0 },
+    section: 'income',
     question: 'Select the ones that apply to you',
     isAnswered: (a) => (a.income?.length ?? 0) > 0,
     answerArea: 'auto',
@@ -314,22 +378,42 @@ export const flow: FlowScreen[] = [
 
 /** Where Continue goes after the last question: the Documents page, opened "from the flow". */
 export const AFTER_FLOW = '/documents'
-/** Documents and Review are sections 3 and 4 (pages, not question screens). */
-export const DOCUMENTS_POSITION = { section: 3, step: 0 }
 export const REVIEW_PATH = '/review'
 
 export const isFlowPath = (path: string) => flow.some((s) => s.path === path)
 
-/** A question counts as done once answered, or skipped with its skip link. "5 years or more" never does (ResidentSheet). */
-function screenDone(s: FlowScreen, a: Answers): boolean {
-  if (s.id === 'years') return a.years === 'under5'
-  return s.isAnswered(a) || (!!s.skip && detail(a, s.id) === s.skip.value)
+/** "2024, 2025 and 2026" */
+export function listYears(years: number[]): string {
+  return years.length <= 1 ? String(years[0] ?? '') : `${years.slice(0, -1).join(', ')} and ${years[years.length - 1]}`
+}
+
+/**
+ * The stepper position of a screen: its section, and its step among the
+ * screens of that section that apply to these answers. "x of n" and the
+ * segments are always derived from this, never typed in.
+ */
+export function positionOf(screen: FlowScreen, a: Answers, year = TAX_YEAR): FlowPosition {
+  const inSection = flow.filter((s) => s.section === screen.section)
+  const applying = inSection.filter((s) => s === screen || !s.when || s.when(a, year))
+  return { section: sectionIndex(screen.section), step: Math.max(0, applying.indexOf(screen)), steps: applying.length }
+}
+
+/** First screen of a section that applies (for jumping from the stepper); Documents and Review are pages. */
+export function pathForSection(section: number, a: Answers, year = TAX_YEAR): { path: string; state: Record<string, unknown> | null } {
+  const screen = flow.find((s) => sectionIndex(s.section) === section && (!s.when || s.when(a, year)))
+  if (screen) return { path: screen.path, state: null }
+  return section === sectionIndex('documents') ? { path: AFTER_FLOW, state: { fromFlow: true } } : { path: REVIEW_PATH, state: null }
+}
+
+/** A question counts as done once answered, or skipped with its skip link. */
+function screenDone(s: FlowScreen, a: Answers, year: number): boolean {
+  return s.isAnswered(a, year) || (!!s.skip && detail(a, s.id) === s.skip.value)
 }
 
 /** The first question that applies and isn't done; everything done → the last one that applies. */
-export function resumeScreen(a: Answers): FlowScreen {
-  const applies = flow.filter((s) => !s.when || s.when(a))
-  return applies.find((s) => !screenDone(s, a)) ?? applies[applies.length - 1]
+export function resumeScreen(a: Answers, year = TAX_YEAR): FlowScreen {
+  const applies = flow.filter((s) => !s.when || s.when(a, year))
+  return applies.find((s) => !screenDone(s, a, year)) ?? applies[applies.length - 1]
 }
 
 /**
@@ -337,9 +421,9 @@ export function resumeScreen(a: Answers): FlowScreen {
  * the first unfinished question; else the Documents page (from the flow)
  * until documentsDone(); else Review.
  */
-export function resumeTarget(a: Answers): { path: string; position: FlowPosition; state: Record<string, unknown> | null } {
-  const unfinished = flow.filter((s) => !s.when || s.when(a)).find((s) => !screenDone(s, a))
-  if (unfinished) return { path: unfinished.path, position: unfinished.position, state: null }
-  if (!documentsDone(a)) return { path: AFTER_FLOW, position: DOCUMENTS_POSITION, state: { fromFlow: true } }
-  return { path: REVIEW_PATH, position: { section: 4, step: 0 }, state: null }
+export function resumeTarget(a: Answers, year = TAX_YEAR): { path: string; position: FlowPosition; state: Record<string, unknown> | null } {
+  const unfinished = flow.filter((s) => !s.when || s.when(a, year)).find((s) => !screenDone(s, a, year))
+  if (unfinished) return { path: unfinished.path, position: positionOf(unfinished, a, year), state: null }
+  if (!documentsDone(a)) return { path: AFTER_FLOW, position: at('documents'), state: { fromFlow: true } }
+  return { path: REVIEW_PATH, position: at('review'), state: null }
 }
