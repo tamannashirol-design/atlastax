@@ -243,6 +243,13 @@ Rules:
 - prefers-reduced-motion: movement becomes a `fade`; status text stays.
   Components read it with `useReducedMotionConfig()`.
 
+## Test documents and ID numbers
+- Fake documents only. PDFs live ONLY in `fixtures/synthetic/`; images only
+  there or in the design folders (`src/assets/illustrations/`, `public/`,
+  `references/`). SSN-like numbers only as 123-45-6789, 000-00-0000,
+  111-11-1111 or 555-55-5555. `npm run check:files` enforces both (runs
+  before every build). Extraction plan: EXTRACTION-PLAN.md.
+
 ## Tech stack
 React + TypeScript + Tailwind CSS + Framer Motion, built with Vite.
 Run locally with `npm run dev`, then open http://localhost:5173.

@@ -5,13 +5,14 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "npm run contrast && tsc -b && vite build",
+    "build": "npm run check:files && npm run contrast && tsc -b && vite build",
     "lint": "oxlint",
     "preview": "vite preview",
     "contrast": "node scripts/contrast.ts",
     "audit:focus": "node scripts/audit-focus.mjs",
     "check:documents": "node scripts/check-documents.ts",
     "check:residency": "node scripts/check-residency.ts",
+    "check:files": "node scripts/check-files.ts",
     "illustrations": "node scripts/illustrations.mjs"
   },
   "dependencies": {
