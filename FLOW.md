@@ -240,8 +240,8 @@ or /motion → Intro, with a 390 / 820 / 1032 / 1280 width toggle and
   - Top: "<n> of <total> added" (documents only; ticks up with the soft
     spring), a thin navy bar, and "<n> to go. Add what you have, and you can
     come back for the rest." / "All done for now. You can come back any time
-    to add more." (TODO confirm). Income items: their own line.
-  - Groups with a quiet heading and a short line (TODO confirm): Identity
+    to add more." (approved). Income items: their own line.
+  - Groups with a quiet heading and a short line (approved): Identity
     ("These show who you are. A clear photo or a PDF works."), Income
     documents ("Forms from your employer, school or bank."), Other documents
     ("Your return from an earlier year, if you have it."), Income without a

@@ -32,7 +32,7 @@ import { Link, navigate, useHistoryState } from '../lib/router'
 //           "<n> to go. Add what you have, and you can come back for the rest."
 //           The count ticks up (soft spring) when a document is added.
 //   Groups  Identity · Income documents · Income without a form, each with a
-//           quiet heading and a short friendly line (TODO confirm wording)
+//           quiet heading and a short friendly line (wording approved by the designer)
 //   Cards   DocumentCard: art, name, hint and one soft "Add" ("Replace" plus an
 //           "Added" pill once uploaded). No pill while not added, and no "Not
 //           now": every required document is needed to prepare the return.
@@ -52,7 +52,6 @@ const quietLink = `flex min-h-11 min-w-12 items-center justify-center rounded-sm
 const GROUPS = [
   { id: 'identity', title: 'Identity', line: 'These show who you are. A clear photo or a PDF works.' },
   { id: 'income', title: 'Income documents', line: 'Forms from your employer, school or bank.' },
-  // TODO confirm wording
   { id: 'other', title: 'Other documents', line: 'Your return from an earlier year, if you have it.' },
 ] as const
 
@@ -155,7 +154,7 @@ export default function DocumentsPage() {
                   <ProgressBar value={summary.documents.added / summary.documents.total} reduce={reduce} />
                 </>
               )}
-              {/* TODO confirm wording. No promises about speed, accuracy or automatic reading. */}
+              {/* Wording approved by the designer. No promises about speed, accuracy or automatic reading. */}
               <p className="text-body text-text-muted tabular-nums">
                 {items.length === 0
                   ? documentsLine(summary)
