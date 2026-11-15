@@ -2,22 +2,18 @@ import { CheckIcon, CircleDashedIcon } from '@phosphor-icons/react'
 import { AnimatePresence, motion, useReducedMotionConfig } from 'framer-motion'
 import { useEffect, useRef, useState } from 'react'
 import { AppShell } from '../components/AppShell'
-import { BottomSheet } from '../components/BottomSheet'
 import { FlowStepper } from '../components/FlowStepper'
 import { PrimaryButton } from '../components/PrimaryButton'
-import { SecondaryButton } from '../components/SecondaryButton'
-import { UploadAnswer } from '../components/UploadAnswer'
 import { SELF_REPORTED_INTRO } from '../documents.config'
 import { clearDetail, setDetail, useAnswers, useFilingYear } from '../flow/answers'
 import { documentsLine, incomeItemsLine, selfReportKey, type DocumentItem, type IncomeItem } from '../flow/requiredDocuments'
-import { DocumentCard, type Pill } from './DocumentCard'
-import { isReading, retryReading, useExtraction, type DocumentReading } from '../extraction/client'
+import { DocumentCard } from './DocumentCard'
+import { DocumentUploadSheet } from './DocumentUploadSheet'
 import { documentArt, incomeArt } from './artwork'
 import { returnStatus } from '../home/returnStatus'
 import { READING_PATH, pathForSection, resumeScreen } from '../flow/screens'
 import { at, sectionIndex } from '../flow/sections'
 import { spring } from '../lib/motion'
-import { UploadHostContext } from '../lib/uploadHost'
 import { Link, navigate, useHistoryState } from '../lib/router'
 
 // THE Documents page: the Documents tab, and the flow's Documents step.
@@ -75,26 +71,6 @@ export default function DocumentsPage() {
   const income = items.filter((i): i is IncomeItem => i.kind === 'income')
   const back = resumeScreen(answers).path
   const afterSheet = useRef<() => void>(() => {})
-  // Reading status from the server (statuses only, never values)
-  const reading = useExtraction()
-
-  // Say real reading changes out loud (not each stage): started, ready, couldn't read
-  const heard = useRef<Record<string, DocumentReading['status']> | null>(null)
-  useEffect(() => {
-    if (!reading.loaded) return
-    const before = heard.current
-    heard.current = Object.fromEntries(Object.values(reading.documents).map((d) => [d.itemId, d.status]))
-    if (!before) return // first answer from the server: nothing changed on screen
-    for (const d of docs) {
-      const now = reading.documents[d.id]
-      const was = before[d.id]
-      if (!now || now.status === was) continue
-      if (now.status === 'failed') setAnnounce(`Couldn’t read your ${d.form}`)
-      else if (now.status === 'ready') setAnnounce(`${d.form} read. You’ll check the details later.`)
-      else if (isReading(now) && !isReading({ ...now, status: was ?? 'ready' })) setAnnounce(`Reading your ${d.form}`)
-    }
-  }, [reading, docs])
-
   useEffect(() => {
     document.title = 'Documents · AtlasTax'
     // Linked to one item: bring it into view and focus it
@@ -238,14 +214,8 @@ export default function DocumentsPage() {
                         // The hint stays the same once added (a long file name would grow the card); files are listed under Replace
                         hint={d.source}
                         art={documentArt(d.id)}
-                        pill={pillFor(d, reading.documents[d.id])}
-                        note={failureNote(d, reading.documents[d.id])}
+                        pill={d.status === 'added' ? 'added' : undefined}
                         primary={{ label: d.status === 'added' ? 'Replace' : 'Add', onClick: () => setUploading({ item: d }) }}
-                        secondary={
-                          d.status === 'added' && canRetry(reading.documents[d.id])
-                            ? { kind: 'button', label: 'Try again', onClick: () => change(d.id, () => void retryReading(year, d.id), `Reading your ${d.form} again`) }
-                            : undefined
-                        }
                         onDropFile={(file) => setUploading({ item: d, file })}
                       />
                     ))}
@@ -306,66 +276,10 @@ export default function DocumentsPage() {
 
       <AnimatePresence onExitComplete={() => afterSheet.current()}>
         {uploading && (
-          <BottomSheet
-            title={`Add: ${uploading.item.form}`}
-            onClose={closeUpload}
-          >
-            <p className="text-body text-text-muted">{uploading.item.source}</p>
-            {/* "Not now" on the consent sheet closes this sheet too */}
-            <UploadHostContext.Provider value={{ close: closeUpload }}>
-              <div className="pt-6">
-                <SheetUpload item={uploading.item} initialFile={uploading.file} />
-              </div>
-            </UploadHostContext.Provider>
-            <div className="flex flex-col pt-8">
-              <SecondaryButton onClick={closeUpload}>Done</SecondaryButton>
-            </div>
-          </BottomSheet>
+          <DocumentUploadSheet item={uploading.item} initialFile={uploading.file} onClose={closeUpload} />
         )}
       </AnimatePresence>
     </AppShell>
-  )
-}
-
-/** The card's pill: reading status wins while a document is added. */
-function pillFor(d: DocumentItem, r: DocumentReading | undefined): Pill | undefined {
-  if (d.status !== 'added') return undefined
-  if (isReading(r)) return 'reading'
-  if (r?.status === 'failed') return 'failed'
-  return 'added'
-}
-
-/** Plain words for a failure that needs another file (Replace). "Try again" covers the rest. */
-function failureNote(d: DocumentItem, r: DocumentReading | undefined): string | undefined {
-  if (d.status !== 'added' || r?.status !== 'failed') return undefined
-  if (r.failure === 'wrong-type') return `This doesn’t look like a ${d.form}. Replace it with the right file.`
-  if (r.failure === 'blurry') return 'This photo is too blurry to read. A sharper photo in good light can help.'
-  if (r.failure === 'rotated') return 'This photo is sideways or upside down. Try one that’s upright.'
-  return undefined
-}
-
-const canRetry = (r: DocumentReading | undefined) => r?.status === 'failed' && (r.failure === 'unreadable' || r.failure === 'other')
-
-/** The real upload, saving to the same answer the flow's upload question uses. */
-function SheetUpload({ item, initialFile }: { item: DocumentItem; initialFile?: File }) {
-  const answers = useAnswers()
-  const v = answers.details?.[item.uploadScreen]
-  const files = Array.isArray(v) ? v : []
-  return (
-    <UploadAnswer
-      docLabel={item.form}
-      uploaded={files}
-      allowAnother
-      initialFile={initialFile}
-      upload={{ key: item.uploadScreen, itemId: item.id }}
-      onUploaded={(name) => setDetail(item.uploadScreen, [...files, name])}
-      onRemove={(i) =>
-        setDetail(
-          item.uploadScreen,
-          files.filter((_, j) => j !== i),
-        )
-      }
-    />
   )
 }
 

@@ -370,7 +370,8 @@ if (!only || 'consent sheet'.includes(only)) {
     return page
   }
   const consentOpen = (page) => page.getByRole('dialog', { name: 'Before you add a document' }).isVisible()
-  const uploadedCount = (page) => page.evaluate(async () => (await (await fetch('/api/extraction?year=2025')).json()).documents.length)
+  // Reading starts only on request: asking it to start lists every document that has a file
+  const uploadedCount = (page) => page.evaluate(async () => (await (await fetch('/api/extraction/start?year=2025', { method: 'POST' })).json()).documents.length)
   console.log(where)
 
   // Agree
@@ -497,6 +498,101 @@ if (!only || 'consent sheet'.includes(only)) {
   const names = sent.map((x) => `${x.name}:${x.status}`).join(', ')
   assert(where, 'dropped.pdf was sent exactly once', sent.filter((x) => x.name === 'dropped.pdf').length === 1, names)
   assert(where, 'second.pdf: refused once, then sent after agreeing', names.endsWith('second.pdf:403, second.pdf:201'), names)
+  await page.close()
+}
+
+// The Reading page (/reading), by keyboard, against the mock reader
+if (!only || 'reading'.includes(only)) {
+  const where = 'reading page'
+  const ready = { visa: 'F-1', enrolled: 'yes', state: 'CA', citizenship: 'FR', residency: { arrivalYear: 2023, arrivalDate: '2023-08-15', left: 'no' }, taxId: 'ssn', filedBefore: 'no', income: ['opt-cpt'], details: { 'opt-type': 'opt', 'opt-w2': ['W-2.pdf'], 'passport-upload': ['Passport.pdf'], 'i94-upload': ['I-94.pdf'] } }
+  /** A return with passport, I-94 and W-2 added, and their (fake) files on the server */
+  const setup = async (options = {}) => {
+    const page = await browser.newPage({ viewport: { width: 390, height: 844 }, ...options })
+    await page.goto(BASE + '/documents', { waitUntil: 'load' })
+    await page.waitForTimeout(800) // the app settles the session cookie first
+    await page.evaluate(async (a) => {
+      sessionStorage.setItem('atlastax:returns', JSON.stringify({ year: 2025, years: { 2025: a } }))
+      const c = await (await fetch('/api/consent')).json()
+      await fetch('/api/consent', { method: 'POST', body: JSON.stringify({ version: c.notice.version, fingerprint: c.notice.fingerprint }) })
+      for (const item of ['passport', 'i94', 'opt-cpt']) await fetch('/api/files', { method: 'POST', body: new Blob(['%PDF-1.4 sample']), headers: { 'x-item-id': item, 'x-tax-year': '2025', 'x-file-name': `${item}.pdf` } })
+    }, ready)
+    return page
+  }
+  console.log(where)
+
+  const label = (page) => page.locator('[data-stage]').innerText()
+  const liveSaid = (page, text) =>
+    page.waitForFunction((t) => [...document.querySelectorAll('[aria-live]')].some((n) => n.textContent === t), text, { timeout: 12000 }).then(
+      () => true,
+      () => false,
+    )
+
+  // The three stages, in order, from real events; then Done → Review by itself
+  let page = await setup()
+  await page.goto(BASE + '/reading?reading=normal', { waitUntil: 'load' })
+  await page.evaluate(watchBody)
+  await page.waitForTimeout(600)
+  await check(page, where, 'load → the headline', { focus: /^Your documents$/, ring: false })
+  assert(where, 'stage 1: "Reading your documents"', /Reading your documents/.test(await label(page)))
+  assert(where, 'the loops run while reading', (await page.locator('.loop-scan').count()) > 0 && (await page.locator('.loop-sweep').count()) === 1)
+  await page.evaluate(() => {
+    Object.defineProperty(document, 'hidden', { value: true, configurable: true })
+    document.dispatchEvent(new Event('visibilitychange'))
+  })
+  assert(where, 'loops pause when the tab is hidden', (await page.locator('[data-stage]').getAttribute('data-loops')) === 'paused')
+  await page.evaluate(() => {
+    Object.defineProperty(document, 'hidden', { value: false, configurable: true })
+    document.dispatchEvent(new Event('visibilitychange'))
+  })
+  assert(where, '…and run again when it’s back', (await page.locator('[data-stage]').getAttribute('data-loops')) === 'running')
+  assert(where, 'stage 2: "Extracting your details" (announced)', await liveSaid(page, 'Extracting your details'))
+  await page.waitForTimeout(500) // the label cross-fade
+  assert(where, '…and on the pill', /Extracting your details/.test(await label(page)))
+  assert(where, 'stage 3: "Done" (announced)', await liveSaid(page, 'Done'))
+  const doneAt = Date.now()
+  assert(where, 'Done sits on the success fill', (await page.locator('[data-stage="done"]').count()) === 1)
+  await page.waitForURL('**/review', { timeout: 5000 })
+  const held = Date.now() - doneAt
+  assert(where, 'Done settles and holds ~600ms, then Review by itself', held >= 600 && held < 3000, `${held}ms`)
+  await page.close()
+
+  // Reduced motion: no loops, the same three labels
+  page = await setup({ reducedMotion: 'reduce' })
+  await page.goto(BASE + '/reading?reading=normal', { waitUntil: 'load' })
+  await page.waitForTimeout(600)
+  assert(where, 'reduced motion: same label', /Reading your documents/.test(await label(page)))
+  assert(where, 'reduced motion: no loops', (await page.locator('.loop-scan').count()) === 0 && (await page.locator('.loop-sweep').count()) === 0)
+  assert(where, 'reduced motion: still reaches "Extracting your details"', await liveSaid(page, 'Extracting your details'))
+  await page.close()
+
+  // A failure: focus stays, it's announced; Try again → the headline; then everything is read → Review
+  page = await setup()
+  await page.goto(BASE + '/reading?reading=fail', { waitUntil: 'load' })
+  await page.evaluate(watchBody)
+  await page.getByText('Couldn’t read', { exact: true }).waitFor({ timeout: 12000 })
+  await settle(page)
+  // Several changes are spoken one after another (about 1.2s apart): wait for the failure's turn
+  await page.waitForFunction(() => [...document.querySelectorAll('[aria-live]')].some((n) => n.textContent.startsWith('Couldn’t read your')), null, { timeout: 8000 })
+  await check(page, where, 'a failure → focus stays', { focus: /^Your documents$/, ring: false, live: /^Couldn’t read your / })
+  await page.getByRole('button', { name: 'Continue' }).waitFor({ timeout: 12000 })
+  await page.waitForTimeout(500) // the label cross-fade
+  assert(where, 'everything else read: the pill stops and Continue waits for the person', /Couldn’t read 1 document/.test(await label(page)) && new URL(page.url()).pathname === '/reading')
+  await tabTo(page, /^Try again for /)
+  await check(page, where, 'Tab → Try again', { focus: /^Try again for / })
+  await page.keyboard.press('Enter')
+  await page.waitForTimeout(100)
+  await check(page, where, 'Try again → the headline (the row goes away while it’s read again)', { focus: /^Your documents$/, ring: false })
+  await page.waitForURL('**/review', { timeout: 20000 })
+  assert(where, 'everything read → on to Review by itself', new URL(page.url()).pathname === '/review')
+  await page.close()
+
+  // Already read before: the page still shows and reads again (no skipping)
+  page = await setup()
+  await page.goto(BASE + '/reading', { waitUntil: 'load' })
+  await page.waitForURL('**/review', { timeout: 20000 })
+  await page.goto(BASE + '/reading', { waitUntil: 'load' })
+  await page.waitForTimeout(800)
+  assert(where, 'already read → the page shows again, from "Reading your documents"', new URL(page.url()).pathname === '/reading' && /Reading your documents/.test(await label(page)))
   await page.close()
 }
 

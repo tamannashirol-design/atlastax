@@ -36,6 +36,8 @@ type Props = {
   position: FlowPosition
   /** Where the back arrow goes (the previous question, or Home) */
   backHref: string
+  /** History state for the back arrow (e.g. { fromFlow: true } back to Documents) */
+  backState?: Record<string, unknown>
   /** id of the question heading; answers use it as their aria-labelledby */
   questionId: string
   question: string
@@ -53,10 +55,13 @@ type Props = {
   continueLabel?: string
   /** Stepper shows sections only up to this one (outside the v1 scope) */
   lastSection?: number
-  helper?: string
+  helper?: ReactNode
   /** Link under Continue. icon: false for action links like "I'll add it later". */
   help?: { label: string; onClick?: () => void; icon?: boolean }
   onNavigate?: (section: number) => void
+  /** Replaces Continue + help link (same reserved height), for screens whose primary
+   *  action comes and goes (the Reading page shows Continue only when needed). */
+  footer?: ReactNode
 }
 
 const focusRing = 'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-text'
@@ -67,12 +72,13 @@ const wideColumn = `${column} desktop:col-span-8`
 // word joiner on each side of the hyphen stops the browser breaking there.
 const keepHyphensTogether = (text: string) => text.replace(/(\S)-(?=\S)/g, '$1\u2060-\u2060')
 
-export function QuestionLayout({ year, position, backHref, questionId, question, answers, answerArea = 'fixed', wide = false, canContinue, onContinue, continueLabel = 'Continue', lastSection, helper, help, onNavigate }: Props) {
+export function QuestionLayout({ year, position, backHref, backState, questionId, question, answers, answerArea = 'fixed', wide = false, canContinue, onContinue, continueLabel = 'Continue', lastSection, helper, help, onNavigate, footer }: Props) {
   const block = wide ? wideColumn : column
   return (
     <AppShell
       title={`${year} tax return`}
       backHref={backHref}
+      backState={backState}
       activeTab="home"
       // Answers save as you go, so leaving is always safe
       action={
@@ -118,6 +124,8 @@ export function QuestionLayout({ year, position, backHref, questionId, question,
 
           {/* Fixed height = Continue 56 + 8 + link 48, even when there's no link */}
           <div className={`row-start-4 mt-8 flex min-h-28 flex-col gap-2 ${column}`}>
+            {footer !== undefined ? footer : (
+            <>
             <PrimaryButton disabled={!canContinue} onClick={onContinue}>
               {continueLabel}
             </PrimaryButton>
@@ -130,6 +138,8 @@ export function QuestionLayout({ year, position, backHref, questionId, question,
                 {help.icon !== false && <QuestionIcon size={24} weight="regular" aria-hidden />}
                 {help.label}
               </button>
+            )}
+            </>
             )}
           </div>
         </div>

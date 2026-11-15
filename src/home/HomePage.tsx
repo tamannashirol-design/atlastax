@@ -15,7 +15,8 @@ import { documentHref, documentsLine, incomeItemsLine } from '../flow/requiredDo
 import { resumeTarget } from '../flow/screens'
 import { spring } from '../lib/motion'
 import { Link, navigate } from '../lib/router'
-import { homeFixture } from './fixtures'
+import { useExtraction } from '../extraction/client'
+import { homeFixture, homeReadingFixture } from './fixtures'
 import { returnStatus, type HomeState, type ReturnStatus } from './returnStatus'
 import { OtherWaysToFile } from '../residency/OtherWaysToFile'
 
@@ -41,6 +42,7 @@ const SENTENCE: Record<HomeState, (s: ReturnStatus) => string> = {
   new: () => 'We’ll go through it together, one question at a time.',
   'in-progress': () => 'Your answers are saved as you go.',
   'needs-documents': (s) => [documentsLine(s.documents), incomeItemsLine(s.documents)].filter(Boolean).join(' · '),
+  'reading-failed': (s) => s.sentence ?? '',
   ready: () => 'Your forms are ready to download.',
   'not-supported': (s) => s.sentence ?? OUT_OF_SCOPE.body,
 }
@@ -60,7 +62,9 @@ export default function HomePage() {
   const returns = useAllReturns()
   const fixture = homeFixture()
   const answers = fixture ?? returns[TAX_YEAR] ?? {}
-  const status = returnStatus(answers, TAX_YEAR)
+  // Live reading status (or a pretend one for ?home=readfailed)
+  const liveReading = useExtraction()
+  const status = returnStatus(answers, TAX_YEAR, homeReadingFixture() ?? (fixture ? undefined : liveReading))
   const reduce = useReducedMotionConfig() ?? false
   const [earlier, setEarlier] = useState(false)
   const card = (i: number) => ({
@@ -198,6 +202,9 @@ export default function HomePage() {
       </Card>,
       yourAnswers(3),
     )
+  }
+  if (status.state === 'reading-failed') {
+    side.push(yourAnswers(1))
   }
   if (status.state === 'ready') {
     main.push(

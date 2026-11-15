@@ -16,7 +16,7 @@ Open the app with `npm run dev`, then http://localhost:5173.
 | 2 | Server | Uploads stored privately, checked by content, deletable; consent recorded; `check:server` | **Done** (`1eced11`) | Nothing new on screen; uploads work as before | Opus |
 | 3 | Mock reader | Mock provider (10 scenarios), live reading status, Remove deletes on the server | **Done** (`c00e141`) | `/motion` → "Reading (mock)"; `/documents` → Reading, Added, Couldn't read, Try again on cards | Opus, Sonnet for the pills |
 | **4** | **Consent sheet** | Notice shown before the first upload; "Continue to upload" / "Not now"; server requires it; read again on Profile; `check:consent`. **Plus the consent review fixes** (below). | **Done** (`5cdf3b4`, review fixes in the commit after it) | `/documents` → **Add** on any card (first time). `/profile` → **Privacy**. `/trips` → open "Fill this in from your I-94 travel history". See "How to see step 4" below. | Sonnet for the sheet, Opus for the logic (reviewed and fixed on Opus) |
-| 5 | **Reading page** | The page after Continue on Documents: abstract page-line animation, "2 of 3 documents read", per-document status, Try again / Enter it myself, Continue waits when anything failed. `loop.scan` / `loop.sweep` tokens. | Not started (**approved**) | `/reading` (and `?reading=slow` etc. on `/motion`). Documents → **Continue** already points there; until it's built it shows "This screen is coming soon." | Opus for logic, Sonnet for motion |
+| **5** | **Reading page** (redone Nov 15) | One status pill: "Reading your documents" → "Extracting your details" → "Done" (success fill + small settle), each changed only by the mock reader (3–5s per stage); hold 600ms, then Review. Reading starts only when /reading opens (never at upload), every visit reads again. Failures: "Couldn't read" + Try again / Choose another file / Enter it myself, Continue waits. Removed: reading at upload, Reading/Couldn't read on cards, 10s/60s messages, skip-to-Review, minimum display time, Home's "Reading N documents". | **Committed; focus audit has a known flaky part** (below) | `/documents` → **Continue**, or `/reading?reading=normal` / `?reading=fail` | Opus |
 | 6 | Review screen | One document per screen, ticks on every tax-form or identifying value, "Enter it myself" opens it with empty fields, confirmed-values store on the server | Not started | `/review` (shows "coming soon" today) | Opus for logic, Sonnet for polish |
 | R1 | Transcription | Fix the field list to the IRS boxes (1042-S Box 10); turn confirmed values into tax input; `check:taxinput` | Not started | Nothing on screen | Opus |
 | R2 | Engine core, 2025 | 2025 tables with sources, Tax Table method, wages-only; `check:tax` | Not started | Nothing on screen | Opus |
@@ -33,6 +33,38 @@ Open the app with `npm run dev`, then http://localhost:5173.
 | 8 | Real provider | A real reading service behind the same interface | Not started (waits on legal and the vendor) | Nothing different on screen | Opus |
 
 Old step 7 (summary, download lock) no longer exists as its own step: it is part of R6.
+
+## How to see step 5
+
+1. `npm run dev`, add your documents on `/documents` (passport, I-94, and any income
+   forms), then press **Continue**. The page always shows: the pill reads "Reading
+   your documents", then "Extracting your details", then "Done" on a green fill;
+   about 600ms after it settles you land on Review ("coming soon").
+2. Test situations (development only): `/reading?reading=normal`, `fail`, `allfail`,
+   `wrongtype`, `blurry`, `rotated`, or `/motion` → **Reading page**.
+3. Home after a failure, without uploading: `/?home=readfailed`.
+4. Reduce motion on: no loops or slide, same three labels.
+
+## Step 5: things to know
+
+- Checks passing: `check:reading`, `check:server`, `check:files`, `check:consent`,
+  `check:documents`, `check:residency`, `check:extraction`, `contrast` (36 pairs,
+  two new for the pill), type check.
+- Not yet updated for the new flow (docs only): `CLAUDE.md` (Reading page and Documents
+  cards sections), `MOTION-reading.md`, `EXTRACTION-PLAN.md`, `FLOW.md`.
+- Focus audit: only the Reading part was run after this change; the other sections
+  were not re-run.
+
+### Known flaky: focus audit, Reading part
+
+- **What happens:** now and then a test page stops getting updates and sits on one
+  stage (seen on "Reading your documents"), so a later step times out (e.g. waiting
+  for Continue in the failure case, or for `/review`). Each scenario passed in at
+  least one run; no run passed all of them. Cause not found; it has only been seen
+  in automated runs, and it is not yet known whether a real user can hit it.
+- **Reproduce:** with `npm run dev` running, `ONLY=reading npm run audit:focus`, a few
+  times in a row. Failures move between scenarios from run to run.
+- Not investigated further, at the designer's request.
 
 ## How to see step 4
 

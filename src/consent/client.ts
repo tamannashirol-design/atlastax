@@ -4,6 +4,7 @@
 // else, so the server can't record agreement to words that weren't shown.
 // Decisions live in ./logic.ts.
 import { useEffect, useSyncExternalStore } from 'react'
+import { sessionReady } from '../lib/session.ts'
 import { afterAgree, afterNoticeChanged, afterRefusal, fromServer, INITIAL_CONSENT, isNotice, type ConsentState } from './logic.ts'
 
 let state: ConsentState = INITIAL_CONSENT
@@ -24,7 +25,8 @@ export function loadConsent(force = false): Promise<void> {
   if (loading) return loading
   if (!force && state.status === 'ready') return Promise.resolve()
   if (state.status === 'unknown') set({ ...state, status: 'loading' })
-  loading = fetch('/api/consent')
+  loading = sessionReady()
+    .then(() => fetch('/api/consent'))
     .then((r) => (r.ok ? r.json() : Promise.reject(new Error('consent'))))
     .then((body) => set(fromServer(body)))
     .catch(() => set({ ...state, status: 'error' }))

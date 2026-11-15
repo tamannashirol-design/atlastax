@@ -198,30 +198,54 @@ const stream = fetch(`${base}/api/extraction/events?year=2025`, { headers: reade
   for await (const chunk of r.body!) events.push(dec.decode(chunk as Uint8Array))
 }).catch(() => {})
 
-const w2 = (await (await upload('opt-cpt')).json()) as { fileId: string }
-check('an upload with a document and year starts reading right away', ['queued', 'reading', 'checking'].includes((await statusOf('opt-cpt'))?.status ?? ''))
-check('…and reaches "ready"', await until('opt-cpt', 'ready'))
-check('files without a readable document aren’t read (previous return)', (await upload('previous-return')).status === 201 && !(await statusOf('previous-return')))
+const startReading = async () => {
+  const r = await fetch(`${base}/api/extraction/start?year=2025`, { method: 'POST', headers: reader })
+  return { status: r.status, body: (await r.json()) as Snap & { run: number } }
+}
 
-await scenario('one-fails')
+const w2 = (await (await upload('opt-cpt')).json()) as { fileId: string }
+check('an upload alone does NOT start reading', !(await statusOf('opt-cpt')))
+await upload('cbp-history')
+await upload('previous-return')
+const firstRun = await startReading()
+check('the Reading page starts it: every document comes back queued in the answer', firstRun.status === 200 && firstRun.body.documents.find((d) => d.itemId === 'opt-cpt')?.status === 'queued')
+check('…and reaches "ready"', await until('opt-cpt', 'ready'))
+check('files without a readable document aren’t read (travel history)', !(await statusOf('cbp-history')))
+check('an optional document IS read when added (previous return)', await until('previous-return', 'ready'))
+const second = await startReading()
+check('opening the page again reads everything from the beginning (a new run)', second.body.run === firstRun.body.run + 1 && second.body.documents.every((d) => d.status === 'queued'))
+await until('opt-cpt', 'ready')
+await until('previous-return', 'ready')
+
 await upload('passport')
-check('one-fails: the next upload fails', await until('passport', 'failed'))
-check('…with a reason', (await statusOf('passport'))?.failure === 'unreadable')
-const retried = await fetch(`${base}/api/extraction/passport/retry?year=2025`, { method: 'POST', headers: reader })
+check('a new upload drops nothing else, and isn’t read yet', !(await statusOf('passport')) && (await statusOf('opt-cpt'))?.status === 'ready')
+await scenario('one-fails')
+await startReading()
+const failedOne = async () => (await snap()).documents.find((d) => d.status === 'failed')
+const failEnd = Date.now() + 8000
+while (!(await failedOne()) && Date.now() < failEnd) await new Promise((r) => setTimeout(r, 50))
+const failedDoc = await failedOne()
+check('one-fails: one document of the next reading fails', !!failedDoc)
+check('…with a reason', failedDoc?.failure === 'unreadable')
+const retried = await fetch(`${base}/api/extraction/${failedDoc?.itemId}/retry?year=2025`, { method: 'POST', headers: reader })
 check('Try again restarts reading (204)', retried.status === 204)
-check('…and this time it works', await until('passport', 'ready', 8000))
+check("…and this time it works", await until(failedDoc?.itemId ?? "", "ready", 15000))
 
 await scenario('fast')
 await upload('opt-cpt')
-check('adding a second file re-reads the document with both files', (await statusOf('opt-cpt'))?.files === 2 && (await until('opt-cpt', 'ready')))
+check('adding a file makes the earlier reading out of date (dropped)', !(await statusOf('opt-cpt')))
+check('…"Choose another file" then reads it with both files', (await fetch(`${base}/api/extraction/opt-cpt/retry?year=2025`, { method: 'POST', headers: reader })).status === 204 && (await statusOf('opt-cpt'))?.files === 2 && (await until('opt-cpt', 'ready')))
 await fetch(`${base}/api/files/${w2.fileId}`, { method: 'DELETE', headers: reader })
-check('removing one file re-reads with the file that’s left', (await statusOf('opt-cpt'))?.files === 1 && (await until('opt-cpt', 'ready')))
+check('removing a file drops the earlier reading too', !(await statusOf('opt-cpt')))
+check('…and the next start reads the file that’s left', (await startReading()).body.documents.find((d) => d.itemId === 'opt-cpt')?.files === 1 && (await until('opt-cpt', 'ready')))
+check('Try again on a document with no files → 404', (await fetch(`${base}/api/extraction/i94/retry?year=2025`, { method: 'POST', headers: reader })).status === 404)
 
 const otherYear = (await (await fetch(`${base}/api/extraction?year=2024`, { headers: reader })).json()) as Snap
 check('another tax year sees none of these documents', otherYear.documents.length === 0)
 const stranger = (await (await fetch(`${base}/api/extraction?year=2025`)).json()) as Snap
 check('another session sees none of these documents', stranger.documents.length === 0)
 check('scenarios can’t be set outside development', (await createAppStatus()) === 404)
+check('the old dev replay is gone (404)', (await fetch(`${base}/api/extraction/replay?year=2025`, { method: 'POST', headers: reader, body: JSON.stringify({ scenario: 'fast' }) })).status === 404)
 
 await new Promise((r) => setTimeout(r, 300))
 live.abort()

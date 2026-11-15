@@ -17,10 +17,13 @@
 //   Reading (EXTRACTION-PLAN.md; statuses only, never values):
 //   GET    /api/extraction?year=2025          → snapshot { capabilities, documents }
 //   GET    /api/extraction/events?year=2025   → live updates (server-sent events), snapshot first
+//   POST   /api/extraction/start?year=2025    → 200 snapshot (the Reading page opened: read every
+//                                               document from the beginning, all queued in the answer)
 //   POST   /api/extraction/:itemId/retry?year=2025 → 204
-//   POST   /api/extraction/scenario { scenario }  → 204 (dev only: what the mock does)
+//   POST   /api/extraction/scenario { scenario }  → 204 (dev only: what the mock does next)
 //
-// Upload headers x-item-id + x-tax-year start reading that document (D4).
+// Upload headers x-item-id + x-tax-year say which document a file belongs to. Uploading
+// never starts reading; it makes an earlier reading of that document out of date.
 //
 // Dev test switches on POST /api/files (only when options.dev; REJECTED with 400 otherwise):
 //   ?fail=1 fails halfway · ?kbps=300 another speed · ?dry=1 measure only, nothing stored
@@ -223,13 +226,15 @@ export function createApp(overrides: Partial<ServerOptions> = {}): Handler {
     const year = taxYear(url.searchParams.get('year'))
     if (!year) return send(res, 400, { error: 'year' })
 
-    if (path === '/api/extraction' && req.method === 'GET') return send(res, 200, await jobs.snapshot(sessionId, year))
+    if (path === '/api/extraction/start' && req.method === 'POST') return send(res, 200, await jobs.start(sessionId, year))
+
+    if (path === '/api/extraction' && req.method === 'GET') return send(res, 200, jobs.snapshot(sessionId, year))
 
     if (path === '/api/extraction/events' && req.method === 'GET') {
       res.writeHead(200, { 'content-type': 'text/event-stream', 'cache-control': 'no-store', connection: 'keep-alive', 'x-accel-buffering': 'no' })
       const write = (u: ExtractionUpdate) => res.write(`data: ${JSON.stringify(u)}\n\n`)
       const stop = jobs.listen(sessionId, year, write)
-      write(await jobs.snapshot(sessionId, year))
+      write(jobs.snapshot(sessionId, year))
       const ping = setInterval(() => res.write(': ping\n\n'), 15_000)
       req.on('close', () => {
         clearInterval(ping)
@@ -239,7 +244,7 @@ export function createApp(overrides: Partial<ServerOptions> = {}): Handler {
     }
 
     const retry = path.match(/^\/api\/extraction\/([a-z0-9-]{1,40})\/retry$/)
-    if (retry && req.method === 'POST') return send(res, jobs.retry(sessionId, year, retry[1]) ? 204 : 404)
+    if (retry && req.method === 'POST') return send(res, (await jobs.retry(sessionId, year, retry[1])) ? 204 : 404)
 
     return send(res, 404, { error: 'not-found' })
   }

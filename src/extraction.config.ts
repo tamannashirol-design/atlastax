@@ -3,7 +3,9 @@
 // TODO confirm with CPA: every field below is a PLACEHOLDER (which fields,
 // their names, which can be "Not on my form"). Open questions:
 //   - 1099-DIV and 1099-B fields (left as a short placeholder list)
-//   - Read the optional documents too (driver's license, previous return)?
+//   - Optional documents (driver's license or state ID, previous return) are read
+//     when added (designer decision) and never block: their field lists below are
+//     placeholders. No license number is read (not needed, and sensitive).
 //   - Which W-2 Box 12 / 14 entries matter for a 1040-NR?
 //
 // This is the only place these rules live (see EXTRACTION-PLAN.md §3).
@@ -44,7 +46,7 @@ export type FieldSpec = {
   mayBeBlank?: boolean
 }
 
-export type FormType = 'W-2' | '1042-S' | '1099-INT' | '1099-NEC' | '1099-DIV' | '1099-B' | 'Passport' | 'I-94'
+export type FormType = 'W-2' | '1042-S' | '1099-INT' | '1099-NEC' | '1099-DIV' | '1099-B' | 'Passport' | 'I-94' | 'State ID' | 'Previous return'
 
 const money = (key: string, label: string, box?: string, mayBeBlank = false): FieldSpec => ({ key, label, box, kind: 'money', needsTick: true, mayBeBlank })
 
@@ -105,6 +107,17 @@ export const FIELDS: Record<FormType, FieldSpec[]> = {
     { key: 'classOfAdmission', label: 'Class of admission', kind: 'code', needsTick: true },
     { key: 'mostRecentEntry', label: 'Most recent entry date', kind: 'date', needsTick: true },
   ],
+  // Optional documents (TODO confirm with CPA: whether and what to read)
+  'State ID': [
+    { key: 'fullName', label: 'Full name', kind: 'name', needsTick: true },
+    { key: 'state', label: 'State that issued it', kind: 'state', needsTick: false },
+    { key: 'expires', label: 'Expiration date', kind: 'date', needsTick: true },
+  ],
+  'Previous return': [
+    { key: 'taxYear', label: 'Tax year', kind: 'code', needsTick: true },
+    money('totalIncome', 'Total income'),
+    money('totalTax', 'Total tax'),
+  ],
 }
 
 /**
@@ -124,6 +137,9 @@ export const ITEM_FORMS: Record<string, FormType[]> = {
   'contract-work': ['1099-NEC'],
   passport: ['Passport'],
   i94: ['I-94'],
+  // Optional: read when added, never block
+  'state-id': ['State ID'],
+  'previous-return': ['Previous return'],
 }
 
 /** The fields to read for an item, for the form type the provider found (or the first one). */

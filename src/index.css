@@ -194,6 +194,37 @@ html:has(dialog[open]) {
   overflow: hidden;
 }
 
+/* ---- Loops (src/lib/motion.ts `loop`; Reading page) ----
+   Durations come from --loop-* variables set from motion.ts (never typed here).
+   .loop-scan: each dot row (style --i: its index) lights for one step, in turn;
+   a grid with fewer rows than steps rests on the last step. Opacity only.
+   .loop-sweep: a light band moves across, then rests. Transform only.
+   [data-loops="paused"] (tab hidden, off-screen) stops both where they are.
+   Keyframe percentages can't read variables: 25% = one step of loop.scan.steps (4),
+   70% = loop.sweep.move / duration (1.4 / 2.0). `npm run check:reading` checks both. */
+@keyframes loop-scan-row {
+  0% { opacity: 1; }
+  25% { opacity: 0.28; }
+  100% { opacity: 0.28; }
+}
+.loop-scan > * {
+  opacity: 0.28;
+  animation: loop-scan-row var(--loop-scan) step-end infinite;
+  animation-delay: calc(var(--i) * var(--loop-scan-step));
+}
+@keyframes loop-sweep-band {
+  0% { transform: translateX(-100%); animation-timing-function: ease-in-out; }
+  70% { transform: translateX(260%); }
+  100% { transform: translateX(260%); }
+}
+.loop-sweep {
+  animation: loop-sweep-band var(--loop-sweep) infinite;
+}
+[data-loops='paused'] .loop-scan > *,
+[data-loops='paused'] .loop-sweep {
+  animation-play-state: paused;
+}
+
 /* ---- Debug tooling (not part of the design) ---- */
 
 /* Outline every element. Outlines never change layout. */

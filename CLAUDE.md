@@ -152,6 +152,20 @@ Rules:
   driver's license or state ID is `optional` (shown, never counted).
   `PREVIOUS_RETURN` (optional, only if filed before) shares its storage with
   the question's previous-return sheet.
+- Reading page (`src/reading/`, `/reading`): after Documents → Continue.
+  Rules ONLY in `src/reading/logic.ts` (`npm run check:reading`): statuses come
+  only from the server's events; "2 of 3 documents read" as text; everything
+  already read → straight to /review (replace); everything read while showing
+  → hold (≥1.5s page, ≥0.7s final) then on to /review; anything failed →
+  Continue waits ("Enter them myself" if all failed); optional documents are
+  read and never block. ~10s/~60s change only the words ("Still working…",
+  "Keep going in the background"). Hero is abstract (page lines), never the
+  document or values. Home shows "reading" / "reading-failed" through
+  `returnStatus(answers, year, extraction)`. Dev: `/reading?reading=slow|fast|
+  fail|allfail|wrongtype|blurry|rotated|nostages|normal`, `&thresholds=fast`.
+- First contact with the server goes through `sessionReady()`
+  (`src/lib/session.ts`), so parallel first requests can't create different
+  sessions (files in one, the page reading another).
 - Documents page (`src/documents/`): friendly cards (`DocumentCard`: art,
   one soft primary-tint "Add"; "Added" pill + "Replace" once uploaded; no
   pill while not added; no "Not now"; drop a file on a card). Continue is
@@ -244,6 +258,16 @@ Rules:
   | `soft` | 400ms, bounce 0.15 | Things settling: drag-over, cards entering, stepper marker |
   | `pop` | 250ms, bounce 0.34 (≈6% overshoot) | Upload check only |
   | `fade` | 150ms, no bounce | Reduced-motion replacement for any movement |
+- Loops (approved for the Reading page; `loop` in `src/lib/motion.ts`, CSS
+  `.loop-scan` / `.loop-sweep` in index.css, durations via `loopVars`):
+  | Token | Loop | Use |
+  |---|---|---|
+  | `loop.scan` | 1.6s per pass, 4 steps, opacity only | "Being read": dot grids |
+  | `loop.sweep` | 2.0s (1.4s moving + 0.6s rest), transform only | Light band over a decorative surface, never over text |
+  Loops run ONLY while something is really being read, pause when the tab is
+  hidden or the element is off-screen, and never run under reduced motion (a
+  still state with the same text). `npm run check:reading` keeps the CSS
+  keyframe percentages in step with the tokens.
 - Animate transform and opacity only (colors switch by fading layers).
   Animations must be interruptible.
 - prefers-reduced-motion: movement becomes a `fade`; status text stays.

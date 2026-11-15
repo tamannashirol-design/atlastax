@@ -82,7 +82,7 @@ globalThis.fetch = (async (input: string, init?: { method?: string; body?: strin
     if (known.some((n) => n.version === shown.version && n.fingerprint === shown.fingerprint)) return { ok: false, status: 409, json: async () => ({ error: 'notice-changed', notice: server.notice }) }
     return { ok: false, status: 400, json: async () => ({ error: 'unknown-notice' }) }
   }
-  return { ok: true, status: 200, json: async () => ({ given: server.given, required: true, version: server.notice.version, notice: server.notice, ...(server.given ? { at: '2025-06-01T00:00:00.000Z' } : {}) }) }
+  return { ok: true, status: 200, text: async () => '', json: async () => ({ given: server.given, required: true, version: server.notice.version, notice: server.notice, ...(server.given ? { at: '2025-06-01T00:00:00.000Z' } : {}) }) }
 }) as unknown as typeof fetch
 
 await loadConsent(true)

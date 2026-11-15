@@ -29,6 +29,8 @@ export const pairs: Pair[] = [
   { fg: 'error', bg: 'background', kind: 'text', use: 'Error message on the page (upload failed)' },
   { fg: 'error', bg: 'surface', kind: 'text', use: 'Error message in a card; "Remove" / "Remove file" labels' },
   { fg: 'error', bg: 'sage-100', kind: 'text', use: '"Remove" / "Remove file" label while pressed' },
+  { fg: 'on-primary', bg: 'success', kind: 'text', use: 'Reading pill: check + "Done" on the success fill' },
+  { fg: 'text', bg: 'sage-100', kind: 'text', use: 'Reading pill: label where the sage sweep band passes behind it' },
 
   // UI components
   { fg: 'border-strong', bg: 'background', kind: 'ui', use: 'Unselected tile border vs page' },

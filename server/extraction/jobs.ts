@@ -1,12 +1,13 @@
 // Reading jobs: one per document (person + tax year + Documents item).
 //
-// - Reading starts as soon as a file is uploaded (D4). Adding, replacing or
-//   removing a file restarts that document's reading with all its files;
-//   removing the last file drops the document.
+// - Reading starts only when the Reading page asks (start: every document with
+//   files, read again from the beginning, so the page always plays it through).
+//   Adding, replacing or removing a file makes an earlier reading out of date:
+//   it stops and is dropped, until the next start.
 // - The browser listens per tax year and gets a small status update on every
 //   real change. Updates carry statuses only, never values (D3, D9).
-// - State is kept in memory. After a server restart, the files on disk are
-//   read again automatically the next time the browser asks (trigger "resume").
+// - State is kept in memory. After a server restart nothing has been read
+//   until the Reading page starts it again.
 // - Extracted fields stay here for the Review screen (build step 6).
 import { join } from 'node:path'
 import { FIELDS, ITEM_FORMS } from '../../src/extraction.config.ts'
@@ -18,10 +19,11 @@ export type ReadingStatus = 'queued' | 'reading' | 'checking' | 'ready' | 'faile
 /** What the browser sees for one document */
 export type DocumentReading = { itemId: string; status: ReadingStatus; failure?: Failure; files: number }
 
+/** `run`: which reading this belongs to (+1 on every start), so the browser can ignore late news from an earlier one */
 export type ExtractionUpdate =
-  | { type: 'snapshot'; capabilities: { stages: boolean }; documents: DocumentReading[] }
-  | { type: 'document'; document: DocumentReading }
-  | { type: 'removed'; itemId: string }
+  | { type: 'snapshot'; run: number; capabilities: { stages: boolean }; documents: DocumentReading[] }
+  | { type: 'document'; run: number; document: DocumentReading }
+  | { type: 'removed'; run: number; itemId: string }
 
 type Doc = DocumentReading & { run: number; abort?: AbortController; fields?: ExtractedField[] }
 
@@ -39,7 +41,9 @@ export const isReadable = (itemId: string | undefined): itemId is string => !!it
 export function readingJobs({ providerFor, filesDir, listFiles }: Deps) {
   const docs = new Map<string, Map<string, Doc>>() // "<session>:<year>" → itemId → doc
   const listeners = new Map<string, Set<(u: ExtractionUpdate) => void>>()
+  const runs = new Map<string, number>() // "<session>:<year>" → current run
   const keyOf = (sessionId: string, year: number) => `${sessionId}:${year}`
+  const runOf = (key: string) => runs.get(key) ?? 0
   const docsOf = (key: string) => docs.get(key) ?? docs.set(key, new Map()).get(key)!
   const pub = ({ itemId, status, failure, files }: Doc): DocumentReading => ({ itemId, status, files, ...(failure ? { failure } : {}) })
   const emit = (key: string, u: ExtractionUpdate) => listeners.get(key)?.forEach((l) => l(u))
@@ -48,6 +52,7 @@ export function readingJobs({ providerFor, filesDir, listFiles }: Deps) {
     return (await listFiles(sessionId)).filter((m) => m.year === year && m.itemId === itemId).sort((a, b) => a.createdAt.localeCompare(b.createdAt))
   }
 
+  /** Mark a document "queued" (synchronously visible to snapshots) and read it in the background. */
   async function start(sessionId: string, year: number, itemId: string, trigger: ReadInput['trigger']) {
     const key = keyOf(sessionId, year)
     const map = docsOf(key)
@@ -57,22 +62,25 @@ export function readingJobs({ providerFor, filesDir, listFiles }: Deps) {
     if (!files.length) {
       if (old) {
         map.delete(itemId)
-        emit(key, { type: 'removed', itemId })
+        emit(key, { type: 'removed', run: runOf(key), itemId })
       }
       return
     }
     const doc: Doc = { itemId, status: 'queued', files: files.length, run: (old?.run ?? 0) + 1, abort: new AbortController() }
     map.set(itemId, doc)
-    emit(key, { type: 'document', document: pub(doc) })
+    emit(key, { type: 'document', run: runOf(key), document: pub(doc) })
+    void read(key, map, doc, files, trigger, sessionId)
+  }
 
+  async function read(key: string, map: Map<string, Doc>, doc: Doc, files: FileMeta[], trigger: ReadInput['trigger'], sessionId: string) {
     const update = (patch: Partial<Doc>) => {
-      if (map.get(itemId) !== doc) return false // a newer read took over
+      if (map.get(doc.itemId) !== doc) return false // a newer read took over
       Object.assign(doc, patch)
-      emit(key, { type: 'document', document: pub(doc) })
+      emit(key, { type: 'document', run: runOf(key), document: pub(doc) })
       return true
     }
     try {
-      const forms = ITEM_FORMS[itemId]
+      const forms = ITEM_FORMS[doc.itemId]
       for await (const e of providerFor(sessionId).read({ files: files.map((f) => join(filesDir, f.fileId)), forms, fieldsFor: (f) => FIELDS[f], trigger, signal: doc.abort!.signal })) {
         if (e.type === 'stage' && !update({ status: e.stage })) return
         if (e.type === 'failed' && !update({ status: 'failed', failure: e.reason, abort: undefined })) return
@@ -85,30 +93,50 @@ export function readingJobs({ providerFor, filesDir, listFiles }: Deps) {
     }
   }
 
+  const readableItems = async (sessionId: string, year: number) =>
+    new Set((await listFiles(sessionId)).filter((m) => m.year === year && isReadable(m.itemId)).map((m) => m.itemId!))
+
+  function snapshotOf(sessionId: string, year: number): ExtractionUpdate {
+    const documents = [...docsOf(keyOf(sessionId, year)).values()].map(pub)
+    return { type: 'snapshot', run: runOf(keyOf(sessionId, year)), capabilities: providerFor(sessionId).capabilities(), documents }
+  }
+
   return {
-    /** A file was added or removed for this document: (re)start reading it. */
+    /** A file was added or removed: any reading of this document is out of date. Stop it and drop it. */
     filesChanged(sessionId: string, year: number | undefined, itemId: string | undefined) {
       if (year === undefined || !isReadable(itemId)) return
-      void start(sessionId, year, itemId, 'upload')
+      const key = keyOf(sessionId, year)
+      const map = docsOf(key)
+      const old = map.get(itemId)
+      if (!old) return
+      old.abort?.abort()
+      map.delete(itemId)
+      emit(key, { type: 'removed', run: runOf(key), itemId })
     },
 
-    retry(sessionId: string, year: number, itemId: string) {
+    /** The Reading page opened: read every document of this person and year from the beginning. Returns the state with all of them queued. */
+    async start(sessionId: string, year: number) {
+      const key = keyOf(sessionId, year)
+      runs.set(key, runOf(key) + 1)
+      const items = await readableItems(sessionId, year)
+      const map = docsOf(key)
+      // Documents whose files are gone since the last reading
+      for (const itemId of [...map.keys()]) if (!items.has(itemId)) this.filesChanged(sessionId, year, itemId)
+      await Promise.all([...items].map((itemId) => start(sessionId, year, itemId, 'start')))
+      return snapshotOf(sessionId, year)
+    },
+
+    /** "Try again", or a new file chosen on the Reading page: read this one document from the beginning. */
+    async retry(sessionId: string, year: number, itemId: string) {
       if (!isReadable(itemId)) return false
-      const doc = docs.get(keyOf(sessionId, year))?.get(itemId)
-      if (!doc) return false
-      void start(sessionId, year, itemId, 'retry')
+      if (!(await filesFor(sessionId, year, itemId)).length) return false
+      await start(sessionId, year, itemId, 'retry')
       return true
     },
 
-    /** Current state for this person and year; catches up on files nobody is reading yet (after a restart). */
-    async snapshot(sessionId: string, year: number): Promise<ExtractionUpdate> {
-      const key = keyOf(sessionId, year)
-      const map = docsOf(key)
-      const items = new Set((await listFiles(sessionId)).filter((m) => m.year === year && isReadable(m.itemId)).map((m) => m.itemId!))
-      for (const itemId of items) if (!map.has(itemId)) void start(sessionId, year, itemId, 'resume')
-      // start() registers the doc synchronously only after awaiting files; show "queued" for those meanwhile
-      const documents = [...items].map((itemId) => (map.get(itemId) ? pub(map.get(itemId)!) : { itemId, status: 'queued' as const, files: 0 }))
-      return { type: 'snapshot', capabilities: providerFor(sessionId).capabilities(), documents }
+    /** Current state for this person and year (only what has been started). */
+    snapshot(sessionId: string, year: number): ExtractionUpdate {
+      return snapshotOf(sessionId, year)
     },
 
     listen(sessionId: string, year: number, on: (u: ExtractionUpdate) => void) {

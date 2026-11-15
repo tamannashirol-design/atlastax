@@ -35,9 +35,9 @@ export type ReadInput = {
   forms: FormType[]
   /** Fields to read for each possible form */
   fieldsFor: (form: FormType) => FieldSpec[]
-  /** Why this read started: a new upload, a retry, or catching up after a restart */
-  trigger: 'upload' | 'retry' | 'resume'
-  /** Aborted when the document changes (new file, removed file, retry): stop at once */
+  /** Why this read started: the Reading page opened, or "Try again" */
+  trigger: 'start' | 'retry'
+  /** Aborted when the document changes (new file, removed file, retry, a new start): stop at once */
   signal: AbortSignal
 }
 

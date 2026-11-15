@@ -8,7 +8,7 @@ import { useUpload, type UploadState } from '../lib/upload'
 import { setLoggedIn, useLoggedIn } from '../lib/auth'
 import type { IntroMode } from '../intro/chrome'
 import { IntroContent } from '../intro/IntroContent'
-import { MOCK_SCENARIOS, setMockScenario } from '../extraction/client'
+import { MOCK_SCENARIOS, READING_SCENARIOS, setMockScenario } from '../extraction/client'
 import { Link } from '../lib/router'
 
 // /motion: play each state of the upload moment, scrub progress, and toggle
@@ -301,11 +301,12 @@ function ReadingScenarios() {
           Reading (mock)
         </h2>
         <p className="text-body text-text-muted">
-          Choose what the fake reader does, then add or replace a document on the{' '}
+          Choose what the fake reader does, then press Continue on the{' '}
           <Link href="/documents" className="font-semibold text-text underline underline-offset-4">
             Documents page
           </Link>
-          . “Next upload” scenarios fail once; Try again then works. Statuses come from the server, never a timer in the page.
+          . Reading starts only on the Reading page. “Next reading” scenarios fail one document once; Try again then works. Statuses come
+          from the server, never a timer in the page.
         </p>
       </header>
       <div className="grid grid-cols-2 gap-3 tablet:grid-cols-3 desktop:grid-cols-5" role="group" aria-label="Mock reader scenario">
@@ -318,6 +319,21 @@ function ReadingScenarios() {
       <p className="text-small text-text-muted" aria-live="polite">
         {said || `Mock reader: ${MOCK_SCENARIOS.find((s) => s.id === chosen)?.label}`}
       </p>
+      <div className="flex flex-col gap-2">
+        <h3 className="text-body font-semibold">Reading page</h3>
+        <p className="max-w-column text-small text-text-muted">
+          Opens the page with the mock set to that situation. It reads the documents you’ve already added from the beginning.
+        </p>
+        <ul className="flex flex-wrap gap-x-6">
+          {Object.keys(READING_SCENARIOS).map((r) => (
+            <li key={r}>
+              <Link href={`/reading?reading=${r}`} className="flex min-h-11 items-center text-body font-semibold underline underline-offset-4">
+                {r}
+              </Link>
+            </li>
+          ))}
+        </ul>
+      </div>
     </section>
   )
 }

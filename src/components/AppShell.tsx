@@ -1,6 +1,6 @@
 import { CaretLeftIcon, FileTextIcon, HouseIcon, UserIcon, type Icon } from '@phosphor-icons/react'
 import type { ReactNode } from 'react'
-import { Link } from '../lib/router'
+import { Link, navigate } from '../lib/router'
 import { FakeAuthBadge } from './FakeAuthBadge'
 
 // App shell: three rows filling the screen.
@@ -21,9 +21,9 @@ const tabs: { id: Tab; href: string; label: string; Icon: Icon }[] = [
 const focusRing = 'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-text'
 
 /** action: the top bar's right side (e.g. "Save and exit"). Default: the fake sign-in badge (testing only). */
-type Props = { title: ReactNode; backHref?: string; activeTab: Tab; action?: ReactNode; children: ReactNode }
+type Props = { title: ReactNode; backHref?: string; /** History state for the back arrow (e.g. { fromFlow: true }) */ backState?: Record<string, unknown>; activeTab: Tab; action?: ReactNode; children: ReactNode }
 
-export function AppShell({ title, backHref, activeTab, action, children }: Props) {
+export function AppShell({ title, backHref, backState, activeTab, action, children }: Props) {
   return (
     <div className="grid h-dvh grid-rows-[auto_minmax(0,1fr)_auto]">
       {/* Hairline drawn as an inset shadow so the bar stays exactly --top-bar-h tall */}
@@ -31,7 +31,20 @@ export function AppShell({ title, backHref, activeTab, action, children }: Props
         {/* Equal side columns keep the title centred whatever sits on the right */}
         <div className="grid h-(--top-bar-h) page-content grid-cols-[minmax(2.75rem,1fr)_auto_minmax(2.75rem,1fr)] items-center gap-2">
           {backHref ? (
-            <Link href={backHref} aria-label="Back" className={`flex size-11 items-center rounded-sm ${focusRing}`}>
+            <Link
+              href={backHref}
+              aria-label="Back"
+              onClick={
+                backState
+                  ? (e) => {
+                      if (e.metaKey || e.ctrlKey || e.shiftKey || e.button !== 0) return
+                      e.preventDefault()
+                      navigate(backHref, backState)
+                    }
+                  : undefined
+              }
+              className={`flex size-11 items-center rounded-sm ${focusRing}`}
+            >
               {/* viewBox cropped to the glyph so the arrow itself sits on the margin */}
               <CaretLeftIcon size={24} width={9} viewBox="72 0 96 256" weight="regular" aria-hidden />
             </Link>

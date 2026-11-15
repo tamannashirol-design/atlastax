@@ -6,12 +6,14 @@ import { incomeOptions, extraOptions } from '../data/income'
 import type { Answers } from '../flow/answers'
 import { hasProgress } from '../flow/answers'
 import { documentHref, requiredItems, summarizeItems, type ItemsSummary, type RequiredItem } from '../flow/requiredDocuments'
-import { REVIEW_PATH, pathForSection, resumeTarget } from '../flow/screens'
+import { READING_PATH, REVIEW_PATH, pathForSection, resumeTarget } from '../flow/screens'
+import type { ExtractionState } from '../extraction/client'
+import { homeReadingState, readingOverview } from '../reading/logic'
 import { at, sectionIndex, sections, type FlowPosition } from '../flow/sections'
 import { OUT_OF_SCOPE } from '../residency.config'
 import { isOutOfScope } from '../residency/fromAnswers'
 
-export type HomeState = 'new' | 'in-progress' | 'needs-documents' | 'ready' | 'not-supported'
+export type HomeState = 'new' | 'in-progress' | 'needs-documents' | 'reading-failed' | 'ready' | 'not-supported'
 type Target = { path: string; state: Record<string, unknown> | null }
 
 export type ReturnStatus = {
@@ -33,7 +35,12 @@ export type ReturnStatus = {
 
 const docsIndex = sectionIndex('documents')
 
-export function returnStatus(a: Answers, year: number): ReturnStatus {
+/**
+ * `reading` (optional): the live reading status (useExtraction). With it, a return
+ * whose documents are all added shows "reading-failed" when the Reading page couldn't
+ * read one. No notifications: Home is where the state shows.
+ */
+export function returnStatus(a: Answers, year: number, reading?: ExtractionState): ReturnStatus {
   const items = requiredItems(a)
   const documents = summarizeItems(items)
   const resume = resumeTarget(a, year)
@@ -101,6 +108,11 @@ export function returnStatus(a: Answers, year: number): ReturnStatus {
       progress: { position: at('documents'), done: docsIndex },
       nextSteps: outstanding.slice(0, 3).map((i) => ({ label: i.kind === 'document' ? `Add your ${i.form}` : `${i.incomeLabel}: details needed`, target: { path: documentHref(i.id), state: null } })),
     }
+  }
+  // Documents are all added: if the Reading page couldn't read one, Home says so
+  const whileReading = homeReadingState(reading?.loaded ? readingOverview(items, reading) : null)
+  if (whileReading) {
+    return { ...base, ...whileReading, buttonTarget: { path: READING_PATH, state: null }, progress: { position: at('review'), done: docsIndex + 1 }, nextSteps: [] }
   }
   return {
     ...base,

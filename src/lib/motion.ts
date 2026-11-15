@@ -14,3 +14,25 @@ export const spring = {
 
 /** How far things shrink while pressed. */
 export const pressScale = { tile: 0.97, button: 0.98 }
+
+/**
+ * Loops: things that repeat until a REAL event stops them (approved for the Reading
+ * page; EXTRACTION-PLAN.md, MOTION-reading.md). Not springs, so they live here as
+ * their own group. Rules: they run only while something is actually being read,
+ * pause when the tab is hidden or the element is off-screen, and never run under
+ * reduced motion (a still state with the same text instead). CSS in index.css
+ * (.loop-scan, .loop-sweep) reads these through --loop-* variables set from here.
+ */
+export const loop = {
+  /** "Being read": a dark row steps down a dot grid, 1.6s per pass in 4 steps (one every 0.4s), opacity only. */
+  scan: { duration: 1.6, steps: 4 },
+  /** A soft light band across a DECORATIVE surface (never over text): 1.4s moving (ease-in-out) + 0.6s rest = 2.0s, transform only. */
+  sweep: { duration: 2.0, move: 1.4 },
+} as const
+
+/** The CSS variables the loop classes read (put on the element that owns the loops). */
+export const loopVars = {
+  '--loop-scan': `${loop.scan.duration}s`,
+  '--loop-scan-step': `${loop.scan.duration / loop.scan.steps}s`,
+  '--loop-sweep': `${loop.sweep.duration}s`,
+} as Record<string, string>

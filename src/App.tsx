@@ -1,6 +1,7 @@
 import DocumentsPage from './documents/DocumentsPage'
 import FlowPage from './flow/FlowPage'
-import { STOP_PATH, isFlowPath, isGatedPath } from './flow/screens'
+import { READING_PATH, STOP_PATH, isFlowPath, isGatedPath } from './flow/screens'
+import ReadingPage from './reading/ReadingPage'
 import { useAnswers, useFilingYear } from './flow/answers'
 import { lazy, Suspense, useEffect } from 'react'
 import HomePage from './home/HomePage'
@@ -45,6 +46,8 @@ export default function App() {
   if (isFlowPath(path)) return <FlowPage path={path} />
   // One Documents page for the tab and the flow (the flow opens it with { fromFlow: true })
   if (path === '/documents') return <DocumentsPage />
+  // After Documents → Continue (skips straight to Review when everything is already read)
+  if (path === READING_PATH) return <ReadingPage />
   // Logged out: the intro is the entry page. Logged in: Home (fake auth, see lib/auth)
   if (path === '/') return loggedIn ? <HomePage /> : <LandingPage />
   // The intro, always (logged in or not)

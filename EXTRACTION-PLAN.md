@@ -459,7 +459,24 @@ document back on Review is fine, and (behavior unchanged for now):
 
 (Inside this part, "§1" to "§10" mean its own numbered sections below.)
 
-**Status: APPROVED (Nov 15, 2026). Not built yet (build step 5).** Motion study:
+**Status: APPROVED (Nov 15, 2026). BUILT in step 5** (`src/reading/`; rules in
+`src/reading/logic.ts`, tested by `npm run check:reading`). Built differently, for review:
+- **Hero dot grid is 4×4, not 5×5**, so each of `loop.scan`'s 4 steps has its own
+  row; the row indicator is 3×3 (3 rows, then a rest step).
+- **The hero's check draws when everything required is read** (the final state),
+  not each time one document is ready; each ready row shows its own check icon.
+- **Home "done while away"**: Home still says "Your return is ready" (as before)
+  until Review exists (step 6); "reading" and "reading-failed" are built.
+- **Enter it myself / Continue** go to `/review` with history state
+  `{ enter: [document ids] }`; Review (step 6) reads it.
+- **A document added without a file on the server** (from before files were kept)
+  shows "Couldn't read · We couldn't find this file. Add it again." + Choose another file.
+- **Leaving** is a quick fade of the hero and list; the Review heading can't take
+  focus yet (Review isn't built).
+- Found and fixed while testing: parallel first requests could create two server
+  sessions (files in one, the page reading the other). First contact now goes
+  through `sessionReady()`.
+Motion study:
 `MOTION-reading.md` (approved too). The designer's answers are in §10.
 
 ### Flow

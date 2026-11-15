@@ -1,4 +1,4 @@
-import { CheckIcon, CircleDashedIcon, DotsNineIcon, WarningCircleIcon } from '@phosphor-icons/react'
+import { CheckIcon, CircleDashedIcon } from '@phosphor-icons/react'
 import { AnimatePresence, motion, useReducedMotionConfig } from 'framer-motion'
 import { useRef, useState, type DragEvent } from 'react'
 import type { Art } from '../data/income'
@@ -16,20 +16,15 @@ import { spring } from '../lib/motion'
 // sheet with the file already uploading. Add stays for keyboard and phone.
 // White surface, radius lg, faint sage border + soft shadow; 24 padding.
 
-// Pills only where they say something: "Added" once uploaded, "Reading"
-// while the server reads it (then back to "Added"), "Couldn't read" when it
-// failed, and "Details needed" on income without a form (it has no Add).
-// Nothing while not added: the card just shows "Add".
-// Corner pills (Added, Reading) share one reserved spot, as wide as the wider
-// of the two, so the card never changes size. Wide pills (Couldn't read,
-// Details needed) sit under the name.
-export type Pill = 'added' | 'reading' | 'failed' | 'details'
-const CORNER: Pill[] = ['added', 'reading']
+// Pills only where they say something: "Added" once uploaded, and "Details
+// needed" on income without a form (it has no Add). Nothing while not added:
+// the card just shows "Add". Reading happens later, on the Reading page.
+// "Added" has its spot reserved, so the card never changes size. "Details
+// needed" is wider and sits under the name.
+export type Pill = 'added' | 'details'
 
 const PILLS: Record<Pill, { text: string; Icon: typeof CheckIcon; cls: string }> = {
   added: { text: 'Added', Icon: CheckIcon, cls: 'border border-success bg-surface text-success' },
-  reading: { text: 'Reading', Icon: DotsNineIcon, cls: 'bg-sage-100 text-text' },
-  failed: { text: 'Couldn’t read', Icon: WarningCircleIcon, cls: 'border border-error bg-surface text-error' },
   details: { text: 'Details needed', Icon: CircleDashedIcon, cls: 'bg-sage-100 text-text' },
 }
 
@@ -39,8 +34,6 @@ type Props = {
   optional?: boolean
   /** One-line hint (unchanged once added, so the card keeps its size) */
   hint: string
-  /** A short message under the pill (why a document couldn't be read) */
-  note?: string
   /** The designer's illustration (decorative); see documents/artwork.ts */
   art?: Art
   pill?: Pill
@@ -53,11 +46,11 @@ type Props = {
   index: number
 }
 
-export function DocumentCard({ id, name, optional, hint, note, art, pill, primary, secondary, onDropFile, index }: Props) {
+export function DocumentCard({ id, name, optional, hint, art, pill, primary, secondary, onDropFile, index }: Props) {
   const reduce = useReducedMotionConfig() ?? false
   const [over, setOver] = useState(false)
   const depth = useRef(0)
-  // "Added" draws its check only when it changes on screen (added, or reading finished), never on load
+  // "Added" draws its check only when it changes on screen, never on load
   const [firstPill] = useState(pill)
   const drop = onDropFile
     ? {
@@ -110,13 +103,13 @@ export function DocumentCard({ id, name, optional, hint, note, art, pill, primar
               </h3>
               <p className="text-small text-text-muted [overflow-wrap:anywhere]">{hint}</p>
             </div>
-            {/* "Added" / "Reading": top-right, level with the name (same 24pt line height). Their space is reserved on every card
+            {/* "Added": top-right, level with the name (same 24pt line height). Its space is reserved on every card
                 that can be added (invisible until then), so the text column never changes width and the card never changes size.
-                A status change cross-fades (old out with fade, new in with quick). */}
+                It fades in with quick and out with fade. */}
             <span className="grid justify-items-end">
-              {primary && CORNER.map((p) => <StatusPill key={p} pill={p} placeholder className="[grid-area:1/1]" />)}
+              {primary && <StatusPill pill="added" placeholder className="[grid-area:1/1]" />}
               <AnimatePresence initial={false}>
-                {pill && CORNER.includes(pill) && (
+                {pill === 'added' && (
                   <motion.span
                     key={pill}
                     className="flex [grid-area:1/1]"
@@ -130,11 +123,10 @@ export function DocumentCard({ id, name, optional, hint, note, art, pill, primar
               </AnimatePresence>
             </span>
           </div>
-          {/* "Couldn't read" and "Details needed" sit under the name: too wide for the corner on narrow cards */}
-          {(pill === 'details' || pill === 'failed') && (
+          {/* "Details needed" sits under the name: too wide for the corner on narrow cards */}
+          {pill === 'details' && (
             <div className="flex flex-col gap-1">
               <StatusPill pill={pill} />
-              {note && <p className="text-small text-text">{note}</p>}
             </div>
           )}
           {(primary || secondary) && (
