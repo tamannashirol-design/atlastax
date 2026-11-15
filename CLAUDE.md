@@ -271,6 +271,14 @@ Rules:
   delete. Consent is recorded per session; `consentRequired` stays off until
   the consent sheet exists (extraction step 4).
 - Never log file names, contents or values (route + error code only).
+- Consent (`src/consent.config.ts`, `src/consent/`): the notice's words and
+  version live ONLY in `src/consent.config.ts` (placeholder wording, TODO
+  confirm with legal); changing the words needs a new `CONSENT_VERSION` and
+  fingerprint (`npm run check:consent`, part of the build). Any `UploadAnswer`
+  with an `upload` prop asks first (`ConsentSheet`) and the server refuses stored
+  uploads without it; hosts that open an upload provide
+  `UploadHostContext` so "Not now" can close them. Measured-only uploads
+  (no `upload` prop, `?dry=1`) never ask. Readable later on Profile.
 - Dev switches: `?fail=1`, `?kbps=300`, `?dry=1` (measured, not stored;
   /motion uses it). `npm run check:server` tests the safety rules.
 - Reading (`server/extraction/`): providers behind one interface

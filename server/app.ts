@@ -7,7 +7,7 @@
 //                              → 201 { fileId, name, size }
 //                                413 too big · 415 not a PDF or photo · 403 consent needed
 //   DELETE /api/files/:fileId  delete your own file → 204 (404 if it isn't yours)
-//   GET    /api/consent        → { given, version, required }
+//   GET    /api/consent        → { given, version, required, at? }  (at = when this session agreed to this version)
 //   POST   /api/consent        { version } → 204, records the date and notice version
 //   GET    /api/health         → { ok: true }
 //
@@ -82,7 +82,8 @@ export function createApp(overrides: Partial<ServerOptions> = {}): Handler {
     if (path === '/api/consent') {
       if (req.method === 'GET') {
         const c = await store.consent(sessionId)
-        return send(res, 200, { given: c?.version === options.consentVersion, version: options.consentVersion, required: options.consentRequired })
+        const given = c?.version === options.consentVersion
+        return send(res, 200, { given, version: options.consentVersion, required: options.consentRequired, ...(given && c ? { at: c.at } : {}) })
       }
       if (req.method === 'POST') {
         const body = await readJson(req)
@@ -109,7 +110,10 @@ export function createApp(overrides: Partial<ServerOptions> = {}): Handler {
   }
 
   async function upload(req: IncomingMessage, res: ServerResponse, url: URL, sessionId: string) {
-    if (options.consentRequired && (await store.consent(sessionId))?.version !== options.consentVersion) {
+    const dev = options.dev
+    const dry = dev && url.searchParams.has('dry')
+    // A measured-only dev upload stores nothing, so it needs no consent
+    if (!dry && options.consentRequired && (await store.consent(sessionId))?.version !== options.consentVersion) {
       req.resume()
       return send(res, 403, { error: 'consent-required' })
     }
@@ -121,9 +125,7 @@ export function createApp(overrides: Partial<ServerOptions> = {}): Handler {
       return
     }
 
-    const dev = options.dev
     const fail = dev && url.searchParams.has('fail')
-    const dry = dev && url.searchParams.has('dry')
     const rate = (dev ? Number(url.searchParams.get('kbps') ?? DEV_UPLOAD_KBPS) : 0) * 1024
     const name = fileName(req.headers['x-file-name'])
     const item = String(req.headers['x-item-id'] ?? '')

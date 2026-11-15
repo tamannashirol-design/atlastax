@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "npm run check:files && npm run contrast && tsc -b && vite build",
+    "build": "npm run check:files && npm run check:consent && npm run contrast && tsc -b && vite build",
     "lint": "oxlint",
     "preview": "vite preview",
     "contrast": "node scripts/contrast.ts",
@@ -16,7 +16,8 @@
     "illustrations": "node scripts/illustrations.mjs",
     "check:extraction": "node scripts/check-extraction.ts",
     "server": "node server/index.ts",
-    "check:server": "node scripts/check-server.ts"
+    "check:server": "node scripts/check-server.ts",
+    "check:consent": "node scripts/check-consent.ts"
   },
   "dependencies": {
     "@fontsource-variable/fraunces": "^5.3.0",

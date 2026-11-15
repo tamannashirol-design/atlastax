@@ -1,6 +1,6 @@
 # Reading motion: what the reference does
 
-**Status: study only, waiting for your OK. Nothing built.**
+**Status: APPROVED (Nov 15, 2026), including the two loop tokens (`loop.scan`, `loop.sweep`; they pause when the tab is hidden or the hero is off-screen, and reduced motion shows a static state with the same text). The Reading page is not built yet (build step 5).**
 
 Source: `references/motion/documents-extract.mov` (13.2s, 1444×948, ~55fps).
 Measured from 661 frames, one every 0.02s and cropped to the pill, so timings

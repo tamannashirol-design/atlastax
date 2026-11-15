@@ -8,7 +8,8 @@ import { join } from 'node:path'
 import { createApp } from '../server/app.ts'
 
 const dataDir = await mkdtemp(join(tmpdir(), 'atlastax-check-'))
-const app = createApp({ dataDir, maxFileBytes: 1024, consentVersion: 'test-1', dev: true })
+// consentRequired is on by default; this main test server opts out so the upload and reading tests need no agreement step (consent has its own section)
+const app = createApp({ dataDir, maxFileBytes: 1024, consentRequired: false, consentVersion: 'test-1', dev: true })
 const server = createServer((req, res) => app(req, res))
 await new Promise<void>((r) => server.listen(0, r))
 const base = `http://localhost:${(server.address() as { port: number }).port}`
@@ -78,6 +79,10 @@ check('agreeing to an old notice version is refused (400)', wrong.status === 400
 await fetch(`${base}/api/consent`, { method: 'POST', headers: { cookie }, body: JSON.stringify({ version: 'test-1' }) })
 const after = (await (await fetch(`${base}/api/consent`, { headers: { cookie } })).json()) as { given: boolean }
 check('consent is recorded for this session', after.given === true)
+const afterFull = (await (await fetch(`${base}/api/consent`, { headers: { cookie } })).json()) as { at?: string }
+check('…with the time it was recorded', typeof afterFull.at === 'string' && !Number.isNaN(Date.parse(afterFull.at)))
+const beforeFull = (await (await fetch(`${base}/api/consent`)).json()) as { at?: string }
+check('…and no time is shown to someone who hasn’t agreed', beforeFull.at === undefined)
 
 const strict = createApp({ dataDir, consentRequired: true, consentVersion: 'test-1', dev: true })
 const strictServer = createServer((req, res) => strict(req, res))
@@ -87,6 +92,33 @@ const noConsent = await fetch(strictBase + '/api/files', { method: 'POST', body:
 check('with consent required, an upload without consent is refused (403)', noConsent.status === 403)
 const withConsent = await fetch(strictBase + '/api/files?kbps=100000', { method: 'POST', body: PDF(), headers: { cookie } })
 check('…and accepted once consent is recorded', withConsent.status === 201)
+
+// A changed notice: the same person is asked again
+const bumped = createApp({ dataDir, consentRequired: true, consentVersion: 'test-2', dev: true })
+const bumpedServer = createServer((req, res) => bumped(req, res))
+await new Promise<void>((r) => bumpedServer.listen(0, r))
+const bumpedBase = `http://localhost:${(bumpedServer.address() as { port: number }).port}`
+const bumpedGet = (await (await fetch(`${bumpedBase}/api/consent`, { headers: { cookie } })).json()) as { given: boolean; version: string }
+check('a new notice version asks the same person again', bumpedGet.given === false && bumpedGet.version === 'test-2')
+check('…and an upload is refused until they agree to it', (await fetch(bumpedBase + '/api/files?kbps=100000', { method: 'POST', body: PDF(), headers: { cookie } })).status === 403)
+await fetch(`${bumpedBase}/api/consent`, { method: 'POST', headers: { cookie }, body: JSON.stringify({ version: 'test-2' }) })
+check('…then accepted', (await fetch(bumpedBase + '/api/files?kbps=100000', { method: 'POST', body: PDF(), headers: { cookie } })).status === 201)
+
+// Measured-only dev uploads (the /motion page, the style guide) store nothing, so they need no consent
+const dryNoConsent = await fetch(strictBase + '/api/files?dry=1&kbps=100000', { method: 'POST', body: PDF() })
+check('a measured-only (?dry=1) upload needs no consent', dryNoConsent.status === 201)
+check('…but a real one in the same server still does', (await fetch(strictBase + '/api/files?kbps=100000', { method: 'POST', body: PDF() })).status === 403)
+
+// The default is on
+const defaults = createApp({ dataDir, dev: true })
+const defaultsServer = createServer((req, res) => defaults(req, res))
+await new Promise<void>((r) => defaultsServer.listen(0, r))
+const defaultsBase = `http://localhost:${(defaultsServer.address() as { port: number }).port}`
+check('consent is required by default', (await fetch(defaultsBase + '/api/files?kbps=100000', { method: 'POST', body: PDF() })).status === 403)
+const defaultsGet = (await (await fetch(`${defaultsBase}/api/consent`)).json()) as { required: boolean }
+check('…and the browser is told so', defaultsGet.required === true)
+bumpedServer.close()
+defaultsServer.close()
 
 console.log('\nREADING (mock provider)\n')
 type Snap = { capabilities: { stages: boolean }; documents: { itemId: string; status: string; failure?: string; files: number }[] }

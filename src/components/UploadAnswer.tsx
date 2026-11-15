@@ -1,9 +1,13 @@
 import { AnimatePresence, motion, useReducedMotionConfig } from 'framer-motion'
 import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { spring } from '../lib/motion'
+import { consentRefused, giveConsent, loadConsent, useConsent } from '../consent/client'
+import { ConsentSheet } from '../consent/ConsentSheet'
+import { consentNeeded, uploadsBlocked } from '../consent/logic'
 import { deleteFile } from '../extraction/client'
 import { rememberFileId, takeFileId, useFilingYear } from '../flow/answers'
 import { useUpload, type UploadMeta } from '../lib/upload'
+import { useUploadHost } from '../lib/uploadHost'
 import { BottomSheet } from './BottomSheet'
 import { SecondaryButton } from './SecondaryButton'
 import { UploadZone } from './UploadZone'
@@ -22,6 +26,12 @@ import { UploadZone } from './UploadZone'
 //   (`itemId`, which starts reading them on the server). Remove also deletes
 //   the file from the server. Without it (style guide demos) uploads are
 //   measured only and never stored.
+// - Consent (EXTRACTION-PLAN.md §4): with `upload`, nothing is stored until the
+//   person has agreed to the notice. The consent sheet opens over this control
+//   the first time it shows (a file dropped on a card waits for it); "Continue to
+//   upload" starts any waiting file and moves focus to the zone; "Not now" closes
+//   whatever opened this (UploadHostContext) and nothing is uploaded. A file chosen
+//   while consent is missing asks first, and the server refuses it too.
 //
 // Focus is moved on purpose at every step, because the button that started
 // each step disappears (it must never fall back to the page body):
@@ -52,6 +62,16 @@ type Props = {
 export function UploadAnswer({ docLabel, uploaded, onUploaded, onRemove, allowAnother, initialFile, upload }: Props) {
   const up = useUpload()
   const year = useFilingYear()
+  const consent = useConsent()
+  const host = useUploadHost()
+  const stores = !!upload
+  const blocked = stores && uploadsBlocked(consent)
+  // The person said "Not now" and nothing closed us: stay quiet until they try to upload again
+  const [declined, setDeclined] = useState(false)
+  // (a refusal from the server asks again even after "Not now": the person is trying to upload)
+  const askingForConsent = stores && consentNeeded(consent) && (!declined || !!up.needsConsent)
+  const afterConsent = useRef<() => void>(() => {})
+  const waitingFile = useRef<File | null>(null)
   const meta: UploadMeta = { itemId: upload?.itemId, year }
   const query = upload ? '' : '?dry=1'
   // Read in the effect below without re-running it on every render
@@ -78,8 +98,49 @@ export function UploadAnswer({ docLabel, uploaded, onUploaded, onRemove, allowAn
   // start() is stable and cancels any earlier attempt, so a dev-mode double run is harmless.
   const { start } = up
   useEffect(() => {
-    if (initialFile) start(initialFile, latest.current.query, latest.current.meta)
-  }, [initialFile, start])
+    if (initialFile && !blocked) start(initialFile, latest.current.query, latest.current.meta)
+  }, [initialFile, start, blocked])
+
+  // The server refused a file for lack of consent: forget what we cached, so the sheet shows (the same file is retried after "Continue")
+  useEffect(() => {
+    if (up.needsConsent) consentRefused()
+  }, [up.needsConsent])
+
+  // A file chosen while we didn't know yet whether consent is needed: it starts as soon as we know it isn't
+  useEffect(() => {
+    if (!blocked && !askingForConsent && waitingFile.current) {
+      const f = waitingFile.current
+      waitingFile.current = null
+      reported.current = null
+      start(f, latest.current.query, latest.current.meta)
+    }
+  }, [blocked, askingForConsent, start])
+
+  const agree = async () => {
+    // Take the waiting file BEFORE agreeing, so the effect above can't also start it
+    const f = waitingFile.current
+    waitingFile.current = null
+    const ok = await giveConsent()
+    if (!ok) {
+      waitingFile.current = f
+      return false
+    }
+    // Once the sheet has finished leaving: focus the zone, then start the waiting file (or the refused one again)
+    afterConsent.current = () => {
+      zoneButton()?.focus()
+      if (f) {
+        reported.current = null
+        up.start(f, latest.current.query, latest.current.meta)
+      } else if (up.needsConsent) up.retry()
+    }
+    return true
+  }
+  const decline = () => {
+    waitingFile.current = null
+    afterConsent.current = () => {}
+    setDeclined(true)
+    host?.close()
+  }
 
   useEffect(() => {
     if (up.status === 'done' && up.file && reported.current !== up.file.name + up.file.size) {
@@ -151,6 +212,13 @@ export function UploadAnswer({ docLabel, uploaded, onUploaded, onRemove, allowAn
           allowAnother={allowAnother}
           onFiles={(files) => {
             reported.current = null
+            // No consent yet: ask first, then upload this file (nothing leaves the browser before)
+            if (stores && uploadsBlocked(consent)) {
+              waitingFile.current = files[0]
+              setDeclined(false)
+              if (consent.status !== 'ready') void loadConsent()
+              return
+            }
             up.start(files[0], query, meta)
           }}
           onRetry={up.retry}
@@ -191,6 +259,10 @@ export function UploadAnswer({ docLabel, uploaded, onUploaded, onRemove, allowAn
       <span className="sr-only" aria-live="polite">
         {announce}
       </span>
+
+      <AnimatePresence onExitComplete={() => afterConsent.current()}>
+        {askingForConsent && <ConsentSheet key="consent" mode="ask" onAgree={agree} onDecline={decline} />}
+      </AnimatePresence>
 
       <AnimatePresence onExitComplete={() => focusNext.current()}>
         {pending !== undefined && (

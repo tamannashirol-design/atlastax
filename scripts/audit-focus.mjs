@@ -111,6 +111,21 @@ const waitRow = (page, name) =>
   page.waitForFunction((n) => [...document.querySelectorAll('[data-file-row]')].some((r) => r.textContent.includes(n)), name, { timeout: 15000 })
 const settle = (page) => page.waitForTimeout(700) // longest spring is 400ms
 
+/** Agree to the current privacy notice for this browser, so upload tests start past the consent sheet
+ *  (the consent sheet has its own section below). */
+const agree = (page) =>
+  page.evaluate(async () => {
+    const c = await (await fetch('/api/consent')).json()
+    await fetch('/api/consent', { method: 'POST', body: JSON.stringify({ version: c.version }) })
+  })
+
+/** A check that isn't about focus. */
+function assert(where, step, ok, detail = '') {
+  checks++
+  if (!ok) failures.push(`${where} · ${step}: ${detail}`)
+  console.log(`  ${ok ? '✓' : '✗'} ${step}${ok ? '' : '  ✗ ' + detail}`)
+}
+
 async function uploadFlow(page, where) {
   // Upload
   await tabTo(page, /^Choose a file$/)
@@ -174,6 +189,7 @@ for (const path of SCREENS.filter((p) => !only || p.includes(only))) {
   const errors = []
   page.on('pageerror', (e) => errors.push(String(e)))
   await page.goto(BASE + path, { waitUntil: 'networkidle' })
+  await agree(page)
   await page.evaluate(() => sessionStorage.clear())
   await page.reload({ waitUntil: 'networkidle' })
   await page.evaluate(watchBody)
@@ -188,6 +204,7 @@ if (!only || 'previous-return sheet'.includes(only)) {
   const where = 'previous-return sheet'
   const page = await browser.newPage({ viewport: { width: 820, height: 1180 } })
   await page.goto(BASE + '/filed-before', { waitUntil: 'networkidle' })
+  await agree(page)
   await page.evaluate(() => sessionStorage.clear())
   await page.reload({ waitUntil: 'networkidle' })
   await page.evaluate(watchBody)
@@ -300,6 +317,7 @@ if (!only || 'documents'.includes(only)) {
   const where = 'documents page'
   const page = await browser.newPage({ viewport: { width: 390, height: 844 } })
   await page.goto(BASE + '/documents', { waitUntil: 'networkidle' })
+  await agree(page)
   await page.evaluate(() =>
     sessionStorage.setItem('atlastax:returns', JSON.stringify({ year: 2025, years: { 2025: { income: ['opt-cpt', 'freelance'], details: { 'freelance-form': 'no' } } } })),
   )
@@ -313,6 +331,66 @@ if (!only || 'documents'.includes(only)) {
   await page.keyboard.press('Escape')
   await settle(page)
   await check(page, where, 'sheet closed → its card', { focus: /^W\u2060?-\u2060?2/ })
+  await page.close()
+}
+
+// The consent sheet: the first upload, by keyboard (a fresh browser has not agreed yet)
+if (!only || 'consent sheet'.includes(only)) {
+  const where = 'consent sheet'
+  const seed = () => sessionStorage.setItem('atlastax:returns', JSON.stringify({ year: 2025, years: { 2025: { income: ['opt-cpt'], details: {} } } }))
+  const open = async () => {
+    const page = await browser.newPage({ viewport: { width: 390, height: 844 } })
+    await page.goto(BASE + '/documents', { waitUntil: 'networkidle' })
+    await page.evaluate(seed)
+    await page.reload({ waitUntil: 'networkidle' })
+    await page.evaluate(watchBody)
+    await tabTo(page, /^Add W-2$/)
+    await page.keyboard.press('Enter')
+    await settle(page)
+    return page
+  }
+  const consentOpen = (page) => page.getByRole('dialog', { name: 'Before you add a document' }).isVisible()
+  const uploadedCount = (page) => page.evaluate(async () => (await (await fetch('/api/extraction?year=2025')).json()).documents.length)
+  console.log(where)
+
+  // Agree
+  let page = await open()
+  await check(page, where, 'first upload → consent sheet', { focus: /Close/ })
+  assert(where, 'it is the consent sheet', await consentOpen(page))
+  assert(where, 'nothing uploaded while it is open', (await uploadedCount(page)) === 0)
+  await tabTo(page, /Read the full privacy notice/)
+  await check(page, where, 'Tab → full notice link', { focus: /Read the full privacy notice/ })
+  await tabTo(page, /^Continue to upload$/)
+  await check(page, where, 'Tab → Continue to upload', { focus: /^Continue to upload$/ })
+  await page.keyboard.press('Enter')
+  await settle(page)
+  await check(page, where, 'agreed → Choose a file', { focus: /^Choose a file$/ })
+  assert(where, 'the server recorded the agreement', await page.evaluate(async () => (await (await fetch('/api/consent')).json()).given === true))
+  await pick(page, pdf('W2-consent.pdf'))
+  await waitRow(page, 'W2-consent.pdf')
+  await settle(page)
+  await check(page, where, 'upload after agreeing', { focus: /^W2-consent\.pdf, uploaded$/ })
+  await page.close()
+
+  // Not now: nothing uploaded, both sheets close, focus returns to the card
+  page = await open()
+  await tabTo(page, /^Not now$/)
+  await check(page, where, 'Tab → Not now', { focus: /^Not now$/ })
+  await page.keyboard.press('Enter')
+  await settle(page)
+  await check(page, where, 'Not now → the card', { focus: /^W\u2060?-\u2060?2/ })
+  assert(where, 'both sheets are closed', (await page.locator('dialog[open]').count()) === 0)
+  assert(where, 'nothing was uploaded', (await uploadedCount(page)) === 0)
+
+  // Asked again next time; Escape means Not now
+  await tabTo(page, /^Add W-2$/)
+  await page.keyboard.press('Enter')
+  await settle(page)
+  assert(where, 'asked again the next time', await consentOpen(page))
+  await page.keyboard.press('Escape')
+  await settle(page)
+  await check(page, where, 'Escape → the card', { focus: /^W\u2060?-\u2060?2/ })
+  assert(where, 'Escape also closed both sheets', (await page.locator('dialog[open]').count()) === 0)
   await page.close()
 }
 

@@ -1,6 +1,6 @@
 import { CheckIcon, PlusIcon, TrashIcon, WarningCircleIcon } from '@phosphor-icons/react'
 import { AnimatePresence } from 'framer-motion'
-import { useState, type ReactNode } from 'react'
+import { useRef, useState, type ReactNode } from 'react'
 import { BottomSheet } from '../components/BottomSheet'
 import { SecondaryButton } from '../components/SecondaryButton'
 import { fieldClass } from '../components/SelectField'
@@ -9,6 +9,7 @@ import { UploadAnswer } from '../components/UploadAnswer'
 import { CBP_HELPER, STUDENT_LIMIT_YEARS } from '../residency.config'
 import { setResidency, useAnswers } from '../flow/answers'
 import { Link } from '../lib/router'
+import { UploadHostContext } from '../lib/uploadHost'
 import { extractTravelHistoryStub, tripsFromTravelHistory, type AbroadTrip, type Flag } from './days'
 import { asksArrivalDate, daysFor, studentYearsFor } from './fromAnswers'
 import { inputClass, quietButton, smallButton } from './fields'
@@ -100,6 +101,10 @@ export function TripsStep({ labelledBy, taxYear }: { labelledBy: string; taxYear
   const state = daysFor(answers, taxYear)
   const [announce, setAnnounce] = useState('')
   const [confirmRemove, setConfirmRemove] = useState(false)
+  // The travel-history upload mounts only once its section is opened, so the consent sheet
+  // appears when the zone would first show, not when the page loads
+  const [historyOpen, setHistoryOpen] = useState(false)
+  const historyRef = useRef<HTMLDetailsElement>(null)
   const setTrips = (t: AbroadTrip[]) => setResidency({ trips: t })
   const flagFor = (id: string) => state?.flags.find((f) => f.tripId === id)
   const cutOff = state?.flags.find((f) => f.kind === 'maybe-cut-off')
@@ -205,12 +210,22 @@ export function TripsStep({ labelledBy, taxYear }: { labelledBy: string; taxYear
             {trips.length ? 'Add another' : 'Add a trip'}
           </button>
 
-          <details className="flex flex-col" open={files.length > 0}>
+          <details ref={historyRef} className="flex flex-col" open={files.length > 0} onToggle={(e) => setHistoryOpen(e.currentTarget.open)}>
             <summary className="flex min-h-11 cursor-pointer items-center rounded-sm text-body font-semibold underline underline-offset-4 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-text">
               Fill this in from your I-94 travel history
             </summary>
             <div className="flex flex-col gap-3 pt-2">
               <p className="text-small text-text-muted">{CBP_HELPER}</p>
+              {(historyOpen || files.length > 0) && (
+              <UploadHostContext.Provider
+                // "Not now" on the consent sheet folds this section away again
+                value={{
+                  close: () => {
+                    if (historyRef.current) historyRef.current.open = false
+                    historyRef.current?.querySelector('summary')?.focus()
+                  },
+                }}
+              >
               <UploadAnswer
                 docLabel="travel history"
                 uploaded={files}
@@ -228,6 +243,8 @@ export function TripsStep({ labelledBy, taxYear }: { labelledBy: string; taxYear
                   setResidency(left.length ? { cbpFiles: left } : { cbpFiles: [], trips: trips.filter((t) => !t.fromHistory), historyCutOff: false })
                 }}
               />
+              </UploadHostContext.Provider>
+              )}
               {files.length > 0 && (
                 <>
                   <p className="flex items-start gap-2 text-small">

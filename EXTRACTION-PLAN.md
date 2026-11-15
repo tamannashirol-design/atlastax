@@ -208,6 +208,30 @@ Placeholders to show the shape, not a tax decision:
   version). If the notice changes, people see it again.
 - Readable later from Profile.
 
+**Built in step 4 (Nov 2026)** — how it works:
+- The notice's words and version live ONLY in `src/consent.config.ts` (the server
+  reads the version from there too). `npm run check:consent` fails if the words
+  change without a new `CONSENT_VERSION` and fingerprint, so a changed notice
+  always asks everyone again. All wording is placeholder, TODO confirm with legal.
+- The sheet (`src/consent/ConsentSheet.tsx`) opens over any upload control that
+  stores files (`UploadAnswer` with `upload`), the first time it shows: income
+  upload sheets, the Documents sheet, the previous-return sheet, and the
+  travel-history section when it's opened. A file dropped on a card waits for it.
+  /motion and the style guide uploads store nothing, so they never ask.
+- "Continue to upload" records agreement (date + version) on the server, starts
+  any waiting file and moves focus to the zone. "Not now", the X, Escape and a tap
+  outside all mean the same: close the sheet that opened the upload, upload nothing.
+- If the server ever refuses an upload for lack of consent (new version, lost
+  cookie) the control goes quietly back to idle, asks, then retries the same file.
+- The server now requires consent for stored uploads (on by default); measured-only
+  dev uploads (`?dry=1`) are exempt.
+- Profile has a **Privacy** section: the same words, read-only, and "You agreed on
+  <date>" once they have. Withdrawing consent is not built (legal, see below).
+- Consequence of "Not now" (Q-E, still open): the document stays "not added", and
+  Continue on Documents needs every required document, so someone who keeps
+  declining can't get past Documents until we decide on a way to enter details by
+  hand from there ("Enter it myself" exists only on Review, step 6).
+
 ---
 
 ## 5. Review screen ("Check your details")
@@ -357,7 +381,7 @@ Each step ends with `npm run contrast`, the new checks, and new color pairs in
 - **Q-D.** A document that **failed while they were away**: go to Review and
   offer "Enter it myself" there, or stop on the Reading page to offer "Try
   again" first? (Reading-page Q4 below.)
-- **Q-E.** Consent "Not now": keep the person in the flow typing things in
+- **Q-E (still open; see "Built in step 4" in §4).** Consent "Not now": keep the person in the flow typing things in
   themselves, or is uploading required?
 - ~~Q-F.~~ **Settled:** the three PDFs were broken filler; deleted.
 
@@ -374,23 +398,29 @@ document back on Review is fine.
 
 (Inside this part, "§1" to "§10" mean its own numbered sections below.)
 
-**Status: planned, not built. Waiting for your approval.** Motion study:
-`MOTION-reading.md` (also waiting for your OK).
+**Status: APPROVED (Nov 15, 2026). Not built yet (build step 5).** Motion study:
+`MOTION-reading.md` (approved too). The designer's answers are in §10.
 
 ### Flow
 
 ```
-Documents ── Continue ──┬── still reading ──▶ Reading page (/reading) ──▶ Review
-                        └── all read ───────────────────────────────────▶ Review
+Documents ── Continue ──▶ /reading ──┬── something still reading, or one failed ──▶ stays on Reading
+                                     └── every document read (none running, none failed) ──▶ /review (a replace-redirect, no flash)
 ```
 
+- **Decided:** Documents' **Continue always points at `/reading`** (already done in
+  step 4). `/reading` itself decides: if nothing is still being read and nothing
+  failed, it goes straight to `/review`. If anything failed, it stays and shows
+  the failures with Continue (§4).
 - Reading starts after each upload (D4), so by the time someone presses
-  Continue it's often finished. The Reading page appears **only if something
-  is still being read** (D6). Since Continue needs every required document,
-  everyone who gets here has at least passport and I-94 (Q1 settled).
+  Continue it's often finished, and they never see the page (D6). Since Continue
+  needs every required document, everyone who gets here has at least passport
+  and I-94 (Q1 settled).
 - What gets read: every document with status "added" from
   `requiredItems(answers)`. The rules stay in `documents.config.ts`; the page
-  never decides which forms matter. Optional documents are a question (Q6).
+  never decides which forms matter. **Decided:** optional documents (driver's
+  license or state ID, previous return) are read too when added, and never
+  block anything. (They need field lists in `extraction.config.ts`, TODO CPA.)
 - Address: `/reading`. Opened from Documents' Continue, from Home while a job
   is running, and by typing it. With no job and nothing added, it redirects
   to Documents.
@@ -488,8 +518,8 @@ step: top bar, compact stepper below 1024px, rail at 1024px+.
   document starts) → result. There's no "Checking" step, and the scan loop
   keeps going in between. It's an indeterminate loop, never a guess.
 - **No percentages, no progress bar, no "x seconds left", no timer-driven
-  status.** A count of finished documents ("2 of 3 ready") is allowed
-  because each tick is a real event (see Q3).
+  status.** **Decided:** a count of finished documents is shown **as text**
+  (e.g. "2 of 3 documents read"), driven only by real events, never a bar.
 - The loops (`loop.scan`, `loop.sweep`) run only while at least one document
   is Reading or Checking, and stop when the last result arrives.
 
@@ -591,14 +621,17 @@ Detail and measurements: `MOTION-reading.md`. In short:
 | Supporting sentence swaps (10s line) | `quick` cross-fade |
 | Hero scan (dot grid) | **new `loop.scan`**: 1.6s, 4 steps, repeating, opacity only |
 | Hero sweep (light band over the page lines) | **new `loop.sweep`**: 2.0s cycle, transform (translateX) only |
-| A document becomes ready | the hero's check draws in: `pop` (Q7) or `soft` |
+| A document becomes ready | the hero's check draws in on `soft` (**decided**: not `pop`, which stays for the upload check) |
 | Final state settles | `soft` |
 
 - Transform and opacity only. Colors switch by fading layers. Everything can
   be interrupted: a new event cancels whatever is running.
-- **Reduced motion:** no movement. The hero is a still card (no scan, no
-  sweep), statuses swap with `fade`, the text is identical, and the live
-  region still announces.
+- **Loops** (`loop.scan`, `loop.sweep`, **approved**) **pause when the tab is
+  hidden or the hero is off-screen** (`visibilitychange` and an
+  `IntersectionObserver`) and resume when it returns.
+- **Reduced motion:** a **static state with the same text**: the hero is a still
+  card (no scan, no sweep), statuses swap with `fade`, and the live region still
+  announces.
 
 ### 8. Accessibility
 
@@ -642,7 +675,23 @@ A "Reading page" panel on /motion drives the **mock provider**:
 Also `?reading=slow|fast|fail|allfail|wrongtype` on `/reading` itself, like
 `?home=`, plus a `?home=reading` fixture.
 
-### 10. Open questions for you
+### 10. Decisions (approved Nov 15, 2026)
+
+| # | Topic | Decision |
+|---|---|---|
+| 1 | Deferring vs locked Continue | Settled earlier: Continue needs every required document. |
+| 2 | When reading starts | Settled earlier: right after each upload (D4). |
+| 3 | Count | Shown as **text**, e.g. "2 of 3 documents read", driven only by real events. |
+| 4 | Failures | A failing document **never blocks the others**. It shows "Couldn't read" with **Try again** and **Enter it myself**. **Continue waits for the person** when anything failed (it does not move on by itself). |
+| 5 | The animation | **Abstract only** (quiet page lines). No document image, no extracted values. The rest of Q5 stands as proposed: the list carries the per-document detail; "Checking" only if the provider reports stages; the scan stays an indeterminate loop. |
+| 6 | Optional documents | Read if added, and **never block**. |
+| 7 | The check | **Soft**, not a pop. |
+| 8 | Loop tokens | **Approved**: `loop.scan` and `loop.sweep`. Loops pause when the tab is hidden or off-screen; reduced motion shows a static state with the same text. |
+| 9 | Notifications | **None in the prototype.** Home and the Documents cards show the state. |
+| 10 | "Enter it myself" | Opens **Review with empty fields** for that document (Review, step 6, must support this). |
+| — | Routing | Documents → Continue points at `/reading`; `/reading` goes straight to `/review` when everything is already read. |
+
+*(Original wording of the questions, for the record:)*
 
 1. ~~Deferring everything vs locked Continue.~~ **Settled:** Continue needs
    every required document; Reading appears only while something is still

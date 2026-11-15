@@ -6,6 +6,7 @@ import { QuestionLayout } from '../components/QuestionLayout'
 import { SecondaryButton } from '../components/SecondaryButton'
 import { UploadAnswer } from '../components/UploadAnswer'
 import { DebugStack, useUrlFlag } from '../lib/debug'
+import { UploadHostContext } from '../lib/uploadHost'
 import { navigate, useHistoryState } from '../lib/router'
 import { setAnswers, setDetail, useAnswers, useFilingYear } from './answers'
 import { PREVIOUS_RETURN } from '../documents.config'
@@ -153,7 +154,10 @@ export default function FlowPage({ path }: { path: string }) {
             onClose={closeSheet}
           >
             {sheetScreen.helper && <p className="text-body text-text-muted">{sheetScreen.helper}</p>}
-            <div className="pt-6">{sheetScreen.answers(answers, `q-${sheetScreen.id}`, year)}</div>
+            {/* "Not now" on the consent sheet closes this sheet (back to the question before it) */}
+            <UploadHostContext.Provider value={{ close: closeSheet }}>
+              <div className="pt-6">{sheetScreen.answers(answers, `q-${sheetScreen.id}`, year)}</div>
+            </UploadHostContext.Provider>
             <div className="flex flex-col gap-2 pt-8">
               <PrimaryButton disabled={!sheetScreen.isAnswered(answers, year)} onClick={() => go(nextAfter(requested), true)}>
                 Continue
@@ -171,9 +175,11 @@ export default function FlowPage({ path }: { path: string }) {
           <BottomSheet title="To continue, we’ll ask for your previous tax return." onClose={() => setSheet(false)}>
             <p className="text-body text-text-muted">This is optional, but uploading it will save you time and reduce errors.</p>
             {/* Same upload control as every upload question (zone + file list) */}
+            <UploadHostContext.Provider value={{ close: () => setSheet(false) }}>
             <div className="pt-6">
               <UploadAnswer docLabel="previous return" uploaded={priorFiles} upload={{ key: PREVIOUS_RETURN.uploadScreen, itemId: PREVIOUS_RETURN.id }} onUploaded={(name) => setPriorFiles([name])} onRemove={() => setPriorFiles([])} />
             </div>
+            </UploadHostContext.Provider>
             <div className="flex flex-col gap-2 pt-8">
               <PrimaryButton disabled={!priorFiles.length} onClick={() => finishSheet({ fileName: priorFiles[0] })}>
                 Continue

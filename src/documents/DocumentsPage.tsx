@@ -14,9 +14,10 @@ import { DocumentCard, type Pill } from './DocumentCard'
 import { isReading, retryReading, useExtraction, type DocumentReading } from '../extraction/client'
 import { documentArt, incomeArt } from './artwork'
 import { returnStatus } from '../home/returnStatus'
-import { REVIEW_PATH, pathForSection, resumeScreen } from '../flow/screens'
+import { READING_PATH, pathForSection, resumeScreen } from '../flow/screens'
 import { at, sectionIndex } from '../flow/sections'
 import { spring } from '../lib/motion'
+import { UploadHostContext } from '../lib/uploadHost'
 import { Link, navigate, useHistoryState } from '../lib/router'
 
 // THE Documents page: the Documents tab, and the flow's Documents step.
@@ -104,6 +105,14 @@ export default function DocumentsPage() {
       el.focus({ preventScroll: true })
     } else if (fromFlow) document.getElementById('documents-title')?.focus({ preventScroll: true })
   }, [fromFlow])
+
+  /** Close the upload sheet and put focus back on that document's card. */
+  const closeUpload = () => {
+    if (!uploading) return
+    const id = uploading.item.id
+    afterSheet.current = () => document.getElementById(`item-${id}`)?.focus({ preventScroll: true })
+    setUploading(null)
+  }
 
   /** Change an item's state, say so, and keep focus on its row (its buttons change). */
   const change = (id: string, apply: () => void, message: string) => {
@@ -279,7 +288,7 @@ export default function DocumentsPage() {
 
             {fromFlow && (
               <div className="mt-10 grid gap-2 tablet:grid-cols-2 tablet:gap-x-(--grid-gutter)">
-                <PrimaryButton disabled={!summary.done} onClick={() => navigate(REVIEW_PATH)}>
+                <PrimaryButton disabled={!summary.done} onClick={() => navigate(READING_PATH)}>
                   Continue
                 </PrimaryButton>
                 {!summary.done && (
@@ -299,26 +308,17 @@ export default function DocumentsPage() {
         {uploading && (
           <BottomSheet
             title={`Add: ${uploading.item.form}`}
-            onClose={() => {
-              const id = uploading.item.id
-              afterSheet.current = () => document.getElementById(`item-${id}`)?.focus({ preventScroll: true })
-              setUploading(null)
-            }}
+            onClose={closeUpload}
           >
             <p className="text-body text-text-muted">{uploading.item.source}</p>
-            <div className="pt-6">
-              <SheetUpload item={uploading.item} initialFile={uploading.file} />
-            </div>
+            {/* "Not now" on the consent sheet closes this sheet too */}
+            <UploadHostContext.Provider value={{ close: closeUpload }}>
+              <div className="pt-6">
+                <SheetUpload item={uploading.item} initialFile={uploading.file} />
+              </div>
+            </UploadHostContext.Provider>
             <div className="flex flex-col pt-8">
-              <SecondaryButton
-                onClick={() => {
-                  const id = uploading.item.id
-                  afterSheet.current = () => document.getElementById(`item-${id}`)?.focus({ preventScroll: true })
-                  setUploading(null)
-                }}
-              >
-                Done
-              </SecondaryButton>
+              <SecondaryButton onClick={closeUpload}>Done</SecondaryButton>
             </div>
           </BottomSheet>
         )}

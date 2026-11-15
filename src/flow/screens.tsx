@@ -422,13 +422,15 @@ for (const screen of flow.slice(STOP_INDEX + 1)) {
 export function isGatedPath(path: string, a: Answers, year = TAX_YEAR): boolean {
   if (!isOutOfScope(a, year)) return false
   const i = flow.findIndex((s) => s.path === path)
-  return i > STOP_INDEX || path === AFTER_FLOW || path === REVIEW_PATH
+  return i > STOP_INDEX || path === AFTER_FLOW || path === REVIEW_PATH || path === READING_PATH
 }
 export const STOP_PATH = '/not-supported'
 
 /** Where Continue goes after the last question: the Documents page, opened "from the flow". */
 export const AFTER_FLOW = '/documents'
 export const REVIEW_PATH = '/review'
+/** After Documents → Continue. Skips straight to Review when nothing is still being read (EXTRACTION-PLAN.md, Reading page). Page built in step 5. */
+export const READING_PATH = '/reading'
 
 export const isFlowPath = (path: string) => flow.some((s) => s.path === path)
 

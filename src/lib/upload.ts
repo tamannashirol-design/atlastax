@@ -13,7 +13,15 @@ export type UploadStatus = 'idle' | 'accepted' | 'uploading' | 'done' | 'error'
 /** size is unknown for files remembered from an earlier visit; fileId is set once the server has stored it */
 export type UploadFile = { name: string; size?: number; fileId?: string }
 /** retryable: the same file can be sent again (network/server failure), not for a file type we can't take */
-export type UploadState = { status: UploadStatus; progress: number; file?: UploadFile; error?: string; retryable?: boolean }
+export type UploadState = {
+  status: UploadStatus
+  progress: number
+  file?: UploadFile
+  error?: string
+  retryable?: boolean
+  /** The server refused the file for lack of consent (back to idle, not an error): ask, then retry() */
+  needsConsent?: boolean
+}
 
 /** What the server stores with a file: which document it is and for which tax year */
 export type UploadMeta = { itemId?: string; year?: number }
@@ -50,6 +58,9 @@ export function useUpload(endpoint = '/api/files') {
             /* no id: still uploaded */
           }
           setState((s) => ({ ...s, status: 'done', progress: 1, file: s.file && { ...s.file, fileId } }))
+        } else if (req.status === 403 && /consent-required/.test(req.responseText)) {
+          // Not an error the person caused: the notice needs agreeing to (again). Quietly back to idle; the caller asks, then retries.
+          setState((s) => ({ status: 'idle', progress: 0, file: s.file, needsConsent: true }))
         } else if (req.status === 415 || req.status === 413) {
           // The server looked inside the file (or measured it) and can't take it: a different file is needed
           setState((s) => ({ ...s, status: 'error', progress: 0, error: req.status === 415 ? TYPE_ERROR : SIZE_ERROR, retryable: false }))

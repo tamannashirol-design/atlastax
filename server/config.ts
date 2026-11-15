@@ -1,5 +1,6 @@
 // Server settings. Change values here only.
 import { join } from 'node:path'
+import { CONSENT_VERSION } from '../src/consent.config.ts'
 import { MAX_UPLOAD_BYTES } from '../src/config.ts'
 
 export type ServerOptions = {
@@ -8,11 +9,12 @@ export type ServerOptions = {
   /** Largest file accepted, in bytes (shared with the browser: src/config.ts) */
   maxFileBytes: number
   /**
-   * Refuse uploads until consent is recorded (EXTRACTION-PLAN.md §4).
-   * Off until the consent sheet exists (build step 4), so uploads keep working.
+   * Refuse stored uploads until consent is recorded for the current notice
+   * version (EXTRACTION-PLAN.md §4). On since build step 4 (the consent sheet).
+   * Measured-only dev uploads (?dry=1, nothing stored) never need it.
    */
   consentRequired: boolean
-  /** The privacy notice version people agree to. Bump it when the notice changes: everyone sees it again. TODO confirm with legal. */
+  /** The privacy notice version people agree to: src/consent.config.ts (bump it when the words change; everyone is asked again). */
   consentVersion: string
   /**
    * Development only: slows uploads down so the folder animation shows real
@@ -25,8 +27,8 @@ export type ServerOptions = {
 export const DEFAULT_OPTIONS: ServerOptions = {
   dataDir: join(process.cwd(), '.data'),
   maxFileBytes: MAX_UPLOAD_BYTES,
-  consentRequired: false,
-  consentVersion: 'draft-1',
+  consentRequired: true,
+  consentVersion: CONSENT_VERSION,
   dev: false,
 }
 
