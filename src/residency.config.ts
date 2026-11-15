@@ -49,10 +49,24 @@ export const CBP_HELPER = 'Get it from the CBP I-94 website (i94.cbp.dhs.gov) un
 /** How far back the arrival-year list goes. */
 export const ARRIVAL_YEARS_BACK = 15
 
-/** The stop screen (and Home) for anyone outside the v1 scope. Neutral: no advice, no jargon, never "resident". */
+/**
+ * The stop screen (and Home) for anyone outside the v1 scope. Names the forms
+ * at the designer's request; says "may" (the app doesn't decide a filing
+ * status) and never "resident". TODO confirm wording with CPA.
+ */
 export const OUT_OF_SCOPE = {
   headline: 'We can’t prepare your return yet',
-  body: 'AtlasTax currently supports students in their first five calendar years in the U.S. Based on your answers, your situation may need a different type of return.',
-  // TODO confirm wording
-  note: 'Your school’s international office or a tax professional can tell you which return applies.',
+  body: 'AtlasTax only prepares Form 1040-NR, the return for students in their first five calendar years in the U.S. Based on what you told us, you may need to file Form 1040 instead, which AtlasTax doesn’t prepare.',
 }
+
+/** Other ways to file, shown with the stop screen (restored from the earlier "we can't file" sheet). TODO confirm the links and wording. */
+export const OTHER_WAYS_TO_FILE: { title: string; body: string; href?: string; site?: string }[] = [
+  { title: 'IRS Free File', body: 'Free tax software from IRS partners, if your income qualifies.', href: 'https://www.irs.gov/freefile', site: 'irs.gov' },
+  {
+    title: 'Free help from VITA volunteers',
+    body: 'IRS-certified volunteers prepare your return for free, if your income qualifies. Some sites are on campus.',
+    href: 'https://irs.treasury.gov/freetaxprep/',
+    site: 'irs.gov',
+  },
+  { title: 'A tax professional', body: 'Your school’s international office can often recommend one.' },
+]

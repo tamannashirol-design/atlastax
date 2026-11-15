@@ -17,6 +17,8 @@ type Target = { path: string; state: Record<string, unknown> | null }
 export type ReturnStatus = {
   state: HomeState
   headline: string
+  /** A sentence that replaces Home's default one for this state (not-supported) */
+  sentence?: string
   buttonLabel: string
   buttonTarget: Target
   /** The progress row: where they are, and how many sections are done (0–6) */
@@ -54,6 +56,7 @@ export function returnStatus(a: Answers, year: number): ReturnStatus {
       ...base,
       state,
       headline: OUT_OF_SCOPE.headline,
+      sentence: isOutOfScope(a, year) ? OUT_OF_SCOPE.body : 'AtlasTax supports students for now. If you’re here as a student, check your answers.',
       buttonLabel: 'Check my answers',
       buttonTarget: { path: isOutOfScope(a, year) ? '/arrival-year' : '/j1-student', state: null },
       progress: { position: at('time'), done: 0 },

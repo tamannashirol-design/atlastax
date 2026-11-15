@@ -17,6 +17,7 @@ import { spring } from '../lib/motion'
 import { Link, navigate } from '../lib/router'
 import { homeFixture } from './fixtures'
 import { returnStatus, type HomeState, type ReturnStatus } from './returnStatus'
+import { OtherWaysToFile } from '../residency/OtherWaysToFile'
 
 // Home: the landing screen for everyone who's logged in, in every state of
 // their return (returnStatus() decides: new, in-progress, needs-documents,
@@ -40,7 +41,7 @@ const SENTENCE: Record<HomeState, (s: ReturnStatus) => string> = {
   'in-progress': () => 'Your answers are saved as you go.',
   'needs-documents': (s) => [documentsLine(s.documents), incomeItemsLine(s.documents)].filter(Boolean).join(' · '),
   ready: () => 'Your forms are ready to download.',
-  'not-supported': () => OUT_OF_SCOPE.body,
+  'not-supported': (s) => s.sentence ?? OUT_OF_SCOPE.body,
 }
 
 // TODO confirm: generic, "may" (no statuses, no uploads here)
@@ -107,6 +108,13 @@ export default function HomePage() {
 
   const main: ReactNode[] = []
   const side: ReactNode[] = []
+  if (status.state === 'not-supported') {
+    main.push(
+      <Card key="other" id="home-other" title="Other ways to file" motionProps={card(1)}>
+        <OtherWaysToFile />
+      </Card>,
+    )
+  }
   if (status.state === 'new') {
     side.push(
       <Card key="things" id="home-things" title="Things you may need" motionProps={card(1)}>
@@ -255,11 +263,7 @@ export default function HomePage() {
                   </AnimatePresence>
                 </div>
               </div>
-              {status.state === 'not-supported' ? (
-                <p className="text-small text-text-muted">{OUT_OF_SCOPE.note}</p>
-              ) : (
-                <ProgressRow done={status.progress.done} current={current} />
-              )}
+              {status.state !== 'not-supported' && <ProgressRow done={status.progress.done} current={current} />}
               <AnimatePresence mode="wait" initial={false}>
                 <motion.div key={status.state} className="flex flex-col" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={spring.quick}>
                   <PrimaryButton onClick={() => go(status.buttonTarget)}>{status.buttonLabel}</PrimaryButton>

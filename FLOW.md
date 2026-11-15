@@ -78,15 +78,18 @@ the arrival year when that question is skipped, which always means within
 scope).
 
 - **Outside scope:** the stop screen, "We can't prepare your return yet",
-  "AtlasTax currently supports students in their first five calendar years
-  in the U.S. Based on your answers, your situation may need a different
-  type of return." Cobalt **Check my answers** (back to the arrival year),
-  quiet **Save and exit** (Home), and a note: "Your school's international
-  office or a tax professional can tell you which return applies." (TODO
-  confirm wording). No travel days or I-94 questions; Tax details, Income,
-  Documents and Review can't be reached (typed addresses redirect to the
-  stop screen); the stepper shows only About you and Time in the U.S.
-  Never says "resident"; no advice; no jargon.
+  "AtlasTax only prepares Form 1040-NR, the return for students in their
+  first five calendar years in the U.S. Based on what you told us, you may
+  need to file Form 1040 instead, which AtlasTax doesn't prepare." (names
+  the forms at the designer's request; "may", never "resident"; TODO
+  confirm with CPA). Then **Other ways to file** (restored): IRS Free File
+  (irs.gov/freefile), Free help from VITA volunteers (IRS VITA site
+  locator), A tax professional (the school's international office can
+  recommend one); links open in a new tab (TODO confirm). Cobalt **Check my
+  answers** (back to the arrival year), quiet **Save and exit** (Home). No
+  travel days or I-94 questions; Tax details, Income, Documents and Review
+  can't be reached (typed addresses redirect to the stop screen); the
+  stepper shows only About you and Time in the U.S.
 - Changing an answer back into scope continues the flow from there.
 
 - Question wording shortened to fit 3 lines on a phone: "Did you spend a
@@ -316,7 +319,7 @@ documents|ready|notsupported (doesn't change saved answers).
 | in-progress | You're on step N of 6: {section} | Continue where you left off (next unanswered question, or Documents) | What's next (links) · Your answers (Edit) |
 | needs-documents | Next: add your documents | Add documents | What's missing (each links to its item on Documents) · Documents summary · Your answers |
 | ready | Your return is ready | Download your forms (TODO: real forms; goes to Review, not built) | Your forms (PDF buttons, TODO) · Your answers with "Review again" |
-| not-supported | We can't prepare your return yet (+ the neutral paragraph and note) | Check my answers (to the arrival year; J-1 non-student: to "student?") | nothing (no progress row, documents or What's next) |
+| not-supported | We can't prepare your return yet (+ the 1040-NR / 1040 paragraph; J-1 non-student: "AtlasTax supports students for now…") | Check my answers (to the arrival year; J-1 non-student: to "student?") | Other ways to file (no progress row, documents or What's next) |
 
 - Hero: "2026 tax return", the headline, one plain sentence (TODO confirm),
   the progress row (all 6 sections with names: done = check, current =

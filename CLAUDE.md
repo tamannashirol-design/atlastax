@@ -159,7 +159,10 @@ Rules:
   the tax year counts; the sixth is out). `inScope()` / `isOutOfScope()` in
   `fromAnswers.ts`. Outside scope the flow stops at /not-supported: later
   screens are hidden, typed addresses redirect (App), the stepper ends at
-  Time in the U.S., Home shows "not-supported". Never say "resident"; no advice.
+  Time in the U.S., Home shows "not-supported". The stop screen explains
+  "AtlasTax only prepares Form 1040-NR … you may need to file Form 1040"
+  (forms named at the designer's request; "may", never "resident") and
+  lists Other ways to file (`OTHER_WAYS_TO_FILE` in the config).
 - Time in the U.S. (`src/residency/`): students only (F-1, J-1 student,
   M-1). Rules ONLY in `src/residency.config.ts` (TODO confirm with CPA);
   `fromAnswers.ts` decides which questions apply. Trips out of the U.S. are

@@ -13,6 +13,7 @@ import { TAX_YEAR } from '../config'
 import { ARRIVAL_YEARS_BACK, OUT_OF_SCOPE } from '../residency.config'
 import { requiredDayYears } from '../residency/days'
 import { asksArrivalDate, asksIfStudent, asksYearAbroad, daysFor, inScope, isOutOfScope, isSupportedStudent } from '../residency/fromAnswers'
+import { OtherWaysToFile } from '../residency/OtherWaysToFile'
 import { ArrivalDate, TimeSummary, TripsStep, YearAbroad } from '../residency/TimeInUS'
 import { setAnswers, setDetail, setResidency, type Answers } from './answers'
 import { documentsDone, ruleForUploadScreen, uploadScreenApplies, type SkipValue } from './requiredDocuments'
@@ -304,10 +305,15 @@ export const flow: FlowScreen[] = [
     isAnswered: () => true,
     answerArea: 'auto',
     stop: { label: 'Check my answers', href: '/arrival-year' },
-    answers: () => (
-      <div className="flex flex-col gap-4">
+    answers: (_a, id) => (
+      <div className="flex flex-col gap-6">
         <p className="text-body">{OUT_OF_SCOPE.body}</p>
-        <p className="text-small text-text-muted">{OUT_OF_SCOPE.note}</p>
+        <section aria-labelledby={`${id}-other`} className="flex flex-col gap-3">
+          <h2 id={`${id}-other`} className="text-body font-semibold">
+            Other ways to file
+          </h2>
+          <OtherWaysToFile />
+        </section>
       </div>
     ),
   },
