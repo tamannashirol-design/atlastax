@@ -202,15 +202,17 @@ or /motion → Intro, with a 390 / 820 / 1032 / 1280 width toggle and
   returns two kinds of items:
   - **documents** (a form is expected): added, later ("I'll add it later"),
     none ("I don't have this", reported on the Documents page) or missing.
-    later and none are deferred.
+    later and none are skipped, and still count as missing: every
+    required document is needed, so they keep the Documents step (and
+    Continue) locked until uploaded.
     Before the form question is answered, a form is expected.
   - **self-reported income items** (income registered, no form): "Details
     needed", or later if deferred.
 - Counts (same words everywhere, from `documentsLine` / `incomeItemsLine`):
   "2 of 3 documents added" counts documents only; a separate line says
-  "1 income item needs details". The Documents step is done when no
-  document is missing and no self-reported item still needs details (unless
-  deferred with "I'll add it later").
+  "1 income item needs details". The Documents step is done when every
+  required document is added (skipped ones included) and no self-reported
+  item still needs details (unless deferred with "Remind me later").
 - Documents page (step 2): self-reported items in their own small group with
   "You told us you had this income. We'll ask for the details here." No tax
   advice, amounts or thresholds; what to collect is TODO confirm with CPA.
@@ -244,13 +246,18 @@ or /motion → Intro, with a 390 / 820 / 1032 / 1280 width toggle and
     documents ("Forms from your employer, school or bank."), Income without
     a form (the neutral self-reported line).
   - Card (`DocumentCard`): art (the passport illustration for Passport and
-    I-94; a UI icon otherwise), name, one-line hint (file names once added),
-    a status pill (text + icon: To do / Added / Later / Not available /
-    Optional / Details needed), ONE soft button "Add" (primary tint, navy
-    text) or "Replace", and at most one quiet secondary: **"Not now"** menu
-    ("Remind me later" = I'll add it later; "I don't have this one" = I
-    don't have this; the optional ID shows only "I don't have one"), or
-    Undo once deferred. White, radius lg, faint sage border + soft shadow.
+    I-94; a UI icon otherwise), name, one-line hint (the driver's license or
+    state ID says "Optional"), and ONE soft button "Add" (primary tint, navy
+    text). Not added yet: just "Add", no pill. Added: an "Added" pill (text
+    + check) in the top-right corner, level with the name, and "Replace";
+    the card keeps exactly the same size (the pill's space is reserved on
+    every card that can be added, and the hint doesn't change; file names
+    are listed under Replace). On iPad portrait (narrowest cards) the art
+    sits on its own row so the name keeps its width beside the pill. No "Not now" or
+    "I don't have this" here: every required document is needed to prepare
+    the return accurately. Income without a form: a "Details needed" pill
+    and a quiet "Remind me later" / Undo. White, radius lg, faint sage
+    border + soft shadow.
   - Drop a file on a card (iPad, laptop): "Drop to add" on a primary-tint
     layer; the upload sheet opens with the file already uploading (a real
     upload). Add stays for keyboard and phone.
@@ -333,7 +340,8 @@ documents|ready|notsupported (doesn't change saved answers).
 - Layout: phone one column; iPad 5 + 3 columns; laptop 8 + 4. The hero and
   the side column share a top edge. White cards (radius lg, shadow) on the
   page background.
-- "Filing for an earlier year?" opens a sheet listing PREVIOUS_TAX_YEARS
+- "Filing for an earlier year?": a secondary button in the hero card,
+  right under the cobalt button; opens a sheet listing PREVIOUS_TAX_YEARS
   (config). Privacy line: PRIVACY_LINE (config), hidden until confirmed.
 - "Replay intro" lives on Profile now. No Help, how-it-works, deadlines,
   news, time estimates or promises; no jargon.

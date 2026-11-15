@@ -85,7 +85,9 @@ export function summarizeItems(items: RequiredItem[]): ItemsSummary {
   const docDeferred = docs.filter((d) => isDeferred(d.status)).length
   const needsDetails = income.filter((i) => i.status === 'details-needed').length
   const incomeDeferred = income.filter((i) => i.status === 'later').length
-  const missing = docs.length - added - docDeferred
+  // Skipped documents ("later" / "none") still count as missing: every required
+  // document is needed to prepare the return, so they keep Continue locked.
+  const missing = docs.length - added
   return {
     documents: { total: docs.length, added, deferred: docDeferred, missing },
     income: { total: income.length, needsDetails, deferred: incomeDeferred, provided: income.length - needsDetails - incomeDeferred },

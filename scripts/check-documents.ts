@@ -52,14 +52,14 @@ check('3. OPT/CPT + scholarship, nothing uploaded', { income: ['opt-cpt', 'schol
   documents: '0 of 2 documents added',
   done: false,
 })
-check('4. One added, one "I\'ll add it later", one "I don\'t have this"', {
+check('4. One added, one "I\'ll add it later", one "I don\'t have this" → skipped ones still needed, not done', {
   income: ['opt-cpt', 'on-campus-job', 'scholarship'],
   details: { 'opt-w2': ['w2.pdf'], 'campus-w2': 'later', 'scholarship-1042s': 'none' },
 }, {
   items: ['opt-cpt:document:added', 'on-campus-job:document:later', 'scholarship:document:none'],
   documents: '1 of 3 documents added',
   incomeLine: null,
-  done: true,
+  done: false,
 })
 check('5. Freelance, "Yes, I got one" (1099-NEC uploaded)', { income: ['freelance'], details: { 'freelance-form': 'yes', 'freelance-1099': ['nec.pdf'] } }, {
   items: ['freelance:document:added'],

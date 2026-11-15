@@ -24,8 +24,9 @@ import { OtherWaysToFile } from '../residency/OtherWaysToFile'
 // ready, not-supported). ?home=new|progress|documents|ready|notsupported shows a test state.
 //
 // Layout (12-column grid): phone one column; iPad 5 + 3 columns; laptop 8 + 4.
-//   main  hero card (the one cobalt button) · the state's main card
-//   side  the state's side cards · "Filing for an earlier year?" · privacy line
+//   main  hero card (the one cobalt button, then "Filing for an earlier year?"
+//         as a secondary button) · the state's main card
+//   side  the state's side cards · privacy line
 // The hero and the side column start on the same top edge.
 // Cards: white surface, radius lg, shadow (hero: shadow 2, others: shadow 1), padding 24 (32 for the hero from 600px).
 // Motion: the hero rises in, cards stagger in, the progress row fills once;
@@ -269,19 +270,18 @@ export default function HomePage() {
                   <PrimaryButton onClick={() => go(status.buttonTarget)}>{status.buttonLabel}</PrimaryButton>
                 </motion.div>
               </AnimatePresence>
+              {/* Secondary, right under the cobalt button: no outline, cobalt label (designer's call); opens the earlier-years sheet */}
+              {PREVIOUS_TAX_YEARS.length > 0 && (
+                <div className="-mt-4 flex flex-col">
+                  <SecondaryButton tone="quiet" onClick={() => setEarlier(true)}>Filing for an earlier year?</SecondaryButton>
+                </div>
+              )}
             </motion.section>
             {main}
           </div>
 
           <div className="col-span-full flex flex-col gap-6 tablet:col-span-3 desktop:col-span-4">
             {side}
-            {PREVIOUS_TAX_YEARS.length > 0 && (
-              <motion.div {...card(side.length + 1)} className="flex">
-                <button type="button" onClick={() => setEarlier(true)} className={linkClass}>
-                  Filing for an earlier year?
-                </button>
-              </motion.div>
-            )}
             {PRIVACY_LINE && <p className="text-small text-text-muted">{PRIVACY_LINE}</p>}
           </div>
         </div>

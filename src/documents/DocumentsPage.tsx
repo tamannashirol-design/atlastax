@@ -32,9 +32,9 @@ import { Link, navigate, useHistoryState } from '../lib/router'
 //           The count ticks up (soft spring) when a document is added.
 //   Groups  Identity · Income documents · Income without a form, each with a
 //           quiet heading and a short friendly line (TODO confirm wording)
-//   Cards   DocumentCard: art, name, hint, status pill, one soft "Add" /
-//           "Replace", and at most one quiet secondary ("Not now" menu with
-//           "Remind me later" / "I don't have this one"; Undo once deferred).
+//   Cards   DocumentCard: art, name, hint and one soft "Add" ("Replace" plus an
+//           "Added" pill once uploaded). No pill while not added, and no "Not
+//           now": every required document is needed to prepare the return.
 //           Drop a file on a card (iPad, laptop) to add it.
 // Each item has its own address: /documents#item-<id> scrolls to and focuses it.
 //
@@ -91,27 +91,10 @@ export default function DocumentsPage() {
     setAnnounce(message)
   }
 
-  // Still to do: documents not added or deferred (documents only, like the count; income items have their own line)
+  // Still to do: every document not added, skipped ones included (documents only, like the count; income items have their own line)
   const toGo = summary.documents.missing
   // Card order for the entrance stagger: Identity, Income documents, then income without a form
   const order = [...GROUPS.flatMap((g) => docs.filter((d) => d.group === g.id)), ...income].map((i) => i.id)
-
-  /** The one quiet secondary on a card: "Not now" while to do, Undo once deferred. Same states as before. */
-  const secondaryFor = (d: DocumentItem) => {
-    if (d.status === 'missing')
-      return {
-        kind: 'menu' as const,
-        label: 'Not now',
-        items: d.optional
-          ? [{ label: 'I don’t have one', onSelect: () => change(d.id, () => setDetail(d.uploadScreen, 'none'), `${d.form}: you don’t have one`) }]
-          : [
-              { label: 'Remind me later', onSelect: () => change(d.id, () => setDetail(d.uploadScreen, 'later'), `${d.form}: you’ll add it later`) },
-              { label: 'I don’t have this one', onSelect: () => change(d.id, () => setDetail(d.uploadScreen, 'none'), `${d.form}: you don’t have this`) },
-            ],
-      }
-    if (d.status === 'later' || d.status === 'none') return { kind: 'button' as const, label: 'Undo', onClick: () => change(d.id, () => clearDetail(d.uploadScreen), `${d.form}: not added yet`) }
-    return undefined
-  }
 
   const t = (i: number) => (reduce ? spring.fade : { ...spring.soft, delay: i * 0.04 })
   const enter = reduce ? { opacity: 0 } : { opacity: 0, y: 8 }
@@ -221,11 +204,11 @@ export default function DocumentsPage() {
                         index={order.indexOf(d.id)}
                         name={d.form}
                         optional={d.optional}
-                        hint={d.status === 'added' ? d.files.join(', ') : d.source}
+                        // The hint stays the same once added (a long file name would grow the card); files are listed under Replace
+                        hint={d.source}
                         artwork={d.id === 'passport' || d.id === 'i94' ? 'passport' : d.id === 'state-id' ? 'id' : 'document'}
-                        pill={d.status === 'added' ? 'added' : d.status === 'later' ? 'later' : d.status === 'none' ? 'none' : d.optional ? 'optional' : 'todo'}
+                        pill={d.status === 'added' ? 'added' : undefined}
                         primary={{ label: d.status === 'added' ? 'Replace' : 'Add', onClick: () => setUploading({ item: d }) }}
-                        secondary={secondaryFor(d)}
                         onDropFile={(file) => setUploading({ item: d, file })}
                       />
                     ))}
@@ -252,7 +235,7 @@ export default function DocumentsPage() {
                       name={item.incomeLabel}
                       hint="No form for this one"
                       artwork="document"
-                      pill={item.status === 'later' ? 'later' : item.status === 'provided' ? 'added' : 'details'}
+                      pill={item.status === 'provided' ? 'added' : item.status === 'details-needed' ? 'details' : undefined}
                       secondary={
                         item.status === 'details-needed'
                           ? { kind: 'button', label: 'Remind me later', onClick: () => change(item.id, () => setDetail(selfReportKey(item.id), 'later'), `${item.incomeLabel}: you’ll add the details later`) }
@@ -272,7 +255,7 @@ export default function DocumentsPage() {
                   Continue
                 </PrimaryButton>
                 {!summary.done && (
-                  <p className="text-small text-text-muted tablet:col-span-2">Add each document, or choose “Not now” for the ones you don’t have yet, to continue.</p>
+                  <p className="text-small text-text-muted tablet:col-span-2">Add each document to continue.</p>
                 )}
               </div>
             )}

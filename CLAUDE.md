@@ -141,16 +141,17 @@ Rules:
   codes, Documents page, stepper, Home) reads them through
   `requiredItems(answers)` in `src/flow/requiredDocuments.ts`: documents
   (form expected) and self-reported income items (no form, where
-  `reportableWithoutForm`). Skipped uploads store "later" or "none"; both are
-  deferred. Counts via `summarizeItems`, words via `documentsLine` /
+  `reportableWithoutForm`). Skipped uploads store "later" or "none"; both
+  still count as missing (every required document is needed; Continue on
+  Documents stays locked until all are added). Counts via `summarizeItems`, words via `documentsLine` /
   `incomeItemsLine`. Never write a tax rule elsewhere; components never
   decide reportability. `npm run check:documents` tests the function.
   Identity documents (`IDENTITY_DOCUMENTS`): passport and I-94 required; a
   driver's license or state ID is `optional` (shown, never counted).
 - Documents page (`src/documents/`): friendly cards (`DocumentCard`: art,
-  status pill, one soft primary-tint "Add"/"Replace", one quiet secondary:
-  a `MenuButton` "Not now" or Undo; drop a file on a card). Continue is the
-  only cobalt element. ONE page for the tab and the flow.
+  one soft primary-tint "Add"; "Added" pill + "Replace" once uploaded; no
+  pill while not added; no "Not now"; drop a file on a card). Continue is
+  the only cobalt element. ONE page for the tab and the flow.
   The flow opens it with history state { fromFlow: true } (navigate(path,
   state)); only then it shows the stepper and Continue. Items link as
   /documents#item-<id>. The stepper's Documents section uses
