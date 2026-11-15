@@ -10,7 +10,7 @@
 //             ("No, I didn't get one" where the config allows it). Needs
 //             details, unless deferred with "I'll add it later".
 // Picking an income card always registers the income, whatever the form answer.
-import { DOCUMENT_RULES, IDENTITY_DOCUMENTS, type DocumentRule, type IdentityRule } from '../documents.config.ts'
+import { DOCUMENT_RULES, IDENTITY_DOCUMENTS, PREVIOUS_RETURN, type DocumentRule, type IdentityRule } from '../documents.config.ts'
 import type { IncomeId } from '../data/income.ts'
 import type { Answers } from './answers.ts'
 import { isSupportedStudent } from '../residency/fromAnswers.ts'
@@ -20,10 +20,10 @@ export type DocumentStatus = 'added' | 'later' | 'none' | 'missing'
 /** details-needed · later ("I'll add it later") · provided (once details collection exists; TODO confirm with CPA) */
 export type IncomeItemStatus = 'details-needed' | 'later' | 'provided'
 
-/** group: "identity" (e.g. the I-94, needed by everyone with a supported status) or "income" */
+/** group: "identity" (e.g. the I-94, needed by everyone with a supported status), "income", or "other" (the optional previous return) */
 export type DocumentItem = (DocumentRule | (IdentityRule & Partial<Record<keyof Omit<DocumentRule, keyof IdentityRule>, undefined>>)) & {
   kind: 'document'
-  group: 'identity' | 'income'
+  group: 'identity' | 'income' | 'other'
   /** Listed but not counted, never holds anything up (e.g. a state ID) */
   optional?: boolean
   status: DocumentStatus
@@ -50,7 +50,15 @@ export function requiredItems(a: Answers): RequiredItem[] {
         return { ...r, kind: 'document', group: 'identity', status: statusOf(files, v), files }
       })
     : []
-  return identity.concat(incomeItems(a))
+  return identity.concat(incomeItems(a), previousReturn(a))
+}
+
+/** The optional previous return, only for people who said they filed before. Same storage as every upload. */
+function previousReturn(a: Answers): RequiredItem[] {
+  if (!isSupportedStudent(a) || a.filedBefore !== 'yes') return []
+  const v = a.details?.[PREVIOUS_RETURN.uploadScreen]
+  const files = Array.isArray(v) ? v : []
+  return [{ ...PREVIOUS_RETURN, kind: 'document', group: 'other', status: statusOf(files, v), files }]
 }
 
 function incomeItems(a: Answers): RequiredItem[] {

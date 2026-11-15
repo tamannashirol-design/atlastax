@@ -9,8 +9,8 @@ const files = import.meta.glob<string>('../assets/illustrations/generated/*.webp
 /** srcSet uses widths; `sizes` matches the icon box (80px phone, 96px from 600px). */
 export type Art = { src: string; srcSet: string; sizes: string }
 
-export function art(name: string): Art {
-  const at = (px: number) => files[`../assets/illustrations/generated/income-${name}-${px}.webp`]
+export function art(name: string, set: 'income' | 'documents' = 'income'): Art {
+  const at = (px: number) => files[`../assets/illustrations/generated/${set}-${name}-${px}.webp`]
   return { src: at(96), srcSet: `${at(96)} 96w, ${at(192)} 192w, ${at(288)} 288w`, sizes: '(width >= 600px) 96px, 80px' }
 }
 

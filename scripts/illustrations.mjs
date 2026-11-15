@@ -1,6 +1,7 @@
 // npm run illustrations
 //
-// 1. Normalize: for each designer illustration (src/assets/illustrations/income-*.png),
+// 1. Normalize: for each designer illustration (src/assets/illustrations/income-*.png
+//    and documents-*.png),
 //    trim the fully transparent border, scale the artwork to fit a 384px square
 //    with equal padding (~8%), and save to illustrations/normalized/.
 //    No redrawing, recoloring, or filters. Originals are never modified.
@@ -21,7 +22,7 @@ mkdirSync(NORM, { recursive: true })
 rmSync(OUT, { recursive: true, force: true }) // only ever holds files made by this script
 mkdirSync(OUT, { recursive: true })
 
-for (const file of readdirSync(SRC).filter((f) => /^income-.*\.png$/i.test(f))) {
+for (const file of readdirSync(SRC).filter((f) => /^(income|documents)-.*\.png$/i.test(f))) {
   const name = file.replace(/(\.png)+$/i, '') // also handles "income-optcpt.png.png"
 
   // Bounding box of every pixel that isn't fully transparent

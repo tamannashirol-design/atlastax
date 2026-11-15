@@ -11,6 +11,7 @@ import { SELF_REPORTED_INTRO } from '../documents.config'
 import { clearDetail, setDetail, useAnswers, useFilingYear } from '../flow/answers'
 import { documentsLine, incomeItemsLine, selfReportKey, type DocumentItem, type IncomeItem } from '../flow/requiredDocuments'
 import { DocumentCard } from './DocumentCard'
+import { documentArt, incomeArt } from './artwork'
 import { returnStatus } from '../home/returnStatus'
 import { REVIEW_PATH, pathForSection, resumeScreen } from '../flow/screens'
 import { at, sectionIndex } from '../flow/sections'
@@ -51,6 +52,8 @@ const quietLink = `flex min-h-11 min-w-12 items-center justify-center rounded-sm
 const GROUPS = [
   { id: 'identity', title: 'Identity', line: 'These show who you are. A clear photo or a PDF works.' },
   { id: 'income', title: 'Income documents', line: 'Forms from your employer, school or bank.' },
+  // TODO confirm wording
+  { id: 'other', title: 'Other documents', line: 'Your return from an earlier year, if you have it.' },
 ] as const
 
 export default function DocumentsPage() {
@@ -206,7 +209,7 @@ export default function DocumentsPage() {
                         optional={d.optional}
                         // The hint stays the same once added (a long file name would grow the card); files are listed under Replace
                         hint={d.source}
-                        artwork={d.id === 'passport' || d.id === 'i94' ? 'passport' : d.id === 'state-id' ? 'id' : 'document'}
+                        art={documentArt(d.id)}
                         pill={d.status === 'added' ? 'added' : undefined}
                         primary={{ label: d.status === 'added' ? 'Replace' : 'Add', onClick: () => setUploading({ item: d }) }}
                         onDropFile={(file) => setUploading({ item: d, file })}
@@ -234,7 +237,7 @@ export default function DocumentsPage() {
                       index={order.indexOf(item.id)}
                       name={item.incomeLabel}
                       hint="No form for this one"
-                      artwork="document"
+                      art={incomeArt(item.income)}
                       pill={item.status === 'provided' ? 'added' : item.status === 'details-needed' ? 'details' : undefined}
                       secondary={
                         item.status === 'details-needed'

@@ -13,6 +13,7 @@ import { LaptopPreview } from '../intro/LaptopPreview'
 import { VisaDemo } from '../intro/scenes'
 import { FlagLine } from '../residency/TimeInUS'
 import { DocumentCard, StatusPill } from '../documents/DocumentCard'
+import { documentArt } from '../documents/artwork'
 import { IncomeCard, IncomeRow, Illustration } from '../components/IncomeCard'
 import { extraOptions, incomeOptions } from '../data/income'
 import { SearchSelect } from '../components/SearchSelect'
@@ -218,7 +219,7 @@ function IntroDemo() {
             index={0}
             name="Passport"
             hint="The page with your photo"
-            artwork="passport"
+            art={documentArt('passport')}
             primary={{ label: 'Add', onClick: () => {} }}
           />
         </ul>

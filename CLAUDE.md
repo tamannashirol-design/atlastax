@@ -72,8 +72,9 @@ elements floating over each other. The flow is documented in FLOW.md.
   (listed on /styleguide). No SF Symbols (not licensed for web).
 
 **Illustrations**
-- Soft 3D objects, used on the Income cards and on Home's "Things you may
-  need" (not in the hero). Decorative (empty alt),
+- Soft 3D objects, used on the Income cards, the Documents cards
+  (`documents-*.png`, mapped in `src/documents/artwork.ts`) and on Home's
+  "Things you may need" (not in the hero). Decorative (empty alt),
   lazy loaded. Icon box 80px on phone, 96px from 600px, centered, contain.
 - `npm run illustrations`: trims each file's transparent border, fits the art
   in a 384px square with equal ~8% padding (illustrations/normalized/), then
@@ -148,6 +149,8 @@ Rules:
   decide reportability. `npm run check:documents` tests the function.
   Identity documents (`IDENTITY_DOCUMENTS`): passport and I-94 required; a
   driver's license or state ID is `optional` (shown, never counted).
+  `PREVIOUS_RETURN` (optional, only if filed before) shares its storage with
+  the question's previous-return sheet.
 - Documents page (`src/documents/`): friendly cards (`DocumentCard`: art,
   one soft primary-tint "Add"; "Added" pill + "Replace" once uploaded; no
   pill while not added; no "Not now"; drop a file on a card). Continue is

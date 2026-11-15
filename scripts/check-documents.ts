@@ -116,6 +116,13 @@ check('15. F-1 student: passport and I-94 required, state ID optional (not count
 })
 check('16. J-1, not a student (not supported yet): no identity document', { visa: 'J-1', residency: { j1Student: 'no' } }, { items: [], documents: 'No documents needed yet' })
 
+check('18. Filed before: an optional previous return is listed, never counted', { visa: 'F-1', filedBefore: 'yes' }, {
+  items: ['passport:document:missing', 'i94:document:missing', 'state-id:document:missing', 'previous-return:document:missing'],
+  documents: '0 of 2 documents added',
+})
+check('19. Never filed before: no previous return', { visa: 'F-1', filedBefore: 'no' }, {
+  items: ['passport:document:missing', 'i94:document:missing', 'state-id:document:missing'],
+})
 check('17. Optional state ID never holds things up', { visa: 'F-1', details: { 'passport-upload': ['p.pdf'], 'i94-upload': ['i.pdf'] } }, {
   items: ['passport:document:added', 'i94:document:added', 'state-id:document:missing'],
   documents: '2 of 2 documents added',

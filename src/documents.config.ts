@@ -101,6 +101,21 @@ export const IDENTITY_DOCUMENTS: IdentityRule[] = [
   { id: 'state-id', form: 'Driver’s license or state ID', label: 'Your driver’s license or state ID', source: 'Optional', uploadScreen: 'state-id-upload', optional: true },
 ]
 
+/**
+ * Previous tax return: asked for in the questions when someone has filed
+ * U.S. taxes before ("Have you filed U.S. taxes before?" → Yes). Optional:
+ * shown on the Documents page, never counted, never holds anything up.
+ * TODO confirm with CPA.
+ */
+export const PREVIOUS_RETURN: IdentityRule = {
+  id: 'previous-return',
+  form: 'Previous tax return',
+  label: 'Your previous U.S. tax return',
+  source: 'Optional',
+  uploadScreen: 'previous-return-upload',
+  optional: true,
+}
+
 /** Shown above self-reported items on the Documents page. Neutral: no tax advice, amounts or thresholds. */
 export const SELF_REPORTED_INTRO = 'You told us you had this income. We’ll ask for the details here.'
 

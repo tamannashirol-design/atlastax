@@ -243,17 +243,22 @@ or /motion → Intro, with a 390 / 820 / 1032 / 1280 width toggle and
     to add more." (TODO confirm). Income items: their own line.
   - Groups with a quiet heading and a short line (TODO confirm): Identity
     ("These show who you are. A clear photo or a PDF works."), Income
-    documents ("Forms from your employer, school or bank."), Income without
-    a form (the neutral self-reported line).
-  - Card (`DocumentCard`): art (the passport illustration for Passport and
-    I-94; a UI icon otherwise), name, one-line hint (the driver's license or
+    documents ("Forms from your employer, school or bank."), Other documents
+    ("Your return from an earlier year, if you have it."), Income without a
+    form (the neutral self-reported line).
+  - Previous tax return (optional, `PREVIOUS_RETURN`): only when "Have you
+    filed U.S. taxes before?" is Yes. The question's upload sheet and this
+    card save to the same place, so a return added in the questions shows
+    "Added" here. Never counted, never holds anything up.
+  - Card (`DocumentCard`): the designer's illustration on its own row
+    (80px phone, 96px from 600px; mapping in `src/documents/artwork.ts`;
+    income without a form uses that income card's art), then name, one-line hint (the driver's license or
     state ID says "Optional"), and ONE soft button "Add" (primary tint, navy
     text). Not added yet: just "Add", no pill. Added: an "Added" pill (text
     + check) in the top-right corner, level with the name, and "Replace";
     the card keeps exactly the same size (the pill's space is reserved on
     every card that can be added, and the hint doesn't change; file names
-    are listed under Replace). On iPad portrait (narrowest cards) the art
-    sits on its own row so the name keeps its width beside the pill. No "Not now" or
+    are listed under Replace). No "Not now" or
     "I don't have this" here: every required document is needed to prepare
     the return accurately. Income without a form: a "Details needed" pill
     and a quiet "Remind me later" / Undo. White, radius lg, faint sage

@@ -9,7 +9,6 @@ import {
   DownloadSimpleIcon,
   FileTextIcon,
   HouseIcon,
-  IdentificationCardIcon,
   MagnifyingGlassIcon,
   MinusCircleIcon,
   PlusIcon,
@@ -130,6 +129,5 @@ export const icons: { name: string; Icon: Icon; reason: string }[] = [
   { name: 'WarningCircle', Icon: WarningCircleIcon, reason: 'Needs your attention (with text): a trip that doesn’t add up, past the student years' },
   { name: 'Plus', Icon: PlusIcon, reason: 'Add a trip' },
   { name: 'Trash', Icon: TrashIcon, reason: 'Delete a trip (button labelled for screen readers)' },
-  { name: 'IdentificationCard', Icon: IdentificationCardIcon, reason: 'Documents: a driver’s license or state ID (until artwork exists)' },
   { name: 'ArrowSquareOut', Icon: ArrowSquareOutIcon, reason: 'Link opens another website in a new tab (other ways to file)' },
 ]

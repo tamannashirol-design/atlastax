@@ -8,6 +8,7 @@ import { UploadAnswer } from '../components/UploadAnswer'
 import { DebugStack, useUrlFlag } from '../lib/debug'
 import { navigate, useHistoryState } from '../lib/router'
 import { setAnswers, setDetail, useAnswers, useFilingYear } from './answers'
+import { PREVIOUS_RETURN } from '../documents.config'
 import { isOutOfScope } from '../residency/fromAnswers'
 import { UnsupportedSheet } from '../residency/UnsupportedSheet'
 import { sectionIndex } from './sections'
@@ -65,7 +66,10 @@ export default function FlowPage({ path }: { path: string }) {
   }
   const [sheet, setSheet] = useState(false)
   const [unsupported, setUnsupported] = useState(false)
-  const [priorFiles, setPriorFiles] = useState<string[]>(() => (typeof answers.priorReturn === 'object' ? [answers.priorReturn.fileName] : []))
+  // Saved where the Documents page reads it, so a return added here shows "Added" there (and the other way round)
+  const priorSaved = answers.details?.[PREVIOUS_RETURN.uploadScreen]
+  const priorFiles: string[] = Array.isArray(priorSaved) ? priorSaved : typeof answers.priorReturn === 'object' ? [answers.priorReturn.fileName] : []
+  const setPriorFiles = (files: string[]) => setDetail(PREVIOUS_RETURN.uploadScreen, files)
   const firstRender = useRef(true)
   const [grid] = useUrlFlag('grid')
   const [outlines] = useUrlFlag('outlines')

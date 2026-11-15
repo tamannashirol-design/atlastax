@@ -5,6 +5,9 @@
 - Income-card illustrations: provided by the AtlasTax designer
   (`src/assets/illustrations/income-*.png`). Source and license: to be
   recorded by the designer.
+- Documents-card illustrations: provided by the AtlasTax designer
+  (`src/assets/illustrations/documents-*.png`). Source and license: to be
+  recorded by the designer. Not used yet: the two 1098-T files.
 - Shipped as 1x/2x/3x WebP copies made by `npm run illustrations`
   (scaled only; no cropping, recoloring, or filters).
 - An earlier candidate set from Microsoft Fluent Emoji 3D (MIT) was evaluated

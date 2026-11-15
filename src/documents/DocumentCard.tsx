@@ -1,11 +1,12 @@
-import { CheckIcon, CircleDashedIcon, FileTextIcon, IdentificationCardIcon } from '@phosphor-icons/react'
+import { CheckIcon, CircleDashedIcon } from '@phosphor-icons/react'
 import { motion, useReducedMotionConfig } from 'framer-motion'
-import { useRef, useState, type DragEvent, type ReactNode } from 'react'
-import { art } from '../data/income'
+import { useRef, useState, type DragEvent } from 'react'
+import type { Art } from '../data/income'
 import { spring } from '../lib/motion'
 
 // One document on the Documents page: a friendly card, not a form row.
-//   [art] name · one-line hint                                   [Added]
+//   illustration (the designer's art: 80px phone, 96px from 600px)
+//   name · one-line hint                                         [Added]
 //   The pill sits top-right, level with the name, so the card keeps its size
 //   when a document is added (text + icon, never color alone)
 //   one action: a soft "Add" (primary tint, navy text; never cobalt) or
@@ -31,7 +32,8 @@ type Props = {
   optional?: boolean
   /** One-line hint (unchanged once added, so the card keeps its size) */
   hint: string
-  artwork: 'passport' | 'id' | 'document'
+  /** The designer's illustration (decorative); see documents/artwork.ts */
+  art?: Art
   pill?: Pill
   /** The one action: Add / Replace. Omit for items that can't be added (self-reported income). */
   primary?: { label: string; onClick: () => void }
@@ -42,7 +44,7 @@ type Props = {
   index: number
 }
 
-export function DocumentCard({ id, name, optional, hint, artwork, pill, primary, secondary, onDropFile, index }: Props) {
+export function DocumentCard({ id, name, optional, hint, art, pill, primary, secondary, onDropFile, index }: Props) {
   const reduce = useReducedMotionConfig() ?? false
   const [over, setOver] = useState(false)
   const depth = useRef(0)
@@ -85,13 +87,10 @@ export function DocumentCard({ id, name, optional, hint, artwork, pill, primary,
         className="grid w-full min-w-0 grid-cols-[minmax(0,1fr)] rounded-lg border border-border-decorative bg-surface shadow-1 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-text"
       >
         <div className="flex flex-col gap-4 p-6 [grid-area:1/1]">
-          {/* Phone and laptop: [art] [name + hint] [pill] in one row. iPad portrait (narrowest cards):
-              the art sits on its own row so the name keeps enough width beside the pill. */}
-          <div className="grid grid-cols-[auto_minmax(0,1fr)_auto] items-start gap-3 tablet:grid-cols-[minmax(0,1fr)_auto] desktop:grid-cols-[auto_minmax(0,1fr)_auto]">
-            <span className="flex tablet:col-span-2 tablet:col-start-1 tablet:row-start-1 desktop:col-span-1">
-              <Art kind={artwork} />
-            </span>
-            <div className="flex min-w-0 flex-col tablet:col-start-1 tablet:row-start-2 desktop:col-start-2 desktop:row-start-1">
+          {/* Illustration on its own row, then [name + hint] [pill]: the name gets the card's full width beside the pill */}
+          {art && <Illustration art={art} />}
+          <div className="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-3">
+            <div className="flex min-w-0 flex-col">
               <h3 id={`item-${id}-title`} className="text-body font-semibold">
                 {/* Keep hyphenated names together (I-94, W-2): an invisible word joiner on each side of the hyphen */}
                 {name.replace(/(\S)-(?=\S)/g, '$1\u2060-\u2060')}
@@ -102,7 +101,7 @@ export function DocumentCard({ id, name, optional, hint, artwork, pill, primary,
             </div>
             {/* "Added": top-right, level with the name (same 24pt line height). Its space is reserved on every card that can be
                 added (invisible until then), so the text column never changes width and the card never changes size. */}
-            <span className="flex tablet:col-start-2 tablet:row-start-2 desktop:col-start-3 desktop:row-start-1">
+            <span className="flex">
               {pill === 'added' ? <StatusPill pill={pill} /> : primary && <StatusPill pill="added" placeholder />}
             </span>
           </div>
@@ -170,15 +169,7 @@ export function StatusPill({ pill, placeholder = false }: { pill: Pill; /** Hold
   )
 }
 
-function Art({ kind }: { kind: Props['artwork'] }): ReactNode {
-  if (kind === 'passport') {
-    const a = art('optcpt')
-    return <img src={a.src} srcSet={a.srcSet} sizes="48px" alt="" width={48} height={48} loading="lazy" decoding="async" className="size-12 shrink-0 object-contain" />
-  }
-  const Icon = kind === 'id' ? IdentificationCardIcon : FileTextIcon
-  return (
-    <span aria-hidden className="flex size-12 shrink-0 items-center justify-center rounded-md bg-sage-100">
-      <Icon size={24} weight="regular" />
-    </span>
-  )
+/** The designer's illustration: decorative (empty alt), lazy loaded; box 80px on phone, 96px from 600px, contain. */
+function Illustration({ art }: { art: Art }) {
+  return <img src={art.src} srcSet={art.srcSet} sizes={art.sizes} alt="" width={96} height={96} loading="lazy" decoding="async" className="size-20 shrink-0 object-contain tablet:size-24" />
 }
