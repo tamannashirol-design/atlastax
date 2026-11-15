@@ -2,6 +2,7 @@ import DocumentsPage from './documents/DocumentsPage'
 import FlowPage from './flow/FlowPage'
 import { isFlowPath } from './flow/screens'
 import HomePage from './home/HomePage'
+import ProfilePage from './profile/ProfilePage'
 import LandingPage from './landing/LandingPage'
 import { useLoggedIn } from './lib/auth'
 import PlaceholderPage from './pages/PlaceholderPage'
@@ -22,6 +23,9 @@ export default function App() {
   if (path === '/documents') return <DocumentsPage />
   // Logged out: the intro is the entry page. Logged in: Home (fake auth, see lib/auth)
   if (path === '/') return loggedIn ? <HomePage /> : <LandingPage />
+  // The intro, always (logged in or not)
+  if (path === '/welcome') return <LandingPage />
+  if (path === '/profile') return <ProfilePage />
   if (isPlaceholderPath(path)) return <PlaceholderPage path={path} />
 
   return (

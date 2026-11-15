@@ -276,25 +276,44 @@ or /motion → Intro, with a 390 / 820 / 1032 / 1280 width toggle and
   behaviour only; visuals from our design system). Add it only after the
   delete-documents feature exists in the app. Not built.
 
-## 1. Home (built: `src/home/HomePage.tsx`)
+## 1. Home (built: `src/home/`)
 
-- Title "Your 2026 tax return" (TAX_YEAR in config) and "For students on an
-  F‑1, J‑1 or M‑1 visa filing Form 1040‑NR." (**TODO confirm**).
-- One primary action: **Start your 2026 return**, or once anything is
-  answered, **Continue where you left off** (goes to the first unfinished
-  screen) with the compact stepper showing their section.
-- "File for a previous year": quiet buttons for the years in
-  PREVIOUS_TAX_YEARS (config; now 2025, 2024, 2023). Each year runs the same
-  flow with its own saved answers; the year shows in titles and questions.
-  A year with answers shows "In progress".
-- Privacy line: PRIVACY_LINE in config, empty (hidden) until confirmed.
-  **TODO confirm** what we can promise.
-- Help: "Replay intro" (opens the intro in a dialog). No how-it-works,
-  deadlines or news.
-- Logo in the top bar settles in on the first load of each session (rise 4
-  + fade, soft spring after a 200ms beat, ~600ms). Not under reduced motion,
-  nowhere else.
-- Home is for logged-in people (fake switch for now, see the intro above).
+The landing screen for everyone logged in ("/"), in every state of the
+return. The questions start only from Home's button; every question has
+"Save and exit" (answers save as you go) and the first question's back
+arrow returns to Home. /welcome always shows the intro; its Get started
+lands on Home (after a FAKE sign-in for now; TODO confirm real accounts).
+
+State comes from ONE function, `returnStatus(answers, year)`
+(`src/home/returnStatus.ts`), which Home and the Documents page use:
+{ state, headline, buttonLabel, buttonTarget, progress, nextSteps } plus
+the documents summary and "Your answers". Test states: ?home=new|progress|
+documents|ready (doesn't change saved answers).
+
+| State | Hero headline | Cobalt button (the only one) | Below the hero |
+|---|---|---|---|
+| new | Let's start your return | Start your return | Things you may need (TODO confirm): Passport and I-20 · Your W-2 or 1042-S · Travel history |
+| in-progress | You're on step N of 6: {section} | Continue where you left off (next unanswered question, or Documents) | What's next (links) · Your answers (Edit) |
+| needs-documents | Next: add your documents | Add documents | What's missing (each links to its item on Documents) · Documents summary · Your answers |
+| ready | Your return is ready | Download your forms (TODO: real forms; goes to Review, not built) | Your forms (PDF buttons, TODO) · Your answers with "Review again" |
+
+- Hero: "2026 tax return", the headline, one plain sentence (TODO confirm),
+  the progress row (all 6 sections with names: done = check, current =
+  bold), the button. New state: passport, graduation cap and bank
+  illustrations overlap in the corner (decorative).
+- Layout: phone one column; iPad 5 + 3 columns; laptop 8 + 4. The hero and
+  the side column share a top edge. White cards (radius lg, shadow) on the
+  page background.
+- "Filing for an earlier year?" opens a sheet listing PREVIOUS_TAX_YEARS
+  (config). Privacy line: PRIVACY_LINE (config), hidden until confirmed.
+- "Replay intro" lives on Profile now. No Help, how-it-works, deadlines,
+  news, time estimates or promises; no jargon.
+- Motion: the hero rises in, cards stagger, the progress row fills once;
+  the hero's text and button cross-fade on a state change. Reduced: fades.
+- The logo settles in once per session (Logo settle).
+- Fake sign-in (testing only): defaults to logged in; the header shows
+  "Logged in (fake)" / "Logged out (fake)" (tap to switch); ?auth=in /
+  ?auth=out; remembered in localStorage.
 
 ## 1 (old). Home, from the reference
 **Source:** `Homepage.png`

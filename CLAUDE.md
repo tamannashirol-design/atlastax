@@ -72,7 +72,8 @@ elements floating over each other. The flow is documented in FLOW.md.
   (listed on /styleguide). No SF Symbols (not licensed for web).
 
 **Illustrations**
-- Soft 3D objects, used only on the Income cards. Decorative (empty alt),
+- Soft 3D objects, used on the Income cards and on Home (the new-state
+  hero cluster and "Things you may need"). Decorative (empty alt),
   lazy loaded. Icon box 80px on phone, 96px from 600px, centered, contain.
 - `npm run illustrations`: trims each file's transparent border, fits the art
   in a 384px square with equal ~8% padding (illustrations/normalized/), then
@@ -157,12 +158,14 @@ Rules:
   `fromAnswers.ts` decides which questions apply. Trips out of the U.S. are
   inverted into stays and counted as a date set. No jargon outside "Show how
   we counted"; no automatic routing. `npm run check:residency`.
-- Fake auth for testing only (`src/lib/auth.ts`): /motion toggle or
-  ?auth=in / ?auth=out. No real authentication yet.
-- Home (`src/home/`): one primary (Start / Continue where you left off),
-  previous years from `PREVIOUS_TAX_YEARS`, privacy line from `PRIVACY_LINE`
-  (empty until confirmed), Help → Replay intro. The logo settles in once per
-  session (Logo `settle`), only here, never under reduced motion.
+- Fake auth for testing only (`src/lib/auth.ts`): defaults to logged in,
+  persists in localStorage, header badge (FakeAuthBadge) switches it, plus
+  ?auth=in / ?auth=out and the /motion toggle. /welcome always shows the intro.
+- Home (`src/home/`): the logged-in landing screen in every state; state
+  from ONE function `returnStatus()` (Home and Documents use it). The
+  questions start only from Home's button; "Save and exit" on every
+  question. Earlier years in a sheet; privacy line from `PRIVACY_LINE`;
+  Replay intro is on Profile. ?home=new|progress|documents|ready for testing.
 - Answers are saved per tax year (`useFilingYear`, `setFilingYear` in
   flow/answers). Never hard-code a year: use the filing year.
 - Copy: no promises (refunds, speed, savings, "free"), no invented numbers;

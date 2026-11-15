@@ -9,7 +9,8 @@ import { SecondaryButton } from '../components/SecondaryButton'
 import { UploadAnswer } from '../components/UploadAnswer'
 import { SELF_REPORTED_INTRO } from '../documents.config'
 import { clearDetail, setDetail, useAnswers, useFilingYear } from '../flow/answers'
-import { documentsLine, incomeItemsLine, requiredItems, selfReportKey, summarizeItems, type DocumentItem, type IncomeItem } from '../flow/requiredDocuments'
+import { documentsLine, incomeItemsLine, selfReportKey, type DocumentItem, type IncomeItem } from '../flow/requiredDocuments'
+import { returnStatus } from '../home/returnStatus'
 import { REVIEW_PATH, pathForSection, resumeScreen } from '../flow/screens'
 import { at, sectionIndex } from '../flow/sections'
 import { spring } from '../lib/motion'
@@ -82,8 +83,10 @@ export default function DocumentsPage() {
   const [uploading, setUploading] = useState<DocumentItem | null>(null)
   const [announce, setAnnounce] = useState('')
   const [why, setWhy] = useState(false)
-  const items = requiredItems(answers)
-  const summary = summarizeItems(items)
+  // Same source as Home and its stepper
+  const status = returnStatus(answers, year)
+  const items = status.items
+  const summary = status.documents
   const docs = items.filter((i): i is DocumentItem => i.kind === 'document')
   const income = items.filter((i): i is IncomeItem => i.kind === 'income')
   const back = resumeScreen(answers).path

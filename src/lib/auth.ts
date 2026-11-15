@@ -1,7 +1,8 @@
 // FAKE sign-in state, for testing only. There is no real authentication yet.
-// Logged out (the default): "/" is the intro page. Logged in: "/" is Home.
-// Switch it with the toggle on /motion, or ?auth=in / ?auth=out in any
-// address (remembered in this browser, then removed from the address).
+// Logged in (the default while developing): "/" is Home. Logged out: "/" is
+// the intro page (/welcome always shows it). Switch it with the badge in the
+// header, the toggle on /motion, or ?auth=in / ?auth=out in any address.
+// Remembered in this browser (localStorage).
 import { useSyncExternalStore } from 'react'
 
 const KEY = 'atlastax:fake-auth'
@@ -9,9 +10,9 @@ const listeners = new Set<() => void>()
 
 function read(): boolean {
   try {
-    return localStorage.getItem(KEY) === 'in'
+    return localStorage.getItem(KEY) !== 'out'
   } catch {
-    return false
+    return true
   }
 }
 

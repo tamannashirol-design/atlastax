@@ -1,6 +1,7 @@
 import { QuestionIcon } from '@phosphor-icons/react'
 import type { ReactNode } from 'react'
 import type { FlowPosition } from '../flow/sections'
+import { Link } from '../lib/router'
 import { AppShell } from './AppShell'
 import { FlowStepper } from './FlowStepper'
 import { PrimaryButton } from './PrimaryButton'
@@ -65,7 +66,17 @@ const keepHyphensTogether = (text: string) => text.replace(/(\S)-(?=\S)/g, '$1\u
 export function QuestionLayout({ year, position, backHref, questionId, question, answers, answerArea = 'fixed', wide = false, canContinue, onContinue, helper, help, onNavigate }: Props) {
   const block = wide ? wideColumn : column
   return (
-    <AppShell title={`${year} tax return`} backHref={backHref} activeTab="home">
+    <AppShell
+      title={`${year} tax return`}
+      backHref={backHref}
+      activeTab="home"
+      // Answers save as you go, so leaving is always safe
+      action={
+        <Link href="/" className="flex min-h-11 items-center rounded-sm text-small font-semibold whitespace-nowrap underline underline-offset-4 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-text">
+          Save and exit
+        </Link>
+      }
+    >
       <div className="flex flex-1 flex-col page-x">
         {/* Phone + iPad portrait: compact stepper, directly under the top bar */}
         <div className="page-content page-grid desktop:hidden">

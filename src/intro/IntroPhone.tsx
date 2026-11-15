@@ -1,5 +1,6 @@
 import { AnimatePresence, motion, useReducedMotionConfig } from 'framer-motion'
 import { useEffect, useLayoutEffect, useRef, useState, type KeyboardEvent, type PointerEvent } from 'react'
+import { FakeAuthBadge } from '../components/FakeAuthBadge'
 import { Logo } from '../components/Logo'
 import { PrimaryButton } from '../components/PrimaryButton'
 import { SecondaryButton } from '../components/SecondaryButton'
@@ -109,7 +110,10 @@ export function IntroPhone({ frame, mode, onClose }: { frame: Frame; mode: Intro
               {page ? (
                 <>
                   <Logo />
-                  <StepDots current={index} total={scenes.length} />
+                  <span className="flex items-center gap-4">
+                    <FakeAuthBadge />
+                    <StepDots current={index} total={scenes.length} />
+                  </span>
                 </>
               ) : (
                 <>

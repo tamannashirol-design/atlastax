@@ -1,126 +1,341 @@
-import { AnimatePresence } from 'framer-motion'
-import { useRef, useState } from 'react'
+import { CheckIcon, CircleDashedIcon, ClockIcon, DownloadSimpleIcon, WarningCircleIcon } from '@phosphor-icons/react'
+import { AnimatePresence, motion, useReducedMotionConfig } from 'framer-motion'
+import { useEffect, useState, type ReactNode } from 'react'
 import { AppShell } from '../components/AppShell'
+import { BottomSheet } from '../components/BottomSheet'
 import { Logo } from '../components/Logo'
-import { FlowStepper } from '../components/FlowStepper'
 import { PrimaryButton } from '../components/PrimaryButton'
+import { ProgressRow } from '../components/ProgressRow'
+import { SecondaryButton } from '../components/SecondaryButton'
 import { PREVIOUS_TAX_YEARS, PRIVACY_LINE, TAX_YEAR } from '../config'
-import { hasProgress, setFilingYear, useAllReturns } from '../flow/answers'
-import { pathForSection, resumeTarget } from '../flow/screens'
-import { Intro, type IntroExit } from '../intro/Intro'
-import { navigate } from '../lib/router'
+import { art, type Art } from '../data/income'
+import { setFilingYear, useAllReturns } from '../flow/answers'
+import { documentHref, documentsLine, incomeItemsLine } from '../flow/requiredDocuments'
+import { resumeTarget } from '../flow/screens'
+import { spring } from '../lib/motion'
+import { Link, navigate } from '../lib/router'
+import { homeFixture } from './fixtures'
+import { returnStatus, type HomeState, type ReturnStatus } from './returnStatus'
 
-// Home, for returning users. One primary action:
-//   nothing saved for TAX_YEAR → "Start your 2026 return"
-//   something saved            → "Continue where you left off", with the
-//                                stepper showing the section they're in
-// Then a quiet row of previous years (only those enabled in config), an
-// optional privacy line (config; empty until confirmed), and Help with
-// "Replay intro". No how-it-works, deadlines or news.
+// Home: the landing screen for everyone who's logged in, in every state of
+// their return (returnStatus() decides: new, in-progress, needs-documents,
+// ready). ?home=new|progress|documents|ready shows a test state.
 //
-// Home is for logged-in people; they never see the intro unless they replay
-// it (logged-out people get the intro as the "/" page). The logo in the top
-// bar settles in on the first load of each session (Logo).
-//
-// Layout: the question column (full width on phone; 6 columns, centered, on
-// iPad and laptop), top-aligned under the top bar like an iOS large title.
-//   32 · title (Display) · 8 · subtitle · 32 · [stepper card · 16] · primary
-//   40 · previous years · 40 · privacy line · 40 · Help (Replay intro) · 32
+// Layout (12-column grid): phone one column; iPad 5 + 3 columns; laptop 8 + 4.
+//   main  hero card (the one cobalt button) · the state's main card
+//   side  the state's side cards · "Filing for an earlier year?" · privacy line
+// The hero and the side column start on the same top edge.
+// Cards: white surface, radius lg, shadow (hero: shadow 2, others: shadow 1), padding 24 (32 for the hero from 600px).
+// Motion: the hero rises in, cards stagger in, the progress row fills once;
+// when the state changes the hero's text and button cross-fade. Reduced: fades.
+// Copy: plain words, no jargon, no time estimates, no promises. TODO confirm all copy.
 
-const column = 'col-span-full tablet:col-span-6 tablet:col-start-2 desktop:col-start-4'
 const linkClass =
-  'flex min-h-11 items-center self-start rounded-sm text-body font-semibold underline underline-offset-4 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-text'
+  'flex min-h-11 items-center rounded-sm text-body font-semibold underline underline-offset-4 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-text'
+
+// TODO confirm: hero sentences
+const SENTENCE: Record<HomeState, (s: ReturnStatus) => string> = {
+  new: () => 'We’ll go through it together, one question at a time.',
+  'in-progress': () => 'Your answers are saved as you go.',
+  'needs-documents': (s) => [documentsLine(s.documents), incomeItemsLine(s.documents)].filter(Boolean).join(' · '),
+  ready: () => 'Your forms are ready to download.',
+}
+
+// TODO confirm: generic, "may" (no statuses, no uploads here)
+const THINGS: { title: string; body: string; art: Art }[] = [
+  { title: 'Passport and I-20', body: 'You may need details from these.', art: art('scholarship') },
+  { title: 'Your W-2 or 1042-S', body: 'If you had a job or a scholarship, you may get one of these.', art: art('contract') },
+  // TODO: a travel illustration would fit better; the passport stands in
+  { title: 'Travel history', body: 'Your trips in and out of the U.S. You can get it from the I-94 website.', art: art('optcpt') },
+]
+
+// TODO: real forms (Review isn't built). Plain names, no form numbers.
+const FORMS = ['Your tax return', 'Your days in the U.S. statement']
 
 export default function HomePage() {
   const returns = useAllReturns()
-  const current = returns[TAX_YEAR]
-  const inProgress = hasProgress(current)
-  const resume = resumeTarget(current ?? {})
-  const [intro, setIntro] = useState(false)
-  const replay = useRef<HTMLButtonElement>(null)
-  const afterIntro = useRef<() => void>(() => {})
+  const fixture = homeFixture()
+  const answers = fixture ?? returns[TAX_YEAR] ?? {}
+  const status = returnStatus(answers, TAX_YEAR)
+  const reduce = useReducedMotionConfig() ?? false
+  const [earlier, setEarlier] = useState(false)
+  const card = (i: number) => ({
+    initial: reduce ? { opacity: 0 } : { opacity: 0, y: 12 },
+    animate: { opacity: 1, y: 0 },
+    transition: reduce ? spring.fade : { ...spring.soft, delay: 0.08 + i * 0.06 },
+  })
 
-  const open = (year: number) => {
+  useEffect(() => {
+    document.title = 'Home · AtlasTax'
+    // Arriving from somewhere whose button went away (e.g. the intro): focus the headline
+    if (!document.activeElement || document.activeElement === document.body) document.getElementById('home-title')?.focus({ preventScroll: true })
+  }, [])
+
+  const go = (t: ReturnStatus['buttonTarget']) => {
+    setFilingYear(TAX_YEAR)
+    navigate(t.path, t.state)
+  }
+  const openYear = (year: number) => {
     setFilingYear(year)
-    const target = resumeTarget(returns[year] ?? {})
-    navigate(target.path, target.state)
+    const t = resumeTarget(returns[year] ?? {}, year)
+    navigate(t.path, t.state)
   }
 
-  const closeIntro = (how: IntroExit) => {
-    setIntro(false)
-    // Once the intro has faded out: Get started goes into the flow (the
-    // question takes focus); otherwise focus goes back to Replay intro
-    afterIntro.current = how === 'start' ? () => open(TAX_YEAR) : () => replay.current?.focus()
+  const current = status.state === 'ready' ? null : status.progress.position.section
+
+  const yourAnswers = (i: number, footer?: ReactNode) => (
+    <Card key="answers" id="home-answers" title="Your answers" motionProps={card(i)}>
+      <dl className="flex flex-col divide-y divide-border-decorative">
+        {status.answers.map((r) => (
+          <div key={r.label} className="flex min-h-14 items-center justify-between gap-4 py-1">
+            <div className="flex min-w-0 flex-col">
+              <dt className="text-small text-text-muted">{r.label}</dt>
+              <dd className={`text-body ${r.value ? '' : 'text-text-muted'}`}>{r.value ?? 'Not answered yet'}</dd>
+            </div>
+            <Link href={r.edit} className={`min-w-11 shrink-0 justify-center ${linkClass}`}>
+              {r.value ? 'Edit' : 'Add'}
+              <span className="sr-only"> {r.label.toLowerCase()}</span>
+            </Link>
+          </div>
+        ))}
+      </dl>
+      {footer}
+    </Card>
+  )
+
+  const main: ReactNode[] = []
+  const side: ReactNode[] = []
+  if (status.state === 'new') {
+    side.push(
+      <Card key="things" id="home-things" title="Things you may need" motionProps={card(1)}>
+        <p className="text-small text-text-muted">You don’t need them yet. It may help to have them nearby.</p>
+        <ul className="flex flex-col gap-3">
+          {THINGS.map((t) => (
+            <li key={t.title} className="flex items-center gap-4">
+              <img src={t.art.src} srcSet={t.art.srcSet} sizes="64px" alt="" width={64} height={64} loading="lazy" decoding="async" className="size-16 shrink-0 object-contain" />
+              <div className="flex min-w-0 flex-col">
+                <span className="text-body font-semibold">{t.title}</span>
+                <span className="text-small text-text-muted">{t.body}</span>
+              </div>
+            </li>
+          ))}
+        </ul>
+      </Card>,
+    )
+  }
+  if (status.state === 'in-progress') {
+    main.push(
+      <Card key="next" id="home-next" title="What’s next" motionProps={card(1)}>
+        <ol className="flex flex-col divide-y divide-border-decorative">
+          {status.nextSteps.map((n, i) => (
+            <li key={n.label} className="flex min-h-14 items-center gap-3 py-1">
+              <span aria-hidden className={`flex size-8 shrink-0 items-center justify-center rounded-full text-small font-semibold tabular-nums ${i === 0 ? 'bg-text text-on-primary' : 'bg-sage-100'}`}>
+                {i + 1}
+              </span>
+              <Link href={n.target.path} onClick={() => setFilingYear(TAX_YEAR)} className={linkClass}>
+                {n.label}
+              </Link>
+            </li>
+          ))}
+        </ol>
+      </Card>,
+    )
+    side.push(yourAnswers(2))
+  }
+  if (status.state === 'needs-documents') {
+    const outstanding = status.items.filter((i) => (i.kind === 'document' ? i.status === 'missing' : i.status === 'details-needed'))
+    const later = status.items.filter((i) => i.status === 'later')
+    main.push(
+      <Card key="missing" id="home-missing" title="What’s missing" motionProps={card(1)}>
+        <ul className="flex flex-col divide-y divide-border-decorative">
+          {outstanding.map((i) => (
+            <li key={i.id} className="flex min-h-14 flex-wrap items-center justify-between gap-x-4 py-1">
+              <Link href={documentHref(i.id)} className={linkClass}>
+                {i.kind === 'document' ? i.form : i.incomeLabel}
+              </Link>
+              <span className="flex items-center gap-2 text-small">
+                <CircleDashedIcon size={24} weight="regular" aria-hidden />
+                {i.kind === 'document' ? 'Not added yet' : 'Details needed'}
+              </span>
+            </li>
+          ))}
+        </ul>
+        {later.length > 0 && (
+          <p className="flex items-start gap-2 text-small text-text-muted">
+            <ClockIcon size={24} weight="regular" aria-hidden className="shrink-0" />
+            You’ll add later: {later.map((i) => (i.kind === 'document' ? i.form : i.incomeLabel)).join(', ')}
+          </p>
+        )}
+      </Card>,
+    )
+    side.push(
+      <Card key="docs" id="home-docs" title="Documents" motionProps={card(2)}>
+        <p className="flex items-center gap-2 text-body font-semibold tabular-nums">
+          {status.documents.documents.missing === 0 ? <CheckIcon size={24} weight="regular" aria-hidden /> : <CircleDashedIcon size={24} weight="regular" aria-hidden />}
+          {documentsLine(status.documents)}
+        </p>
+        {status.documents.documents.total > 0 && <Bar value={status.documents.documents.added / status.documents.documents.total} reduce={reduce} />}
+        {incomeItemsLine(status.documents) && (
+          <p className="flex items-center gap-2 text-body tabular-nums">
+            <WarningCircleIcon size={24} weight="regular" aria-hidden />
+            {incomeItemsLine(status.documents)}
+          </p>
+        )}
+        <Link href="/documents" className={`self-start ${linkClass}`}>
+          View documents
+        </Link>
+      </Card>,
+      yourAnswers(3),
+    )
+  }
+  if (status.state === 'ready') {
+    main.push(
+      <Card key="forms" id="home-forms" title="Your forms" motionProps={card(1)}>
+        <ul className="flex flex-col divide-y divide-border-decorative">
+          {FORMS.map((f) => (
+            <li key={f} className="flex min-h-14 items-center justify-between gap-4 py-1">
+              <span className="flex items-center gap-2 text-body">
+                <CheckIcon size={24} weight="regular" aria-hidden />
+                {f}
+              </span>
+              {/* TODO: real PDF downloads */}
+              <button
+                type="button"
+                className="flex h-11 shrink-0 items-center gap-2 rounded-sm border border-border-strong bg-surface px-4 text-body font-semibold active:bg-sage-100 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-text"
+              >
+                <DownloadSimpleIcon size={24} weight="regular" aria-hidden />
+                PDF<span className="sr-only">: {f}</span>
+              </button>
+            </li>
+          ))}
+        </ul>
+      </Card>,
+    )
+    side.push(
+      yourAnswers(
+        2,
+        <Link href="/visa" onClick={() => setFilingYear(TAX_YEAR)} className={`self-start ${linkClass}`}>
+          Review again
+        </Link>,
+      ),
+    )
   }
 
   return (
     <AppShell title={<Logo settle />} activeTab="home">
       <div className="page-x">
-        <div className="page-content page-grid pt-8 pb-8">
-          <div className={`flex flex-col ${column}`}>
-            <h1 className="font-display text-display text-balance">Your {TAX_YEAR} tax return</h1>
-            {/* TODO confirm: who the app is for (FLOW.md) */}
-            <p className="mt-2 text-body text-text-muted">For students on an F‑1, J‑1 or M‑1 visa filing Form 1040‑NR.</p>
+        <div className="page-content page-grid items-start gap-y-6 pt-6 pb-12 tablet:pt-8">
+          {fixture && (
+            <p className="col-span-full text-small text-text-muted">
+              Test state: {new URLSearchParams(window.location.search).get('home')} (from the address). Your saved answers aren’t changed.
+            </p>
+          )}
 
-            {inProgress && (
-              <div className="mt-8 flex flex-col gap-2 rounded-md border border-border-strong bg-surface px-4 py-2">
-                <span className="pt-2 text-small text-text-muted">You’re in this section</span>
-                <FlowStepper
-                  presentation="compact"
-                  position={resume.position}
-                  onNavigate={(section) => {
-                    setFilingYear(TAX_YEAR)
-                    const target = pathForSection(section, current ?? {})
-                    navigate(target.path, target.state)
-                  }}
-                />
+          <div className="col-span-full flex flex-col gap-6 tablet:col-span-5 desktop:col-span-8">
+            {/* Hero: the one focal point and the only cobalt element */}
+            <motion.section
+              aria-labelledby="home-title"
+              initial={reduce ? { opacity: 0 } : { opacity: 0, y: 16 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={reduce ? spring.fade : spring.soft}
+              className="flex flex-col gap-6 rounded-lg bg-surface p-6 shadow-2 tablet:p-8"
+            >
+              {/* Phone: label (bottom-aligned) beside the art, headline full width below.
+                  600px+: label and headline on the left, art spanning both on the right. */}
+              <div className="grid grid-cols-[minmax(0,1fr)_auto] gap-x-4 gap-y-2">
+                <p className="self-end text-small text-text-muted tablet:col-start-1 tablet:row-start-1">{TAX_YEAR} tax return</p>
+                {status.state === 'new' && <ArtCluster />}
+                <div className="col-span-2 flex min-w-0 flex-col gap-2 tablet:col-span-1 tablet:row-start-2">
+                  <AnimatePresence mode="wait" initial={false}>
+                    <motion.div key={status.state} className="flex flex-col gap-2" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={spring.quick}>
+                      <h1 id="home-title" tabIndex={-1} className="font-display text-display text-balance outline-none">
+                        {status.headline}
+                      </h1>
+                      <p className="text-body text-text-muted tabular-nums">{SENTENCE[status.state](status)}</p>
+                    </motion.div>
+                  </AnimatePresence>
+                </div>
               </div>
-            )}
+              <ProgressRow done={status.progress.done} current={current} />
+              <AnimatePresence mode="wait" initial={false}>
+                <motion.div key={status.state} className="flex flex-col" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={spring.quick}>
+                  <PrimaryButton onClick={() => go(status.buttonTarget)}>{status.buttonLabel}</PrimaryButton>
+                </motion.div>
+              </AnimatePresence>
+            </motion.section>
+            {main}
+          </div>
 
-            <div className={`flex flex-col ${inProgress ? 'mt-4' : 'mt-8'}`}>
-              <PrimaryButton onClick={() => open(TAX_YEAR)}>{inProgress ? 'Continue where you left off' : `Start your ${TAX_YEAR} return`}</PrimaryButton>
-            </div>
-
+          <div className="col-span-full flex flex-col gap-6 tablet:col-span-3 desktop:col-span-4">
+            {side}
             {PREVIOUS_TAX_YEARS.length > 0 && (
-              <section aria-labelledby="home-previous" className="mt-10 flex flex-col gap-2">
-                <h2 id="home-previous" className="text-small text-text-muted">
-                  File for a previous year
-                </h2>
-                <ul className="flex flex-wrap gap-2">
-                  {PREVIOUS_TAX_YEARS.map((year) => {
-                    const started = hasProgress(returns[year])
-                    return (
-                      <li key={year} className="flex">
-                        <button
-                          type="button"
-                          onClick={() => open(year)}
-                          className="flex h-11 items-center gap-2 rounded-sm border border-border-strong bg-surface px-4 text-body font-semibold focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-text active:bg-sage-100"
-                        >
-                          <span className="tabular-nums">{year}</span>
-                          {started && <span className="text-small font-normal text-text-muted">In progress</span>}
-                        </button>
-                      </li>
-                    )
-                  })}
-                </ul>
-              </section>
+              <motion.div {...card(side.length + 1)} className="flex">
+                <button type="button" onClick={() => setEarlier(true)} className={linkClass}>
+                  Filing for an earlier year?
+                </button>
+              </motion.div>
             )}
-
-            {PRIVACY_LINE && <p className="mt-10 text-small text-text-muted">{PRIVACY_LINE}</p>}
-
-            <section aria-labelledby="home-help" className="mt-10 flex flex-col gap-1">
-              <h2 id="home-help" className="text-small text-text-muted">
-                Help
-              </h2>
-              <button ref={replay} type="button" onClick={() => setIntro(true)} className={linkClass}>
-                Replay intro
-              </button>
-            </section>
+            {PRIVACY_LINE && <p className="text-small text-text-muted">{PRIVACY_LINE}</p>}
           </div>
         </div>
       </div>
 
-      <AnimatePresence onExitComplete={() => afterIntro.current()}>{intro && <Intro onClose={closeIntro} />}</AnimatePresence>
+      <AnimatePresence>
+        {earlier && (
+          <BottomSheet title="Filing for an earlier year?" onClose={() => setEarlier(false)}>
+            <p className="text-body text-text-muted">Pick the year you’re filing for. Each year keeps its own answers.</p>
+            <ul className="flex flex-col gap-2 pt-6">
+              {PREVIOUS_TAX_YEARS.map((y) => (
+                <li key={y} className="flex flex-col">
+                  <SecondaryButton onClick={() => openYear(y)}>
+                    <span className="tabular-nums">{y} tax return</span>
+                  </SecondaryButton>
+                </li>
+              ))}
+            </ul>
+          </BottomSheet>
+        )}
+      </AnimatePresence>
     </AppShell>
+  )
+}
+
+/** A white card that's a labelled region. */
+function Card({ id, title, children, motionProps }: { id: string; title: string; children: ReactNode; motionProps: object }) {
+  return (
+    <motion.section {...motionProps} aria-labelledby={id} className="flex flex-col gap-4 rounded-lg bg-surface p-6 shadow-1">
+      <h2 id={id} className="font-display text-title">
+        {title}
+      </h2>
+      {children}
+    </motion.section>
+  )
+}
+
+/** Three overlapping illustrations in one grid cell (no absolute positioning). Decorative. */
+function ArtCluster() {
+  const img = (a: Art, cls: string) => (
+    <img src={a.src} srcSet={a.srcSet} sizes="80px" alt="" width={80} height={80} loading="lazy" decoding="async" className={`size-16 object-contain [grid-area:1/1] tablet:size-20 ${cls}`} />
+  )
+  return (
+    <div aria-hidden data-stack className="col-start-2 row-start-1 grid size-28 justify-self-end tablet:row-span-2 tablet:size-36">
+      {img(art('optcpt'), 'self-start justify-self-start')}
+      {img(art('scholarship'), 'self-start justify-self-end')}
+      {img(art('bank'), 'self-end justify-self-center')}
+    </div>
+  )
+}
+
+/** Thin navy bar (decorative; the line above says it). */
+function Bar({ value, reduce }: { value: number; reduce: boolean }) {
+  return (
+    <span aria-hidden className="flex h-1 overflow-hidden rounded-full bg-border-decorative">
+      <motion.span
+        className="w-full origin-left rounded-full bg-text"
+        initial={{ scaleX: reduce ? value : 0 }}
+        animate={{ scaleX: value }}
+        transition={reduce ? spring.fade : { ...spring.soft, delay: 0.3 }}
+      />
+    </span>
   )
 }

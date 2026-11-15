@@ -202,11 +202,11 @@ if (!only || 'previous-return sheet'.includes(only)) {
   await page.close()
 }
 
-// The intro replayed from Help on Home (logged in; a dialog)
+// The intro replayed from Profile (logged in; a dialog)
 if (!only || 'intro replay'.includes(only)) {
   const where = 'intro replay'
   const page = await browser.newPage({ viewport: { width: 390, height: 844 } })
-  await page.goto(BASE + '/?auth=in', { waitUntil: 'networkidle' })
+  await page.goto(BASE + '/profile?auth=in', { waitUntil: 'networkidle' })
   await page.evaluate(() => sessionStorage.clear())
   await page.evaluate(watchBody)
   console.log(where)
@@ -236,8 +236,16 @@ if (!only || 'intro replay'.includes(only)) {
   await tabTo(page, /^Get started$/)
   await page.keyboard.press('Enter')
   await settle(page)
-  // The question heading takes focus (headings have no ring by design)
-  await check(page, where, 'Get started → first question', { focus: /^What is your visa type\?$/, ring: false })
+  // Get started goes to Home (never straight into the questions); its headline takes focus
+  await check(page, where, 'Get started → Home', { focus: /^Let’s start your return$/, ring: false })
+  // Earlier years: a sheet that traps and returns focus
+  await tabTo(page, /^Filing for an earlier year\?$/)
+  await page.keyboard.press('Enter')
+  await settle(page)
+  await check(page, where, 'earlier years sheet', { focus: /^Close$/ })
+  await page.keyboard.press('Escape')
+  await settle(page)
+  await check(page, where, 'sheet closed → its link', { focus: /^Filing for an earlier year\?$/ })
   await page.close()
 }
 
@@ -267,7 +275,8 @@ if (!only || 'landing wide'.includes(only)) {
   await page.goto(BASE + '/?auth=out', { waitUntil: 'networkidle' })
   await page.evaluate(watchBody)
   console.log(where)
-  await page.keyboard.press('Tab')
+  // The header's fake sign-in badge (testing only) comes first; then the steps
+  await tabTo(page, /^Answer a few simple questions/)
   await check(page, where, 'Tab → selected step', { focus: /^Answer a few simple questions/ })
   await page.keyboard.press('ArrowDown')
   await settle(page)

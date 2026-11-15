@@ -7,6 +7,7 @@ import { FlowStepper } from '../components/FlowStepper'
 import { FormCard } from '../components/FormCard'
 import { Logo } from '../components/Logo'
 import { StepDots } from '../components/StepDots'
+import { ProgressRow } from '../components/ProgressRow'
 import { Intro } from '../intro/Intro'
 import { LaptopPreview } from '../intro/LaptopPreview'
 import { VisaDemo } from '../intro/scenes'
@@ -197,16 +198,9 @@ function IntroDemo() {
           <StepDots current={step} total={3} />
         </div>
         <SecondaryButton onClick={() => setStep((s) => (s + 1) % 3)}>Next step</SecondaryButton>
-        <span className="pt-4 text-body font-semibold">Previous-year button (Home)</span>
-        <Label>Quiet secondary row; only years enabled in config. Shows “In progress” once that year has answers.</Label>
-        <div className="flex flex-wrap gap-2">
-          {['2025', '2024'].map((y, i) => (
-            <span key={y} className="flex h-11 items-center gap-2 rounded-sm border border-border-strong bg-surface px-4 text-body font-semibold">
-              <span className="tabular-nums">{y}</span>
-              {i === 0 && <span className="text-small font-normal text-text-muted">In progress</span>}
-            </span>
-          ))}
-        </div>
+        <span className="pt-4 text-body font-semibold">Progress row (Home hero)</span>
+        <Label>Every section with its name: done (check + name), current (bold), not started (muted). 3 per row on phone, 6 from 600px. Fills once on load.</Label>
+        <ProgressRow done={1} current={1} />
         <span className="pt-4 text-body font-semibold">Laptop preview (wide intro)</span>
         <Label>The real laptop layout (rail + question column) at full size, scaled into a card. Not a device frame. Decorative.</Label>
         {/* inert, as in the intro: a scaled preview isn't clickable */}

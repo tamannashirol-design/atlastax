@@ -1,14 +1,11 @@
 import { useEffect } from 'react'
-import { TAX_YEAR } from '../config'
-import { setFilingYear } from '../flow/answers'
 import { IntroContent } from '../intro/IntroContent'
+import { setLoggedIn } from '../lib/auth'
 import { navigate } from '../lib/router'
 
-// The logged-out entry page ("/" while logged out): the intro itself, as a
-// page. Logged-in people land on Home instead (see App).
-// Get started: starts the current year's return. TODO confirm: account
-// creation will come first once accounts exist.
-// Log in: a placeholder page (no real authentication yet).
+// The intro as a page: "/" while logged out, and /welcome always.
+// Get started and Log in both sign in (FAKE for now) and land on Home, never
+// in the questions. TODO confirm: real sign-up / sign-in once accounts exist.
 export default function LandingPage() {
   useEffect(() => {
     document.title = 'AtlasTax'
@@ -17,12 +14,9 @@ export default function LandingPage() {
     <div className="h-dvh">
       <IntroContent
         mode="page"
-        onClose={(how) => {
-          if (how === 'login') navigate('/login')
-          else {
-            setFilingYear(TAX_YEAR)
-            navigate('/visa')
-          }
+        onClose={() => {
+          setLoggedIn(true)
+          navigate('/')
         }}
       />
     </div>

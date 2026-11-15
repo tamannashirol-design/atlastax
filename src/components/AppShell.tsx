@@ -1,6 +1,7 @@
 import { CaretLeftIcon, FileTextIcon, HouseIcon, UserIcon, type Icon } from '@phosphor-icons/react'
 import type { ReactNode } from 'react'
 import { Link } from '../lib/router'
+import { FakeAuthBadge } from './FakeAuthBadge'
 
 // App shell: three rows filling the screen.
 //   1. Top bar (every breakpoint): back, title.
@@ -19,14 +20,16 @@ const tabs: { id: Tab; href: string; label: string; Icon: Icon }[] = [
 
 const focusRing = 'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-text'
 
-type Props = { title: ReactNode; backHref?: string; activeTab: Tab; children: ReactNode }
+/** action: the top bar's right side (e.g. "Save and exit"). Default: the fake sign-in badge (testing only). */
+type Props = { title: ReactNode; backHref?: string; activeTab: Tab; action?: ReactNode; children: ReactNode }
 
-export function AppShell({ title, backHref, activeTab, children }: Props) {
+export function AppShell({ title, backHref, activeTab, action, children }: Props) {
   return (
     <div className="grid h-dvh grid-rows-[auto_minmax(0,1fr)_auto]">
       {/* Hairline drawn as an inset shadow so the bar stays exactly --top-bar-h tall */}
       <header className="scroll-gutter bg-background shadow-[inset_0_-1px_0_var(--color-border-decorative)] pt-(--safe-top) page-x">
-        <div className="grid h-(--top-bar-h) page-content grid-cols-[2.75rem_minmax(0,1fr)_2.75rem] items-center gap-4">
+        {/* Equal side columns keep the title centred whatever sits on the right */}
+        <div className="grid h-(--top-bar-h) page-content grid-cols-[minmax(2.75rem,1fr)_auto_minmax(2.75rem,1fr)] items-center gap-2">
           {backHref ? (
             <Link href={backHref} aria-label="Back" className={`flex size-11 items-center rounded-sm ${focusRing}`}>
               {/* viewBox cropped to the glyph so the arrow itself sits on the margin */}
@@ -36,7 +39,7 @@ export function AppShell({ title, backHref, activeTab, children }: Props) {
             <span aria-hidden />
           )}
           <div className="flex min-w-0 justify-center truncate text-center text-body font-semibold">{title}</div>
-          <span aria-hidden />
+          <div className="flex min-w-0 justify-end">{action ?? <FakeAuthBadge />}</div>
         </div>
       </header>
 
