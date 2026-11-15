@@ -22,6 +22,10 @@
 //   POST   /api/extraction/:itemId/retry?year=2025 → 204
 //   POST   /api/extraction/scenario { scenario }  → 204 (dev only: what the mock does next)
 //
+//   Review (server/review.ts; ID numbers masked except on reveal):
+//   GET    /api/review?year=2025 → { documents } · PUT /api/review/:itemId?year= → document
+//   GET    /api/review/:itemId/reveal?year=&key= → { value } (Show)
+//
 // Upload headers x-item-id + x-tax-year say which document a file belongs to. Uploading
 // never starts reading; it makes an earlier reading of that document out of date.
 //
@@ -38,6 +42,7 @@ import { DEFAULT_OPTIONS, DEV_FINISH_MS, DEV_UPLOAD_KBPS, type ServerOptions } f
 import { readingJobs, type ExtractionUpdate } from './extraction/jobs.ts'
 import { isScenario, mockProvider, type Scenario } from './extraction/mockProvider.ts'
 import { fingerprintOf, type Notice } from './notice.ts'
+import { reviewStore } from './review.ts'
 import { sniff, storage, type ConsentRecord } from './storage.ts'
 
 type Handler = (req: IncomingMessage, res: ServerResponse, next?: () => void) => void
@@ -69,6 +74,7 @@ export function createApp(overrides: Partial<ServerOptions> = {}): Handler {
     filesDir: store.filesDir,
     listFiles: (id) => store.listFiles(id),
   })
+  const review = reviewStore(jobs, (id) => store.listFiles(id))
 
   return (req, res, next) => {
     const url = new URL(req.url ?? '/', 'http://localhost')
@@ -116,6 +122,27 @@ export function createApp(overrides: Partial<ServerOptions> = {}): Handler {
     if (path === '/api/files' && req.method === 'POST') return upload(req, res, url, sessionId)
 
     if (path.startsWith('/api/extraction')) return extraction(req, res, url, sessionId)
+
+    if (path === '/api/review' || path.startsWith('/api/review/')) {
+      const year = taxYear(url.searchParams.get('year'))
+      if (!year) return send(res, 400, { error: 'year' })
+      if (path === '/api/review' && req.method === 'GET') return send(res, 200, { documents: await review.list(sessionId, year) })
+      const reveal = path.match(/^\/api\/review\/([a-z0-9-]{1,40})\/reveal$/)
+      if (reveal && req.method === 'GET') {
+        const value = review.reveal(sessionId, year, reveal[1], url.searchParams.get('key') ?? '')
+        return value === null ? send(res, 404, { error: 'not-found' }) : send(res, 200, { value })
+      }
+      const one = path.match(/^\/api\/review\/([a-z0-9-]{1,40})$/)
+      if (one && req.method === 'PUT') {
+        const body = await readJson(req)
+        if (!body) return send(res, 400, { error: 'malformed' })
+        const r = await review.save(sessionId, year, one[1], body)
+        if (r === null) return send(res, 404, { error: 'not-found' })
+        if (r === 'not-done') return send(res, 409, { error: 'not-done' })
+        return send(res, 200, r)
+      }
+      return send(res, 404, { error: 'not-found' })
+    }
 
     const del = path.match(/^\/api\/files\/([^/]+)$/)
     if (del && req.method === 'DELETE') {

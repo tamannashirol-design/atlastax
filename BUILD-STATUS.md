@@ -17,7 +17,7 @@ Open the app with `npm run dev`, then http://localhost:5173.
 | 3 | Mock reader | Mock provider (10 scenarios), live reading status, Remove deletes on the server | **Done** (`c00e141`) | `/motion` → "Reading (mock)"; `/documents` → Reading, Added, Couldn't read, Try again on cards | Opus, Sonnet for the pills |
 | **4** | **Consent sheet** | Notice shown before the first upload; "Continue to upload" / "Not now"; server requires it; read again on Profile; `check:consent`. **Plus the consent review fixes** (below). | **Done** (`5cdf3b4`, review fixes in the commit after it) | `/documents` → **Add** on any card (first time). `/profile` → **Privacy**. `/trips` → open "Fill this in from your I-94 travel history". See "How to see step 4" below. | Sonnet for the sheet, Opus for the logic (reviewed and fixed on Opus) |
 | **5** | **Reading page** (redone Nov 15) | One status pill: "Reading your documents" → "Extracting your details" → "Done" (success fill + small settle), each changed only by the mock reader (3–5s per stage); hold 600ms, then Review. Reading starts only when /reading opens (never at upload), every visit reads again. Failures: "Couldn't read" + Try again / Choose another file / Enter it myself, Continue waits. Removed: reading at upload, Reading/Couldn't read on cards, 10s/60s messages, skip-to-Review, minimum display time, Home's "Reading N documents". | **Committed; focus audit has a known flaky part** (below) | `/documents` → **Continue**, or `/reading?reading=normal` / `?reading=fail` | Opus |
-| 6 | Review screen | One document per screen, ticks on every tax-form or identifying value, "Enter it myself" opens it with empty fields, confirmed-values store on the server | Not started | `/review` (shows "coming soon" today) | Opus for logic, Sonnet for polish |
+| **6** | **Review screen** | "Check your details": one document per screen (passport, I-94, then income), "2 of n", file placeholder left (iPad/laptop) or "View document" sheet (phone), editable fields, tick rule, masked IDs with Show, Confirm and continue (locked, says what's left), Skip for now, summary → "Looks good" → `/result`; saved on the server as you go, resumes; states: needs review, all ticked, couldn't read, wrong document, being read after Replace; `check:review` | **Built, waiting for your "next"** | `/review` after the Reading page; states: `/motion` → "Review" or `/review?review=needs` etc. See "How to see step 6". | Opus |
 | R1 | Transcription | Fix the field list to the IRS boxes (1042-S Box 10); turn confirmed values into tax input; `check:taxinput` | Not started | Nothing on screen | Opus |
 | R2 | Engine core, 2025 | 2025 tables with sources, Tax Table method, wages-only; `check:tax` | Not started | Nothing on screen | Opus |
 | R5 | Estimate endpoint | `POST /api/estimate`, stale detection, number switch on the server | Not started | Nothing on screen | Opus |
@@ -33,6 +33,33 @@ Open the app with `npm run dev`, then http://localhost:5173.
 | 8 | Real provider | A real reading service behind the same interface | Not started (waits on legal and the vendor) | Nothing different on screen | Opus |
 
 Old step 7 (summary, download lock) no longer exists as its own step: it is part of R6.
+
+## How to see step 6
+
+1. `npm run dev`, add passport, I-94 and a W-2 on `/documents`, press **Continue**.
+   After "Done" you land on **Check your passport** (1 of 3).
+2. Tick each "This is correct" → **Confirm and continue** unlocks → the I-94, then
+   the W-2, then **Your details** (summary) → **Looks good** → `/result` (Part 2).
+3. Try: **Show** next to the passport number; edit a value (its tick clears);
+   **Skip this document for now**; reload (you stay on the same screen).
+4. Without uploading: `/review?review=needs`, `ticked`, `failed`, `wrongtype`,
+   `replace`, `summary` (also linked on `/motion`).
+
+## Step 6: things to know
+
+- Not on Review yet: optional documents (state ID, previous return) and income
+  without a form. The file preview is a placeholder (showing the real file is
+  open question Q-B for legal).
+- Confirmed values live in server memory only (prototype): restarting the dev
+  server forgets them, and the next Review re-reads the document.
+- Checks: `check:review` (new, in the build), `check:server` (Review section
+  added), focus audit "review" part, `contrast`, build. The Review audit runs
+  through the Reading page first: in 4 runs it passed (15/15) twice and crashed
+  twice while waiting to arrive on /review, likely the same known stall (below).
+  Full audit: every section before "reading page" passed; "trips" passed alone. `check:server` also failed once on a slow retry (over
+  200s) and passed in 21s on the rerun: since that test has no browser, **the
+  stall may be on the server side**, so real users could be affected. Not
+  investigated.
 
 ## How to see step 5
 

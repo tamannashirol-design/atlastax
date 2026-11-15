@@ -10,7 +10,7 @@
 //   until the Reading page starts it again.
 // - Extracted fields stay here for the Review screen (build step 6).
 import { join } from 'node:path'
-import { FIELDS, ITEM_FORMS } from '../../src/extraction.config.ts'
+import { FIELDS, ITEM_FORMS, type FormType } from '../../src/extraction.config.ts'
 import type { FileMeta } from '../storage.ts'
 import type { ExtractedField, ExtractionProvider, Failure, ReadInput } from './provider.ts'
 
@@ -25,7 +25,7 @@ export type ExtractionUpdate =
   | { type: 'document'; run: number; document: DocumentReading }
   | { type: 'removed'; run: number; itemId: string }
 
-type Doc = DocumentReading & { run: number; abort?: AbortController; fields?: ExtractedField[] }
+type Doc = DocumentReading & { run: number; abort?: AbortController; fields?: ExtractedField[]; form?: FormType }
 
 type Deps = {
   /** The provider for a session (the mock's scenario is per session) */
@@ -51,6 +51,9 @@ export function readingJobs({ providerFor, filesDir, listFiles }: Deps) {
   async function filesFor(sessionId: string, year: number, itemId: string) {
     return (await listFiles(sessionId)).filter((m) => m.year === year && m.itemId === itemId).sort((a, b) => a.createdAt.localeCompare(b.createdAt))
   }
+
+  /** Optional hook: a document's files changed (Review clears its checks) */
+  let onFilesChanged: (sessionId: string, year: number, itemId: string) => void = () => {}
 
   /** Mark a document "queued" (synchronously visible to snapshots) and read it in the background. */
   async function start(sessionId: string, year: number, itemId: string, trigger: ReadInput['trigger']) {
@@ -84,7 +87,7 @@ export function readingJobs({ providerFor, filesDir, listFiles }: Deps) {
       for await (const e of providerFor(sessionId).read({ files: files.map((f) => join(filesDir, f.fileId)), forms, fieldsFor: (f) => FIELDS[f], trigger, signal: doc.abort!.signal })) {
         if (e.type === 'stage' && !update({ status: e.stage })) return
         if (e.type === 'failed' && !update({ status: 'failed', failure: e.reason, abort: undefined })) return
-        if (e.type === 'result' && !update({ status: 'ready', fields: e.fields, abort: undefined })) return
+        if (e.type === 'result' && !update({ status: 'ready', fields: e.fields, form: e.form, abort: undefined })) return
       }
     } catch (err) {
       if ((err as Error).name === 'AbortError') return
@@ -105,6 +108,7 @@ export function readingJobs({ providerFor, filesDir, listFiles }: Deps) {
     /** A file was added or removed: any reading of this document is out of date. Stop it and drop it. */
     filesChanged(sessionId: string, year: number | undefined, itemId: string | undefined) {
       if (year === undefined || !isReadable(itemId)) return
+      onFilesChanged(sessionId, year, itemId)
       const key = keyOf(sessionId, year)
       const map = docsOf(key)
       const old = map.get(itemId)
@@ -146,9 +150,19 @@ export function readingJobs({ providerFor, filesDir, listFiles }: Deps) {
       return () => set.delete(on)
     },
 
-    /** Extracted fields for the Review screen (step 6). Server-side only. */
-    fields(sessionId: string, year: number, itemId: string) {
-      return docs.get(keyOf(sessionId, year))?.get(itemId)?.fields ?? null
+    /** The latest reading of a document, with its fields, for Review. Server-side only: values never go out as they are. */
+    reading(sessionId: string, year: number, itemId: string) {
+      const d = docs.get(keyOf(sessionId, year))?.get(itemId)
+      return d ? { status: d.status, failure: d.failure, form: d.form, fields: d.fields ?? null } : null
+    },
+
+    /** Does this person have files for this document? */
+    async hasFiles(sessionId: string, year: number, itemId: string) {
+      return (await filesFor(sessionId, year, itemId)).length > 0
+    },
+
+    whenFilesChange(fn: typeof onFilesChanged) {
+      onFilesChanged = fn
     },
   }
 }

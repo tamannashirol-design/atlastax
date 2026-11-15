@@ -240,6 +240,24 @@ check('removing a file drops the earlier reading too', !(await statusOf('opt-cpt
 check('…and the next start reads the file that’s left', (await startReading()).body.documents.find((d) => d.itemId === 'opt-cpt')?.files === 1 && (await until('opt-cpt', 'ready')))
 check('Try again on a document with no files → 404', (await fetch(`${base}/api/extraction/i94/retry?year=2025`, { method: 'POST', headers: reader })).status === 404)
 
+// Review (server/review.ts): masked out, Show on request, ticks enforced
+type RDoc = { itemId: string; status: string; fields: { key: string; shown: string; ticked: boolean; hasValue: boolean }[] | null }
+const reviewList = async () => ((await (await fetch(`${base}/api/review?year=2025`, { headers: reader })).json()) as { documents: RDoc[] }).documents
+const put = (itemId: string, body: unknown) => fetch(`${base}/api/review/${itemId}?year=2025`, { method: 'PUT', headers: reader, body: JSON.stringify(body) })
+const w2Review = (await reviewList()).find((d) => d.itemId === 'opt-cpt')
+check('Review lists the read W-2 with its details', !!w2Review?.fields?.length)
+check('…the SSN arrives masked', w2Review?.fields?.find((f) => f.key === 'employeeTaxId')?.shown === '•••-••-6789')
+check('…and no full ID number is in the list', !/123-45-6789|12-3456789/.test(JSON.stringify(await reviewList())))
+check('Show sends that one value in full', ((await (await fetch(`${base}/api/review/opt-cpt/reveal?year=2025&key=employeeTaxId`, { headers: reader })).json()) as { value: string }).value === '123-45-6789')
+check('Show refuses a field that isn’t an ID number (404)', (await fetch(`${base}/api/review/opt-cpt/reveal?year=2025&key=wages`, { headers: reader })).status === 404)
+check('another session can’t Show it (404)', (await fetch(`${base}/api/review/opt-cpt/reveal?year=2025&key=employeeTaxId`)).status === 404)
+check('confirming with details left is refused (409)', (await put('opt-cpt', { status: 'confirmed' })).status === 409)
+const tickedDoc = (await (await put('opt-cpt', { fields: { wages: { ticked: true } } })).json()) as RDoc
+check('a tick is saved', tickedDoc.fields?.find((f) => f.key === 'wages')?.ticked === true)
+const editedDoc = (await (await put('opt-cpt', { fields: { wages: { value: '100.00' } } })).json()) as RDoc
+check('editing a value clears its tick (server enforces it)', editedDoc.fields?.find((f) => f.key === 'wages')?.ticked === false)
+check('Review refuses a document this session has no file for (404)', (await put('i94', { fields: {} })).status === 404)
+
 const otherYear = (await (await fetch(`${base}/api/extraction?year=2024`, { headers: reader })).json()) as Snap
 check('another tax year sees none of these documents', otherYear.documents.length === 0)
 const stranger = (await (await fetch(`${base}/api/extraction?year=2025`)).json()) as Snap

@@ -152,17 +152,30 @@ Rules:
   driver's license or state ID is `optional` (shown, never counted).
   `PREVIOUS_RETURN` (optional, only if filed before) shares its storage with
   the question's previous-return sheet.
-- Reading page (`src/reading/`, `/reading`): after Documents → Continue.
-  Rules ONLY in `src/reading/logic.ts` (`npm run check:reading`): statuses come
-  only from the server's events; "2 of 3 documents read" as text; everything
-  already read → straight to /review (replace); everything read while showing
-  → hold (≥1.5s page, ≥0.7s final) then on to /review; anything failed →
-  Continue waits ("Enter them myself" if all failed); optional documents are
-  read and never block. ~10s/~60s change only the words ("Still working…",
-  "Keep going in the background"). Hero is abstract (page lines), never the
-  document or values. Home shows "reading" / "reading-failed" through
-  `returnStatus(answers, year, extraction)`. Dev: `/reading?reading=slow|fast|
-  fail|allfail|wrongtype|blurry|rotated|nostages|normal`, `&thresholds=fast`.
+- Reading page (`src/reading/`, `/reading`): Documents → Continue ALWAYS lands
+  here (no skipping, no minimum time). Opening it starts reading every document
+  from the beginning (`POST /api/extraction/start`). One pill (`ReadingPill`):
+  "Reading your documents" → "Extracting your details" → "Done", each changed
+  only by the server's events (rules ONLY in `src/reading/logic.ts`,
+  `npm run check:reading`); Done fills with `success` and settles on `soft`, holds
+  600ms (`DONE_HOLD_MS`), then /review (replace). A failure: "Couldn't read" rows
+  with Try again / Choose another file / Enter it myself; Continue waits.
+  Optional documents are read and never block. Home shows "reading-failed" through
+  `returnStatus(answers, year, extraction)`. Dev: `/reading?reading=normal|fail|
+  allfail|wrongtype|blurry|rotated`.
+- Review (`src/review/`, `/review`, "Check your details"): one required document
+  per screen, identity first (passport, I-94, then income), "2 of n", then a
+  summary ("Looks good" → /result). Which screen: history state `{ doc }`, else
+  `answers.reviewAt` (resume). Rules ONLY in `src/review/logic.ts` (shared by the
+  server and the screens; `npm run check:review`): tick rule from `needsTick`
+  plus "Please check" (icon + words), not-found values typed (or "Not on my form"
+  where `mayBeBlank`), editing clears the tick, Confirm locked until done and
+  says what's left. ID numbers arrive masked; "Show" fetches one value
+  (`/api/review/:item/reveal`). Saved on the server as you go (`server/review.ts`,
+  memory only); new or removed files clear that document's checks. File preview
+  is a placeholder card ("Passport, file 1"); phone: "View document" sheet.
+  Dev: `/review?review=needs|ticked|failed|wrongtype|replace|summary` (fixtures
+  load only in development).
 - First contact with the server goes through `sessionReady()`
   (`src/lib/session.ts`), so parallel first requests can't create different
   sessions (files in one, the page reading another).
@@ -316,18 +329,20 @@ Rules:
   `npm run check:server` tests the safety rules.
 - Reading (`server/extraction/`): providers behind one interface
   (`provider.ts`); the mock (`mockProvider.ts`, scenarios set on /motion,
-  one per session) is the only one so far. `jobs.ts` reads a document as
-  soon as a file is uploaded with `x-item-id` + `x-tax-year`; adding,
-  replacing or removing a file re-reads it. Only documents in
-  `ITEM_FORMS` are read. The browser gets statuses only, never values
-  (live via `/api/extraction/events`; `useExtraction()` in
-  `src/extraction/client.ts`). Extracted fields stay on the server.
+  one per session) is the only one so far. `jobs.ts` reads only when the
+  Reading page starts it (or Try again); uploading (`x-item-id` + `x-tax-year`)
+  never reads, and adding, replacing or removing a file drops that document's
+  earlier reading. Updates carry a `run` number so late news from an earlier
+  reading is ignored. Only documents in
+  `ITEM_FORMS` are read. The reading channel carries statuses only, never
+  values (live via `/api/extraction/events`; `useExtraction()` in
+  `src/extraction/client.ts`). Values reach the browser only on Review
+  (`/api/review`, ID numbers masked, full only on Show), never in browser storage.
 - Every `UploadAnswer` that stores files passes `upload={{ key, itemId }}`:
   file ids are kept in `answers.fileIds[key]` (same order as the names) so
   Remove deletes the file on the server. No `upload` prop = measured only.
-- Documents cards: "Reading" shares the corner spot with "Added" (space
-  reserved); "Couldn't read" sits under the name with a reason, plus
-  "Try again" when another try can help (else Replace).
+- Documents cards show no reading status (only "Added"); reading happens on
+  the Reading page.
 
 ## Tax year and the estimate (planned: AFTER-DOCUMENTS-PLAN.md)
 - The app's tax year is **2025** (`TAX_YEAR` in `src/config.ts`): the first

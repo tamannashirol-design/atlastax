@@ -25,6 +25,8 @@ export type Answers = {
    * Managed only by UploadAnswer (rememberFileId / takeFileId).
    */
   fileIds?: Record<string, (string | null)[]>
+  /** Review: the screen the person was on (a document id, or "summary"), to resume there. No values. */
+  reviewAt?: string
 }
 
 export type ResidencyAnswers = {

@@ -596,6 +596,78 @@ if (!only || 'reading'.includes(only)) {
   await page.close()
 }
 
+// Review (/review), by keyboard, after a real reading (mock reader)
+if (!only || 'review'.includes(only)) {
+  const where = 'review'
+  console.log(where)
+  const ready = { visa: 'F-1', enrolled: 'yes', state: 'CA', citizenship: 'FR', residency: { arrivalYear: 2023, arrivalDate: '2023-08-15', left: 'no' }, taxId: 'ssn', filedBefore: 'no', income: ['opt-cpt'], details: { 'opt-type': 'opt', 'opt-w2': ['W-2.pdf'], 'passport-upload': ['Passport.pdf'], 'i94-upload': ['I-94.pdf'] } }
+  const page = await browser.newPage({ viewport: { width: 390, height: 844 } })
+  await page.goto(BASE + '/documents', { waitUntil: 'load' })
+  await page.waitForTimeout(800)
+  await page.evaluate(async (a) => {
+    sessionStorage.setItem('atlastax:returns', JSON.stringify({ year: 2025, years: { 2025: a } }))
+    const c = await (await fetch('/api/consent')).json()
+    await fetch('/api/consent', { method: 'POST', body: JSON.stringify({ version: c.notice.version, fingerprint: c.notice.fingerprint }) })
+    for (const item of ['passport', 'i94', 'opt-cpt']) await fetch('/api/files', { method: 'POST', body: new Blob(['%PDF-1.4 sample']), headers: { 'x-item-id': item, 'x-tax-year': '2025', 'x-file-name': `${item}.pdf` } })
+  }, ready)
+  await page.goto(BASE + '/reading?reading=normal', { waitUntil: 'load' })
+  await page.waitForURL('**/review', { timeout: 30000 })
+  // Watch focus from the moment Review has loaded (it loads the details from the server first)
+  await page.getByRole('heading', { name: 'Check your passport' }).waitFor()
+  await page.waitForTimeout(300)
+  await page.evaluate(watchBody)
+  await check(page, where, 'arrive → the headline', { focus: /^Check your passport$/, ring: false })
+  const confirm = page.getByRole('button', { name: 'Confirm and continue' })
+  assert(where, 'Confirm is locked and says what’s left', (await confirm.isDisabled()) && (await page.getByText(/^\d+ details? to check/).count()) === 1)
+  assert(where, 'the passport number is masked', (await page.getByText('•••••4567').count()) === 1)
+  await tabTo(page, /^Show Passport number$/)
+  await check(page, where, 'Tab → Show', { focus: /^Show Passport number$/ })
+  await page.keyboard.press('Enter')
+  await page.waitForTimeout(300)
+  assert(where, 'Show → focus in the field, full value, announced', (await page.evaluate(() => document.activeElement?.value)) === 'X1234567' && (await page.locator('[aria-live]').filter({ hasText: 'Passport number shown' }).count()) >= 1)
+  for (const box of await page.getByRole('checkbox', { name: /^This is correct/ }).all()) {
+    await box.focus()
+    await page.keyboard.press('Space')
+    await page.waitForTimeout(150)
+  }
+  await page.waitForTimeout(400)
+  assert(where, 'every tick by keyboard → Confirm unlocks', !(await confirm.isDisabled()))
+  assert(where, '…and it’s announced', (await page.locator('[aria-live]').filter({ hasText: 'Everything is checked. You can confirm.' }).count()) >= 1)
+  await confirm.focus()
+  await page.keyboard.press('Enter')
+  await page.waitForTimeout(600)
+  await check(page, where, 'Confirm → next document’s headline', { focus: /^Check your most recent I.?-.?94$/, ring: false })
+  assert(where, '"2 of 3"', (await page.getByText(/^Document\s*2 of 3$/).count()) === 1)
+
+  // Editing clears the tick
+  const first = page.getByRole('checkbox', { name: /^This is correct.*Admission number/ })
+  await first.focus()
+  await page.keyboard.press('Space')
+  await page.waitForTimeout(300)
+  await page.getByLabel('Admission number', { exact: true }).focus()
+  await page.keyboard.type('9')
+  await page.waitForTimeout(1000)
+  assert(where, 'editing a value clears its tick', !(await first.isChecked()))
+
+  await tabTo(page, /^Skip this document for now$/)
+  await page.keyboard.press('Enter')
+  await page.waitForTimeout(600)
+  await check(page, where, 'Skip → W-2 headline', { focus: /^Check your W.?-.?2$/, ring: false })
+  await tabTo(page, /^Skip this document for now$/, 80)
+  await page.keyboard.press('Enter')
+  await page.waitForTimeout(600)
+  await check(page, where, 'Skip the last → summary headline', { focus: /^Your details$/, ring: false })
+  assert(where, 'summary: confirmed + skipped', (await page.getByText('Confirmed', { exact: true }).count()) === 1 && (await page.getByText('Skipped for now', { exact: true }).count()) === 2)
+  await page.reload({ waitUntil: 'load' })
+  await page.waitForTimeout(1000)
+  assert(where, 'reload → resumes on the same screen', (await page.getByRole('heading', { name: 'Your details' }).count()) === 1)
+  await tabTo(page, /^Looks good$/)
+  await page.keyboard.press('Enter')
+  await page.waitForTimeout(300)
+  assert(where, 'Looks good → /result', new URL(page.url()).pathname === '/result')
+  await page.close()
+}
+
 // Time in the U.S.: trips out of the U.S., by keyboard
 if (!only || 'trips'.includes(only)) {
   const where = 'trips'

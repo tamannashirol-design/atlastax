@@ -9,6 +9,7 @@ import { setLoggedIn, useLoggedIn } from '../lib/auth'
 import type { IntroMode } from '../intro/chrome'
 import { IntroContent } from '../intro/IntroContent'
 import { MOCK_SCENARIOS, READING_SCENARIOS, setMockScenario } from '../extraction/client'
+import { REVIEW_FIXTURES } from '../review/fixtureNames'
 import { Link } from '../lib/router'
 
 // /motion: play each state of the upload moment, scrub progress, and toggle
@@ -330,6 +331,23 @@ function ReadingScenarios() {
               <Link href={`/reading?reading=${r}`} className="flex min-h-11 items-center text-body font-semibold underline underline-offset-4">
                 {r}
               </Link>
+            </li>
+          ))}
+        </ul>
+      </div>
+      <div className="flex flex-col gap-2">
+        <h3 className="text-body font-semibold">Review (“Check your details”)</h3>
+        <p className="max-w-column text-small text-text-muted">
+          Sample documents with the mock reader’s fake values; nothing is sent to the server. needs: details to check · ticked: all ticked,
+          ready to confirm · failed: couldn’t read (Enter it myself) · wrongtype: wrong document · replace: being read again after a new
+          file · summary: the list after the last document.
+        </p>
+        <ul className="flex flex-wrap gap-x-6">
+          {REVIEW_FIXTURES.map((r) => (
+            <li key={r}>
+              <a href={`/review?review=${r}`} className="flex min-h-11 items-center text-body font-semibold underline underline-offset-4">
+                {r}
+              </a>
             </li>
           ))}
         </ul>

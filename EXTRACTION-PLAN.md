@@ -324,6 +324,14 @@ The confirmation screen, in the **Review** section of the stepper.
   [ These details are correct ]                    ← the one cobalt button
 ```
 
+> **Built (step 6, Nov 15 2026), with the designer's changes:** order is identity
+> first (passport, I-94, then income documents); **editing a value clears its tick**
+> (it no longer counts as confirming); the file preview is a placeholder card
+> ("Passport, file 1"), not the real file (Q-B still open); the button says
+> "Confirm and continue", plus "Skip this document for now"; the summary's
+> "Looks good" goes to `/result`. Optional documents and self-reported income are
+> not on Review yet. Rules: `src/review/logic.ts`.
+
 ### How confirming works (decided, Q-A)
 - **Always ticked:** every value that goes into a tax form or identifies the
   person needs its own tick ("This is correct"), **whatever the confidence**:
