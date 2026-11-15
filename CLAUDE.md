@@ -153,11 +153,18 @@ Rules:
 - Stepper: sections live in `src/flow/sections.ts` only. Screens name a
   section; `positionOf()` derives "x of n" from the screens that apply.
   Never hard-code a step number.
+- v1 SCOPE (TODO confirm with CPA; `residency.config.ts`): a return is
+  prepared only when the tax year is within the first 5 calendar years in
+  student status (years with any presence count, full years abroad don't,
+  the tax year counts; the sixth is out). `inScope()` / `isOutOfScope()` in
+  `fromAnswers.ts`. Outside scope the flow stops at /not-supported: later
+  screens are hidden, typed addresses redirect (App), the stepper ends at
+  Time in the U.S., Home shows "not-supported". Never say "resident"; no advice.
 - Time in the U.S. (`src/residency/`): students only (F-1, J-1 student,
   M-1). Rules ONLY in `src/residency.config.ts` (TODO confirm with CPA);
   `fromAnswers.ts` decides which questions apply. Trips out of the U.S. are
-  inverted into stays and counted as a date set. No jargon outside "Show how
-  we counted"; no automatic routing. `npm run check:residency`.
+  inverted into stays and counted as a date set. No jargon.
+  `npm run check:residency`.
 - Fake auth for testing only (`src/lib/auth.ts`): defaults to logged in,
   persists in localStorage, header badge (FakeAuthBadge) switches it, plus
   ?auth=in / ?auth=out and the /motion toggle. /welcome always shows the intro.

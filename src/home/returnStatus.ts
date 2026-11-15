@@ -8,8 +8,10 @@ import { hasProgress } from '../flow/answers'
 import { documentHref, requiredItems, summarizeItems, type ItemsSummary, type RequiredItem } from '../flow/requiredDocuments'
 import { REVIEW_PATH, pathForSection, resumeTarget } from '../flow/screens'
 import { at, sectionIndex, sections, type FlowPosition } from '../flow/sections'
+import { OUT_OF_SCOPE } from '../residency.config'
+import { isOutOfScope } from '../residency/fromAnswers'
 
-export type HomeState = 'new' | 'in-progress' | 'needs-documents' | 'ready'
+export type HomeState = 'new' | 'in-progress' | 'needs-documents' | 'ready' | 'not-supported'
 type Target = { path: string; state: Record<string, unknown> | null }
 
 export type ReturnStatus = {
@@ -35,7 +37,9 @@ export function returnStatus(a: Answers, year: number): ReturnStatus {
   const resume = resumeTarget(a, year)
   const questionsDone = resume.position.section >= docsIndex
 
-  const state: HomeState = !hasProgress(a) ? 'new' : !questionsDone ? 'in-progress' : !documents.done ? 'needs-documents' : 'ready'
+  // Outside the v1 scope (or a J-1 who isn't here as a student): the return can't be prepared
+  const notSupported = isOutOfScope(a, year) || (a.visa === 'J-1' && a.residency?.j1Student === 'no')
+  const state: HomeState = notSupported ? 'not-supported' : !hasProgress(a) ? 'new' : !questionsDone ? 'in-progress' : !documents.done ? 'needs-documents' : 'ready'
 
   const incomeLabels = [...incomeOptions, ...extraOptions].filter((o) => a.income?.includes(o.id)).map((o) => o.label)
   const answers = [
@@ -45,6 +49,17 @@ export function returnStatus(a: Answers, year: number): ReturnStatus {
   ]
 
   const base = { documents, items, answers }
+  if (state === 'not-supported') {
+    return {
+      ...base,
+      state,
+      headline: OUT_OF_SCOPE.headline,
+      buttonLabel: 'Check my answers',
+      buttonTarget: { path: isOutOfScope(a, year) ? '/arrival-year' : '/j1-student', state: null },
+      progress: { position: at('time'), done: 0 },
+      nextSteps: [],
+    }
+  }
   if (state === 'new') {
     return {
       ...base,

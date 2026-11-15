@@ -10,9 +10,9 @@ import { UploadAnswer } from '../components/UploadAnswer'
 import type { IncomeId } from '../data/income'
 import { countries, usStates } from '../data/places'
 import { TAX_YEAR } from '../config'
-import { ARRIVAL_YEARS_BACK } from '../residency.config'
+import { ARRIVAL_YEARS_BACK, OUT_OF_SCOPE } from '../residency.config'
 import { requiredDayYears } from '../residency/days'
-import { asksArrivalDate, asksIfStudent, asksYearAbroad, daysFor, isSupportedStudent } from '../residency/fromAnswers'
+import { asksArrivalDate, asksIfStudent, asksYearAbroad, daysFor, inScope, isOutOfScope, isSupportedStudent } from '../residency/fromAnswers'
 import { ArrivalDate, TimeSummary, TripsStep, YearAbroad } from '../residency/TimeInUS'
 import { setAnswers, setDetail, setResidency, type Answers } from './answers'
 import { documentsDone, ruleForUploadScreen, uploadScreenApplies, type SkipValue } from './requiredDocuments'
@@ -39,6 +39,8 @@ export type FlowScreen = {
   answerArea?: 'fixed' | 'auto'
   /** Card grid: 8 columns wide at 1024px+ (see QuestionLayout). */
   wide?: boolean
+  /** A stop screen: the primary button goes back to fix answers instead of continuing (e.g. the scope gate). */
+  stop?: { label: string; href: string }
   /**
    * Shown as a slide-up sheet over the page before it (the income uploads),
    * like the previous-return sheet. Its address still works: opening it shows
@@ -279,17 +281,6 @@ export const flow: FlowScreen[] = [
     ),
   },
   {
-    // Only when the arrival year is one Form 8843 asks days for
-    id: 'arrival-date',
-    path: '/arrival-date',
-    section: 'time',
-    question: 'What date did you arrive?',
-    helper: 'To count your days in the U.S. that year',
-    when: (a, year) => isSupportedStudent(a) && asksArrivalDate(a, year),
-    isAnswered: (a) => !!a.residency?.arrivalDate?.startsWith(String(a.residency.arrivalYear)),
-    answers: (a, id) => <ArrivalDate labelledBy={id} year={a.residency!.arrivalYear!} value={a.residency?.arrivalDate ?? ''} onChange={(arrivalDate: string) => setResidency({ arrivalDate })} />,
-  },
-  {
     // Only when arrival → tax year spans more than the student limit (otherwise the answer can't change anything)
     id: 'year-abroad',
     path: '/year-abroad',
@@ -303,12 +294,42 @@ export const flow: FlowScreen[] = [
     answers: (_a, id, year) => <YearAbroad labelledBy={id} taxYear={year} />,
   },
   {
+    // v1 SCOPE GATE (residency.config.ts): outside the first 5 calendar years as a student, the flow stops here.
+    // Every screen after this one is hidden for out-of-scope answers (see gateAfterStop below).
+    id: 'not-supported',
+    path: '/not-supported',
+    section: 'time',
+    question: OUT_OF_SCOPE.headline,
+    when: (a, year) => isOutOfScope(a, year),
+    isAnswered: () => true,
+    answerArea: 'auto',
+    stop: { label: 'Check my answers', href: '/arrival-year' },
+    answers: () => (
+      <div className="flex flex-col gap-4">
+        <p className="text-body">{OUT_OF_SCOPE.body}</p>
+        <p className="text-small text-text-muted">{OUT_OF_SCOPE.note}</p>
+      </div>
+    ),
+  },
+  {
+    // Only when the arrival year is one Form 8843 asks days for
+    id: 'arrival-date',
+    path: '/arrival-date',
+    section: 'time',
+    question: 'What date did you arrive?',
+    helper: 'To count your days in the U.S. that year',
+    when: (a, year) => isSupportedStudent(a) && inScope(a, year) === true && asksArrivalDate(a, year),
+    isAnswered: (a) => !!a.residency?.arrivalDate?.startsWith(String(a.residency.arrivalYear)),
+    answers: (a, id) => <ArrivalDate labelledBy={id} year={a.residency!.arrivalYear!} value={a.residency?.arrivalDate ?? ''} onChange={(arrivalDate: string) => setResidency({ arrivalDate })} />,
+  },
+  {
     id: 'trips',
     path: '/trips',
     section: 'time',
     question: (a, year) => `Did you leave the U.S. in ${listYears(requiredDayYears(year, a.residency?.arrivalYear ?? year))}?`,
     helper: 'To count your days in the U.S. for Form 8843',
-    when: (a) => isSupportedStudent(a), // always part of the section (reached only after the arrival year)
+    // Part of the section unless the answers are outside scope (travel days are only asked within scope)
+    when: (a, year) => isSupportedStudent(a) && inScope(a, year) !== false,
     isAnswered: (a, year) => !!daysFor(a, year)?.complete,
     answerArea: 'auto',
     answers: (_a, id, year) => <TripsStep labelledBy={id} taxYear={year} />,
@@ -319,7 +340,8 @@ export const flow: FlowScreen[] = [
     section: 'time',
     question: 'Check your time in the U.S.',
     helper: 'Change anything that doesn’t look right',
-    when: (a) => isSupportedStudent(a), // always part of the section (reached only after the arrival year)
+    // Part of the section unless the answers are outside scope (travel days are only asked within scope)
+    when: (a, year) => isSupportedStudent(a) && inScope(a, year) !== false,
     isAnswered: () => true,
     answerArea: 'auto',
     answers: (_a, _id, year) => <TimeSummary taxYear={year} />,
@@ -380,6 +402,22 @@ export const flow: FlowScreen[] = [
   },
   ...incomeFollowUps(),
 ]
+
+// Out of scope: every screen after the stop screen is hidden, so Back/Continue,
+// "Continue where you left off" and the stepper never lead past it.
+const STOP_INDEX = flow.findIndex((s) => s.id === 'not-supported')
+for (const screen of flow.slice(STOP_INDEX + 1)) {
+  const own = screen.when
+  screen.when = (a, year) => !isOutOfScope(a, year) && (!own || own(a, year))
+}
+
+/** Out of scope and asking for a page past the stop screen (a later question, Documents, Review)? */
+export function isGatedPath(path: string, a: Answers, year = TAX_YEAR): boolean {
+  if (!isOutOfScope(a, year)) return false
+  const i = flow.findIndex((s) => s.path === path)
+  return i > STOP_INDEX || path === AFTER_FLOW || path === REVIEW_PATH
+}
+export const STOP_PATH = '/not-supported'
 
 /** Where Continue goes after the last question: the Documents page, opened "from the flow". */
 export const AFTER_FLOW = '/documents'

@@ -62,10 +62,32 @@ own screen in the standard question layout.
 | Route | Question | When | Why we ask (helper) |
 |---|---|---|---|
 | /arrival-year | What year did you first arrive in the U.S. as a student? | always | Your first years as a student are counted differently |
-| /arrival-date | What date did you arrive? | the arrival year is one Form 8843 asks days for | To count your days in the U.S. that year |
 | /year-abroad | Did you spend a full calendar year outside the U.S.? (Yes → pick the years) | arrival → tax year spans more than 5 calendar years (5 or fewer: can't change the result) | A full year away isn't counted as one of your student years |
-| /trips | Did you leave the U.S. in {Form 8843 years since arrival}? | always | To count your days in the U.S. for Form 8843 |
-| /time-in-us | Check your time in the U.S. | always | Change anything that doesn't look right |
+| /not-supported | **Stop screen:** We can't prepare your return yet | outside the v1 scope (see below) | — |
+| /arrival-date | What date did you arrive? | within scope, and the arrival year is one Form 8843 asks days for | To count your days in the U.S. that year |
+| /trips | Did you leave the U.S. in {Form 8843 years since arrival}? | within scope | To count your days in the U.S. for Form 8843 |
+| /time-in-us | Check your time in the U.S. | within scope | Change anything that doesn't look right |
+
+**v1 scope (TODO confirm with CPA; rule in `residency.config.ts`):** AtlasTax
+prepares a return only when the tax year is within the person's first 5
+calendar years in student status (F-1 including OPT and CPT, J-1 student,
+M-1). Every calendar year with any presence counts, a calendar year spent
+entirely abroad doesn't, and the tax year counts: the sixth year is outside
+scope. The gate runs right after the year-abroad question (or right after
+the arrival year when that question is skipped, which always means within
+scope).
+
+- **Outside scope:** the stop screen, "We can't prepare your return yet",
+  "AtlasTax currently supports students in their first five calendar years
+  in the U.S. Based on your answers, your situation may need a different
+  type of return." Cobalt **Check my answers** (back to the arrival year),
+  quiet **Save and exit** (Home), and a note: "Your school's international
+  office or a tax professional can tell you which return applies." (TODO
+  confirm wording). No travel days or I-94 questions; Tax details, Income,
+  Documents and Review can't be reached (typed addresses redirect to the
+  stop screen); the stepper shows only About you and Time in the U.S.
+  Never says "resident"; no advice; no jargon.
+- Changing an answer back into scope continues the flow from there.
 
 - Question wording shortened to fit 3 lines on a phone: "Did you spend a
   full calendar year outside the U.S.?" (brief: "Was there a full calendar
@@ -86,12 +108,10 @@ own screen in the standard question layout.
   label). "Remove travel history" deletes the files and the trips read from
   them. Travel history stays in this browser tab only.
 - The most recent I-94 is a separate Identity document (Documents page).
-- Check screen: one sentence, "2026: year 4 of your first 5 calendar years
-  as a student", or past the limit, "This may change how your return is
-  filed. Talk to your school's international office or a tax professional."
-  Then the days per year, each with Edit, and "These go on Form 8843…".
-  "Show how we counted" (collapsed) holds the working and, past the limit,
-  the substantial presence arithmetic. No jargon outside it; no routing.
+- Check screen (only within scope): one sentence, "2026: year 4 of your
+  first 5 calendar years as a student", then the days per year, each with
+  Edit, and "These go on Form 8843…". "Show how we counted" (collapsed)
+  holds the working. No jargon.
 - `npm run check:residency` runs the cases.
 
 Persistent across the app (old version): bottom tab bar with 3 tabs (Home,
@@ -288,7 +308,7 @@ State comes from ONE function, `returnStatus(answers, year)`
 (`src/home/returnStatus.ts`), which Home and the Documents page use:
 { state, headline, buttonLabel, buttonTarget, progress, nextSteps } plus
 the documents summary and "Your answers". Test states: ?home=new|progress|
-documents|ready (doesn't change saved answers).
+documents|ready|notsupported (doesn't change saved answers).
 
 | State | Hero headline | Cobalt button (the only one) | Below the hero |
 |---|---|---|---|
@@ -296,6 +316,7 @@ documents|ready (doesn't change saved answers).
 | in-progress | You're on step N of 6: {section} | Continue where you left off (next unanswered question, or Documents) | What's next (links) · Your answers (Edit) |
 | needs-documents | Next: add your documents | Add documents | What's missing (each links to its item on Documents) · Documents summary · Your answers |
 | ready | Your return is ready | Download your forms (TODO: real forms; goes to Review, not built) | Your forms (PDF buttons, TODO) · Your answers with "Review again" |
+| not-supported | We can't prepare your return yet (+ the neutral paragraph and note) | Check my answers (to the arrival year; J-1 non-student: to "student?") | nothing (no progress row, documents or What's next) |
 
 - Hero: "2026 tax return", the headline, one plain sentence (TODO confirm),
   the progress row (all 6 sections with names: done = check, current =

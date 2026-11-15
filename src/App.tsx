@@ -1,13 +1,15 @@
 import DocumentsPage from './documents/DocumentsPage'
 import FlowPage from './flow/FlowPage'
-import { isFlowPath } from './flow/screens'
+import { STOP_PATH, isFlowPath, isGatedPath } from './flow/screens'
+import { useAnswers, useFilingYear } from './flow/answers'
+import { useEffect } from 'react'
 import HomePage from './home/HomePage'
 import ProfilePage from './profile/ProfilePage'
 import LandingPage from './landing/LandingPage'
 import { useLoggedIn } from './lib/auth'
 import PlaceholderPage from './pages/PlaceholderPage'
 import { isPlaceholderPath } from './pages/placeholders'
-import { Link, usePath } from './lib/router'
+import { Link, navigate, usePath } from './lib/router'
 import MotionPage from './motion/MotionPage'
 import Styleguide from './styleguide/Styleguide'
 
@@ -16,6 +18,14 @@ import Styleguide from './styleguide/Styleguide'
 export default function App() {
   const path = usePath()
   const loggedIn = useLoggedIn()
+  const answers = useAnswers()
+  const year = useFilingYear()
+  // Outside the v1 scope, later questions, Documents and Review can't be reached, even by typing the address
+  const gated = isGatedPath(path, answers, year)
+  useEffect(() => {
+    if (gated) navigate(STOP_PATH, null, { replace: true })
+  }, [gated])
+  if (gated) return null
   if (path === '/styleguide') return <Styleguide />
   if (path === '/motion') return <MotionPage />
   if (isFlowPath(path)) return <FlowPage path={path} />

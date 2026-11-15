@@ -2,7 +2,7 @@
 // summary, Documents, Home), so they all read the same thing. Pure (no React).
 import { STUDENT_VISAS } from '../residency.config.ts'
 import type { Answers } from '../flow/answers.ts'
-import { spanExceedsLimit, studentYears, substantialPresence, type StudentYears } from './residency.ts'
+import { spanExceedsLimit, studentYears, type StudentYears } from './residency.ts'
 import { daysByYear, requiredDayYears, staysFromTrips, type Flag, type YearDays } from './days.ts'
 
 /** Supported for now: F-1 and M-1, or J-1 as a student. */
@@ -55,20 +55,19 @@ export function daysFor(a: Answers, taxYear: number): DaysState | null {
   return { years, flags, working: daysByYear(stays, years), complete: answered && flags.length === 0 }
 }
 
-/** The arithmetic shown inside "Show how we counted", only after the student limit. */
-export function presenceArithmeticFor(a: Answers, taxYear: number) {
-  const sy = studentYearsFor(a, taxYear)
-  const days = daysFor(a, taxYear)
-  if (!sy || sy.withinLimit || !days?.complete) return null
-  // Days from years that were still student years don't count
-  const byYear: Record<number, number> = {}
-  const counted: Record<number, boolean> = {}
-  for (let i = 0; i < 3; i++) {
-    const y = taxYear - i
-    const thatYear = studentYearsFor(a, y)
-    const studentYear = !!thatYear && y >= a.residency!.arrivalYear! && thatYear.withinLimit
-    counted[y] = !studentYear
-    byYear[y] = studentYear ? 0 : (days.working.find((w) => w.year === y)?.days ?? 0)
+/**
+ * The v1 scope gate: true = within scope, false = outside (the flow stops),
+ * null = not known yet (the arrival year, or the year-abroad question when
+ * it applies, isn't answered). Only for supported students.
+ */
+export function inScope(a: Answers, taxYear: number): boolean | null {
+  if (!isSupportedStudent(a) || !a.residency?.arrivalYear) return null
+  if (asksYearAbroad(a, taxYear)) {
+    const r = a.residency
+    if (r.yearAbroad !== 'no' && !(r.yearAbroad === 'yes' && (r.abroadYears?.length ?? 0) > 0)) return null
   }
-  return { ...substantialPresence(taxYear, byYear), counted }
+  return studentYearsFor(a, taxYear)!.withinLimit
 }
+
+/** Outside scope: the flow stops at the stop screen. */
+export const isOutOfScope = (a: Answers, taxYear: number) => inScope(a, taxYear) === false

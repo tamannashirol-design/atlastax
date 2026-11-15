@@ -6,11 +6,11 @@ import { SecondaryButton } from '../components/SecondaryButton'
 import { fieldClass } from '../components/SelectField'
 import { TileGroup } from '../components/TileGroup'
 import { UploadAnswer } from '../components/UploadAnswer'
-import { CBP_HELPER, PAST_LIMIT_MESSAGE, STUDENT_LIMIT_YEARS, SUBSTANTIAL_PRESENCE } from '../residency.config'
+import { CBP_HELPER, STUDENT_LIMIT_YEARS } from '../residency.config'
 import { setResidency, useAnswers } from '../flow/answers'
 import { Link } from '../lib/router'
 import { extractTravelHistoryStub, tripsFromTravelHistory, type AbroadTrip, type Flag } from './days'
-import { asksArrivalDate, daysFor, presenceArithmeticFor, studentYearsFor } from './fromAnswers'
+import { asksArrivalDate, daysFor, studentYearsFor } from './fromAnswers'
 import { inputClass, quietButton, smallButton } from './fields'
 
 // The answer controls of the "Time in the U.S." section. Each sits in the
@@ -277,23 +277,16 @@ export function TimeSummary({ taxYear }: { taxYear: number }) {
   const a = useAnswers()
   const sy = studentYearsFor(a, taxYear)
   const days = daysFor(a, taxYear)
-  const arithmetic = presenceArithmeticFor(a, taxYear)
   if (!sy || !days) return null
   const arrivalYear = a.residency!.arrivalYear!
   const editHref = (y: number) => (y === arrivalYear && asksArrivalDate(a, taxYear) ? '/arrival-date' : '/trips')
 
   return (
     <div className="flex flex-col gap-8">
-      {sy.withinLimit ? (
-        <p className="text-body font-semibold tabular-nums">
-          {taxYear}: year {sy.yearNumber} of your first {STUDENT_LIMIT_YEARS} calendar years as a student.
-        </p>
-      ) : (
-        <p className="flex items-start gap-2 rounded-md border border-text bg-sage-100 p-4 text-body">
-          <WarningCircleIcon size={24} weight="regular" aria-hidden className="shrink-0" />
-          {PAST_LIMIT_MESSAGE}
-        </p>
-      )}
+      {/* Only reached within scope (outside scope the flow stops before this section's later screens) */}
+      <p className="text-body font-semibold tabular-nums">
+        {taxYear}: year {sy.yearNumber} of your first {STUDENT_LIMIT_YEARS} calendar years as a student.
+      </p>
 
       <section aria-labelledby="summary-days" className="flex flex-col gap-2">
         <h2 id="summary-days" className="text-body font-semibold">
@@ -345,21 +338,6 @@ export function TimeSummary({ taxYear }: { taxYear: number }) {
             </div>
           ))}
           <p className="text-text-muted">Any part of a day counts, so the days you left and came back are days in the U.S. A date is never counted twice.</p>
-          {arithmetic && (
-            <div className="flex flex-col gap-1">
-              <p className="font-semibold">Substantial presence test (placeholder rule)</p>
-              <ul className="flex flex-col gap-1 tabular-nums">
-                {arithmetic.parts.map((p) => (
-                  <li key={p.year}>
-                    {p.year}: {arithmetic.counted[p.year] ? `${p.days} × ${p.weight === 1 ? '1' : p.weight < 0.2 ? '1/6' : '1/3'} = ${p.counted.toFixed(1)}` : 'student year, not counted'}
-                  </li>
-                ))}
-                <li>
-                  Total {arithmetic.total.toFixed(1)} of {SUBSTANTIAL_PRESENCE.threshold}; at least {SUBSTANTIAL_PRESENCE.minDaysThisYear} days in {taxYear}: {arithmetic.minDaysMet ? 'yes' : 'no'}
-                </li>
-              </ul>
-            </div>
-          )}
         </div>
       </details>
     </div>

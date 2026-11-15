@@ -8,6 +8,7 @@ import { PrimaryButton } from '../components/PrimaryButton'
 import { ProgressRow } from '../components/ProgressRow'
 import { SecondaryButton } from '../components/SecondaryButton'
 import { PREVIOUS_TAX_YEARS, PRIVACY_LINE, TAX_YEAR } from '../config'
+import { OUT_OF_SCOPE } from '../residency.config'
 import { art, type Art } from '../data/income'
 import { setFilingYear, useAllReturns } from '../flow/answers'
 import { documentHref, documentsLine, incomeItemsLine } from '../flow/requiredDocuments'
@@ -19,7 +20,7 @@ import { returnStatus, type HomeState, type ReturnStatus } from './returnStatus'
 
 // Home: the landing screen for everyone who's logged in, in every state of
 // their return (returnStatus() decides: new, in-progress, needs-documents,
-// ready). ?home=new|progress|documents|ready shows a test state.
+// ready, not-supported). ?home=new|progress|documents|ready|notsupported shows a test state.
 //
 // Layout (12-column grid): phone one column; iPad 5 + 3 columns; laptop 8 + 4.
 //   main  hero card (the one cobalt button) · the state's main card
@@ -39,6 +40,7 @@ const SENTENCE: Record<HomeState, (s: ReturnStatus) => string> = {
   'in-progress': () => 'Your answers are saved as you go.',
   'needs-documents': (s) => [documentsLine(s.documents), incomeItemsLine(s.documents)].filter(Boolean).join(' · '),
   ready: () => 'Your forms are ready to download.',
+  'not-supported': () => OUT_OF_SCOPE.body,
 }
 
 // TODO confirm: generic, "may" (no statuses, no uploads here)
@@ -253,7 +255,11 @@ export default function HomePage() {
                   </AnimatePresence>
                 </div>
               </div>
-              <ProgressRow done={status.progress.done} current={current} />
+              {status.state === 'not-supported' ? (
+                <p className="text-small text-text-muted">{OUT_OF_SCOPE.note}</p>
+              ) : (
+                <ProgressRow done={status.progress.done} current={current} />
+              )}
               <AnimatePresence mode="wait" initial={false}>
                 <motion.div key={status.state} className="flex flex-col" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={spring.quick}>
                   <PrimaryButton onClick={() => go(status.buttonTarget)}>{status.buttonLabel}</PrimaryButton>

@@ -1,7 +1,7 @@
 // Student years: which calendar years count toward the student limit.
 // Pure (no React); rules in src/residency.config.ts. It returns the working,
 // never a filing status.
-import { STUDENT_LIMIT_YEARS, SUBSTANTIAL_PRESENCE } from '../residency.config.ts'
+import { STUDENT_LIMIT_YEARS } from '../residency.config.ts'
 
 export type StudentInput = { taxYear: number; arrivalYear: number; /** Full calendar years with no time in the U.S. */ abroadYears?: number[] }
 
@@ -12,7 +12,7 @@ export type StudentYears = {
   notCounted: number[]
   /** Student years used before the tax year */
   usedBefore: number
-  /** Within the first STUDENT_LIMIT_YEARS: the tax year is still a student year */
+  /** Within the first STUDENT_LIMIT_YEARS: the tax year is still a student year (the v1 scope) */
   withinLimit: boolean
   /** Which student year the tax year is (1-based), when within the limit */
   yearNumber: number
@@ -38,19 +38,4 @@ export function studentYears({ taxYear, arrivalYear, abroadYears = [] }: Student
     withinLimit: usedBefore < STUDENT_LIMIT_YEARS,
     yearNumber: usedBefore + 1,
   }
-}
-
-export type SubstantialPresence = { minDaysMet: boolean; total: number; parts: { year: number; days: number; weight: number; counted: number }[]; meets: boolean }
-
-/** Only shown in the collapsed working, after the student limit. */
-export function substantialPresence(taxYear: number, days: Record<number, number>): SubstantialPresence {
-  const { minDaysThisYear, threshold, weights } = SUBSTANTIAL_PRESENCE
-  const parts = weights.map((weight, i) => {
-    const year = taxYear - i
-    const d = days[year] ?? 0
-    return { year, days: d, weight, counted: d * weight }
-  })
-  const total = parts.reduce((s, p) => s + p.counted, 0)
-  const minDaysMet = (days[taxYear] ?? 0) >= minDaysThisYear
-  return { minDaysMet, total, parts, meets: minDaysMet && total >= threshold }
 }

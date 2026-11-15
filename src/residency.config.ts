@@ -12,7 +12,14 @@ export const STUDENT_VISAS = { always: ['F-1', 'M-1'], askIfStudent: ['J-1'] } a
 /** Neutral message for anyone outside that scope (no calculation is done). */
 export const UNSUPPORTED_MESSAGE = 'We don’t support this yet.'
 
-/** TODO confirm with CPA. Students: the first this-many calendar years count as student years (any part of a year counts; a full year abroad doesn't). */
+/**
+ * v1 SCOPE. TODO confirm with CPA. AtlasTax prepares a return only when the
+ * tax year is within the person's first STUDENT_LIMIT_YEARS calendar years in
+ * student status (F-1 including OPT and CPT, J-1 student, M-1). Every
+ * calendar year with any presence in the U.S. counts, a calendar year spent
+ * entirely abroad doesn't, and the tax year itself counts: the first year
+ * outside scope is the sixth. Outside scope, the flow stops (stop screen).
+ */
 export const STUDENT_LIMIT_YEARS = 5
 
 /**
@@ -22,9 +29,6 @@ export const STUDENT_LIMIT_YEARS = 5
  * The Form 8843 "Exception" (foreign employer paid everything) isn't modelled.
  */
 export const TEACHER_TRAINEE_RULE = { window: 6, limit: 2 }
-
-/** TODO confirm with CPA. Used only after the student limit: ≥ minDaysThisYear this year, and the weighted sum ≥ threshold. */
-export const SUBSTANTIAL_PRESENCE = { minDaysThisYear: 31, threshold: 183, weights: [1, 1 / 3, 1 / 6] }
 
 /**
  * TODO confirm with CPA. Any part of a day counts as a day in the U.S. (the
@@ -45,5 +49,10 @@ export const CBP_HELPER = 'Get it from the CBP I-94 website (i94.cbp.dhs.gov) un
 /** How far back the arrival-year list goes. */
 export const ARRIVAL_YEARS_BACK = 15
 
-/** Shown instead of a year count once past the student limit. Neutral; no advice. */
-export const PAST_LIMIT_MESSAGE = 'This may change how your return is filed. Talk to your school’s international office or a tax professional.'
+/** The stop screen (and Home) for anyone outside the v1 scope. Neutral: no advice, no jargon, never "resident". */
+export const OUT_OF_SCOPE = {
+  headline: 'We can’t prepare your return yet',
+  body: 'AtlasTax currently supports students in their first five calendar years in the U.S. Based on your answers, your situation may need a different type of return.',
+  // TODO confirm wording
+  note: 'Your school’s international office or a tax professional can tell you which return applies.',
+}

@@ -49,6 +49,10 @@ type Props = {
   wide?: boolean
   canContinue: boolean
   onContinue?: () => void
+  /** The primary button's label (default "Continue"; the stop screen says "Check my answers") */
+  continueLabel?: string
+  /** Stepper shows sections only up to this one (outside the v1 scope) */
+  lastSection?: number
   helper?: string
   /** Link under Continue. icon: false for action links like "I'll add it later". */
   help?: { label: string; onClick?: () => void; icon?: boolean }
@@ -63,7 +67,7 @@ const wideColumn = `${column} desktop:col-span-8`
 // word joiner on each side of the hyphen stops the browser breaking there.
 const keepHyphensTogether = (text: string) => text.replace(/(\S)-(?=\S)/g, '$1\u2060-\u2060')
 
-export function QuestionLayout({ year, position, backHref, questionId, question, answers, answerArea = 'fixed', wide = false, canContinue, onContinue, helper, help, onNavigate }: Props) {
+export function QuestionLayout({ year, position, backHref, questionId, question, answers, answerArea = 'fixed', wide = false, canContinue, onContinue, continueLabel = 'Continue', lastSection, helper, help, onNavigate }: Props) {
   const block = wide ? wideColumn : column
   return (
     <AppShell
@@ -81,7 +85,7 @@ export function QuestionLayout({ year, position, backHref, questionId, question,
         {/* Phone + iPad portrait: compact stepper, directly under the top bar */}
         <div className="page-content page-grid desktop:hidden">
           <div className="col-span-full flex h-(--stepper-h) items-center tablet:col-span-6 tablet:col-start-2">
-            <FlowStepper presentation="compact" position={position} onNavigate={onNavigate} />
+            <FlowStepper presentation="compact" position={position} onNavigate={onNavigate} lastSection={lastSection} />
           </div>
         </div>
 
@@ -98,7 +102,7 @@ export function QuestionLayout({ year, position, backHref, questionId, question,
 
           {/* Laptop + iPad landscape: rail starts at row 2 → level with the question text */}
           <div className="hidden self-start desktop:col-span-3 desktop:col-start-1 desktop:row-span-3 desktop:row-start-2 desktop:block">
-            <FlowStepper presentation="rail" position={position} onNavigate={onNavigate} />
+            <FlowStepper presentation="rail" position={position} onNavigate={onNavigate} lastSection={lastSection} />
           </div>
 
           <div className={`row-start-2 flex flex-col gap-2 ${block}`}>
@@ -115,7 +119,7 @@ export function QuestionLayout({ year, position, backHref, questionId, question,
           {/* Fixed height = Continue 56 + 8 + link 48, even when there's no link */}
           <div className={`row-start-4 mt-8 flex min-h-28 flex-col gap-2 ${column}`}>
             <PrimaryButton disabled={!canContinue} onClick={onContinue}>
-              Continue
+              {continueLabel}
             </PrimaryButton>
             {help && (
               <button

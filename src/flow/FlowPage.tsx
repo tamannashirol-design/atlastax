@@ -8,7 +8,9 @@ import { UploadAnswer } from '../components/UploadAnswer'
 import { DebugStack, useUrlFlag } from '../lib/debug'
 import { navigate, useHistoryState } from '../lib/router'
 import { setAnswers, setDetail, useAnswers, useFilingYear } from './answers'
+import { isOutOfScope } from '../residency/fromAnswers'
 import { UnsupportedSheet } from '../residency/UnsupportedSheet'
+import { sectionIndex } from './sections'
 import { AFTER_FLOW, flow, pathForSection, positionOf } from './screens'
 
 // One page for the whole question flow. Because it stays mounted while the
@@ -89,7 +91,9 @@ export default function FlowPage({ path }: { path: string }) {
   // J-1 but not a student: a neutral "We don't support this yet" (students only for now; no calculation).
   // Otherwise: carry on. (No automatic routing on residency results.)
   const onContinue = () =>
-    screen.id === 'filed-before' && answers.filedBefore === 'yes'
+    screen.stop
+      ? navigate(screen.stop.href)
+      : screen.id === 'filed-before' && answers.filedBefore === 'yes'
       ? setSheet(true)
       : screen.id === 'j1-student' && answers.residency?.j1Student === 'no'
         ? setUnsupported(true)
@@ -110,9 +114,14 @@ export default function FlowPage({ path }: { path: string }) {
         questionId={questionId}
         question={question}
         helper={screen.helper}
+        continueLabel={screen.stop?.label}
+        lastSection={isOutOfScope(answers, year) ? sectionIndex('time') : undefined}
         help={
-          // The skip link hides once the question is answered (it would discard the upload)
-          screen.skip && !screen.isAnswered(answers, year)
+          // A stop screen: a quiet "Save and exit" under its button
+          screen.stop
+            ? { label: 'Save and exit', icon: false, onClick: () => navigate('/') }
+            : // The skip link hides once the question is answered (it would discard the upload)
+              screen.skip && !screen.isAnswered(answers, year)
             ? { label: screen.skip.label, icon: false, onClick: () => (setDetail(screen.id, screen.skip!.value), goNext()) }
             : screen.helpLabel
               ? { label: screen.helpLabel }
