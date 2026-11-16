@@ -1,6 +1,6 @@
 import { XIcon } from '@phosphor-icons/react'
 import { motion, useReducedMotion } from 'framer-motion'
-import { useEffect, useId, useRef, type ReactNode } from 'react'
+import { createContext, useContext, useEffect, useId, useRef, type ReactNode } from 'react'
 import { spring } from '../lib/motion'
 
 // Bottom sheet. Render it inside <AnimatePresence> so it can animate out.
@@ -8,10 +8,17 @@ import { spring } from '../lib/motion'
 // behind is inert, and it floats above the page without absolute positioning.
 // Content sits on the same 6-column question grid as the screens.
 // Motion: slides up with the soft spring; Reduce motion → fade only.
+// A sheet opened INSIDE another sheet (the privacy sheet inside an upload sheet) always lands
+// on top: the browser stacks modal dialogs in the order they are opened, and React starts inner
+// components first, so an inner sheet that exists from the first moment waits one beat, until
+// the sheet around it is open. (Without this it opened first and ended up hidden behind it.)
 // Tall content: the sheet stops 24pt below the top (or the safe area) and
 // scrolls inside. Closing puts focus back where it was (e.g. Continue).
 
 type Props = { title: string; onClose: () => void; children: ReactNode }
+
+/** Set inside a sheet's content: anything that opens a sheet there is nested */
+const InsideSheet = createContext(false)
 
 export function BottomSheet({ title, onClose, children }: Props) {
   const ref = useRef<HTMLDialogElement>(null)
@@ -19,13 +26,21 @@ export function BottomSheet({ title, onClose, children }: Props) {
   const titleId = useId()
   // Whatever had focus before the sheet opened (read once, on the first render)
   const opener = useRef(typeof document === 'undefined' ? null : (document.activeElement as HTMLElement | null))
+  const nested = useContext(InsideSheet)
 
   useEffect(() => {
     const d = ref.current
-    if (d && !d.open) d.showModal()
+    let gone = false
+    const show = () => {
+      if (!gone && d && !d.open) d.showModal()
+    }
+    // Nested: after the sheet around it has opened (same moment, before the screen is drawn)
+    if (nested) queueMicrotask(show)
+    else show()
     // The dialog is removed rather than closed, so the browser can't restore focus itself
     const back = opener.current
     return () => {
+      gone = true
       if (back?.isConnected) back.focus({ preventScroll: true })
     }
   }, [])
@@ -74,7 +89,7 @@ export function BottomSheet({ title, onClose, children }: Props) {
                   <XIcon size={24} weight="regular" aria-hidden />
                 </button>
               </div>
-              {children}
+              <InsideSheet.Provider value>{children}</InsideSheet.Provider>
             </div>
           </div>
         </motion.div>

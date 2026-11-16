@@ -10,6 +10,7 @@
     "preview": "vite preview",
     "contrast": "node scripts/contrast.ts",
     "audit:focus": "node scripts/audit-focus.mjs",
+    "audit:consent": "node scripts/audit-consent.mjs",
     "check:documents": "node scripts/check-documents.ts",
     "check:residency": "node scripts/check-residency.ts",
     "check:files": "node scripts/check-files.ts",

@@ -77,6 +77,17 @@ Form 8843 and 1040-NR, filled, every page marked "Prototype estimate, not for fi
 - The test inputs' numbers are made up, add up (tested), and are not in the production
   bundle.
 
+## Fix: privacy sheet hidden after "Not now"
+
+Bug: "Not now", then Add again: the privacy sheet opened BEHIND the upload sheet, so you
+couldn't agree or upload until a reload. Cause: the browser stacks modal dialogs in the
+order they open; once the app already knew consent was needed (every attempt after the
+first), React opened the inner privacy sheet before the upload sheet around it. Fix:
+`BottomSheet` opens a sheet that sits inside another sheet only after the outer one is open,
+so it is always on top. The consent record and "no file leaves before agreement" are
+untouched. Test: `npm run audit:consent` (dev server running; real clicks: Not now → Add
+again → Continue to upload → upload a file, three refusals in a row, Escape, the X).
+
 ## How to see R2
 
 1. Run `npm run dev`, open http://localhost:5173. The mock reader's fake W-2 is wages
