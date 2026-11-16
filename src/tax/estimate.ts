@@ -12,6 +12,9 @@
 import { federalSection } from './federal.ts'
 import type { Blocker, TaxInput } from './input.ts'
 import { stateSection } from './state.ts'
+import { treatyFor } from './treaty.ts'
+import { yearConfig } from './years/index.ts'
+import { TREATY_NOTES } from './years/treaties-2025.ts'
 
 export const ESTIMATE_LABEL = 'Estimate (prototype)'
 /** Always shown on /result, in this wording */
@@ -84,15 +87,28 @@ export const FORMS_NOT_READY: FormStatus[] = [
  * (the W-2's state). Pure; the server runs it, the browser only reads the result.
  */
 export function estimateReturn(input: TaxInput): Estimate {
+  const federal = federalSection(input)
   return {
     year: input.year,
     blockers: input.blockers,
-    federal: federalSection(input),
+    federal,
     state: stateSection(input),
-    notes: [...RESULT_NOTES],
+    notes: notesFor(input, federal),
     forms: FORMS_NOT_READY,
     numbersHidden: false,
   }
+}
+
+/**
+ * The notes under the headline. "Treaty benefits aren't included yet." goes away ONLY for India and
+ * China (with a student visa). With a calculated federal number the note then says what was included
+ * and what it assumes; without one, there is no treaty note at all (nothing was applied or claimed).
+ */
+function notesFor(input: TaxInput, federal: Section): string[] {
+  const cfg = yearConfig(input.year)
+  const treaty = cfg ? treatyFor(input, cfg) : null
+  if (!treaty) return [...RESULT_NOTES]
+  return isCalculated(federal) ? [RESULT_NOTES[0], TREATY_NOTES[treaty.code]] : [RESULT_NOTES[0]]
 }
 
 /** The person turned the number off: every amount disappears (also on the server, so none is sent). */

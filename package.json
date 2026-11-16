@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "npm run check:files && npm run check:consent && npm run check:reading && npm run check:review && npm run check:taxinput && npm run check:tax && npm run check:state && npm run check:result && npm run contrast && tsc -b && vite build && node scripts/check-prod-build.mjs",
+    "build": "npm run check:files && npm run check:consent && npm run check:reading && npm run check:review && npm run check:taxinput && npm run check:tax && npm run check:state && npm run check:treaty && npm run check:result && npm run contrast && tsc -b && vite build && node scripts/check-prod-build.mjs",
     "lint": "oxlint",
     "preview": "vite preview",
     "contrast": "node scripts/contrast.ts",
@@ -24,6 +24,7 @@
     "check:taxinput": "node scripts/check-taxinput.ts",
     "check:tax": "node scripts/check-tax.ts",
     "check:state": "node scripts/check-state.ts",
+    "check:treaty": "node scripts/check-treaty.ts",
     "check:result": "node scripts/check-result.ts"
   },
   "dependencies": {

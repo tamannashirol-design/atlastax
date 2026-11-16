@@ -12,6 +12,7 @@
 // Money in this file is whole DOLLARS unless a name ends in `Cents`.
 import type { Source } from '../estimate.ts'
 import { STATES_2025, type StatesConfig } from './states-2025.ts'
+import { TREATIES_2025, type Treaty } from './treaties-2025.ts'
 
 export const TODO_CPA = 'TODO confirm with CPA'
 
@@ -93,6 +94,8 @@ export type YearConfig = {
   sources: typeof SOURCES
   /** The state estimates (New York, California) and the states with no tax on wages */
   states: StatesConfig
+  /** Student treaty benefits for the federal estimate, by two-letter citizenship code (India, China) */
+  treaties: Record<string, Treaty>
   review: typeof TODO_CPA
 }
 
@@ -104,5 +107,6 @@ export const YEAR_2025: YearConfig = {
   worksheet: WORKSHEET_SINGLE,
   sources: SOURCES,
   states: STATES_2025,
+  treaties: TREATIES_2025,
   review: TODO_CPA,
 }
