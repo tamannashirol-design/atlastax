@@ -33,6 +33,8 @@ export type EstimateLine = {
   from?: string
   /** The IRS publication and page behind this line, e.g. "Instructions for Form 1040-NR (2025), page 17" */
   source?: string
+  /** A treaty line (the China exemption on line 1k, the India standard deduction on line 12): the forms mark these */
+  treaty?: true
 }
 /** An IRS (or state) figure the calculation used, with its citation */
 export type Source = { table: string; citation: string }
@@ -47,7 +49,17 @@ export type NotSupported = { status: 'not-supported'; message: string; withheld?
 export type NoTax = { status: 'no-tax'; message: string; sources: Source[] }
 export type Section = Calculated | NotCalculated | NotSupported | NoTax
 
-export type FormStatus = { id: 'form-8843' | 'form-1040nr'; label: string; status: 'not-ready' | 'ready'; reason?: string }
+export type FormStatus = {
+  id: 'form-8843' | 'form-1040nr'
+  label: string
+  status: 'not-ready' | 'ready'
+  /** Why not, in plain words */
+  reason?: string
+  /** Ready: what the download leaves blank (no values: only line names), what it assumed, and what it doesn't include */
+  blank?: string[]
+  check?: string[]
+  notIncluded?: string[]
+}
 
 export type Estimate = {
   year: number
@@ -115,5 +127,7 @@ function notesFor(input: TaxInput, federal: Section): string[] {
 export function hideNumbers(e: Estimate): Estimate {
   const hide = <T extends Section>(s: T): T =>
     isCalculated(s) ? { ...s, amount: null, lines: s.lines.map((l) => ({ ...l, amount: null })) } : s.status === 'not-supported' ? { ...s, withheld: s.withheld === undefined ? undefined : null } : s
-  return { ...e, federal: hide(e.federal), state: hide(e.state), numbersHidden: true }
+  // Form 1040-NR is made of the amounts, so it can't be downloaded while the number is off
+  const forms = e.forms.map((f): FormStatus => (f.id === 'form-1040nr' ? { id: f.id, label: f.label, status: 'not-ready', reason: 'Turn on “Show estimate number” to download this form.' } : f))
+  return { ...e, federal: hide(e.federal), state: hide(e.state), forms, numbersHidden: true }
 }

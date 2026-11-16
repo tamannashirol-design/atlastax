@@ -7,12 +7,13 @@ import { SecondaryButton } from '../components/SecondaryButton'
 import { Switch } from '../components/Switch'
 import { ESTIMATE_NUMBER_VISIBLE } from '../config'
 import { usStates } from '../data/places'
-import { useAnswers, useFilingYear } from '../flow/answers'
+import { useAnswers, useFilingYear, type Answers } from '../flow/answers'
 import { REVIEW_PATH } from '../flow/screens'
 import { spring } from '../lib/motion'
 import { Link, navigate } from '../lib/router'
+import { downloadForm } from '../forms/client'
 import { fetchEstimate } from '../tax/client'
-import { combined, ESTIMATE_LABEL, hideNumbers, isCalculated, type Calculated, type Estimate, type EstimateLine, type LineGroup, type Section } from '../tax/estimate'
+import { combined, ESTIMATE_LABEL, hideNumbers, isCalculated, type Calculated, type Estimate, type EstimateLine, type FormStatus, type LineGroup, type Section } from '../tax/estimate'
 import type { Target } from '../tax/input'
 import { isResultFixture, type ResultFixture } from '../tax/fixtureNames'
 
@@ -23,7 +24,9 @@ import { isResultFixture, type ResultFixture } from '../tax/fixtureNames'
 //   Federal and State sections: refund (calm, positive), amount owed (neutral, practical), or not
 //   calculated / not supported. "Show how we got this" lists the lines. A combined total only
 //   when both are calculated. Notes: single filing status, treaty benefits not included.
-//   Downloads: both forms "Not ready yet" until they're built.
+//   Downloads: Form 8843 and Form 1040-NR (src/forms, server/forms.ts): a Download button when a form can be
+//   prepared (filled on the server per click, never saved or logged, every page marked "Prototype estimate, not
+//   for filing"), the fields it leaves blank, and why a form isn't ready.
 //   "Show estimate number" (prototype switch, this browser only): off = no amount anywhere.
 // Recalculates every time it opens and whenever the answers change while it's open.
 // Dev: ?result=refund|owed|blocked|waiting shows labelled TEST inputs (fixtures.ts) instead.
@@ -83,7 +86,7 @@ export default function ResultPage() {
   const [announce, setAnnounce] = useState('')
   const last = useRef<string | null>(null)
   // What the estimate depends on in the browser (documents and answers): a change recalculates it
-  const sig = JSON.stringify([answers.income, answers.details, answers.citizenship, answers.visa, answers.state])
+  const sig = JSON.stringify([answers.income, answers.details, answers.citizenship, answers.visa, answers.state, answers.residency])
 
   useEffect(() => {
     let live = true
@@ -207,13 +210,7 @@ export default function ResultPage() {
                 <Card id="result-downloads" title="Download your forms" motionProps={card(1)}>
                   <ul className="flex flex-col divide-y divide-border-decorative">
                     {estimate.forms.map((f) => (
-                      <li key={f.id} className="flex min-h-14 flex-wrap items-center justify-between gap-x-4 gap-y-1 py-2">
-                        <span className="text-body font-semibold">{f.label.replace(/(\S)-(?=\S)/g, '$1\u2060-\u2060')}</span>
-                        <span className="flex items-center gap-2 text-small font-semibold whitespace-nowrap">
-                          <CircleDashedIcon size={24} weight="regular" aria-hidden />
-                          {f.status === 'ready' ? 'Ready' : 'Not ready yet'}
-                        </span>
-                      </li>
+                      <DownloadRow key={f.id} form={f} year={year} answers={answers} numbers={showNumber && !fixture} tellMe={setAnnounce} />
                     ))}
                   </ul>
                 </Card>
@@ -236,6 +233,86 @@ export default function ResultPage() {
 const stateTitle = (code: string | null) => {
   const name = code ? usStates.find((p) => p.value === code)?.label : undefined
   return name ? `State: ${name}` : 'State'
+}
+
+/**
+ * One form in "Download your forms": its status, a Download button when it can be prepared, and a disclosure
+ * with what the form leaves blank, what to check and what isn't included (also on the form's last page).
+ * The PDF is made on the server per click and never saved there; here it is only handed to the browser's download.
+ */
+function DownloadRow({ form, year, answers, numbers, tellMe }: { form: FormStatus; year: number; answers: Answers; numbers: boolean; tellMe: (text: string) => void }) {
+  const [busy, setBusy] = useState(false)
+  const [failed, setFailed] = useState(false)
+  const [open, setOpen] = useState(false)
+  const ready = form.status === 'ready'
+  const blank = form.blank ?? []
+  const panel = `${form.id}-left`
+  const name = form.label.replace(/(\S)-(?=\S)/g, '$1⁠-⁠')
+
+  const run = async () => {
+    if (busy) return // not disabled while busy: a disabled button would lose keyboard focus
+    setBusy(true)
+    setFailed(false)
+    const result = await downloadForm(form.id, year, answers, numbers)
+    setBusy(false)
+    if (result === 'done') tellMe(`${form.label} downloaded`)
+    else setFailed(true)
+  }
+
+  return (
+    <li className="flex flex-col gap-3 py-4">
+      <div className="flex min-h-11 flex-wrap items-center justify-between gap-x-4 gap-y-1">
+        <span className="text-body font-semibold">{name}</span>
+        <span className="flex items-center gap-2 text-small font-semibold whitespace-nowrap">
+          {ready ? <CheckCircleIcon size={24} weight="regular" aria-hidden /> : <CircleDashedIcon size={24} weight="regular" aria-hidden />}
+          {ready ? 'Ready' : 'Not ready yet'}
+        </span>
+      </div>
+      {!ready && form.reason && <p className="text-small text-text-muted">{form.reason}</p>}
+      {ready && (
+        <>
+          <SecondaryButton onClick={() => void run()}>
+            {busy ? 'Preparing…' : 'Download'}
+            <span className="sr-only"> {form.label}</span>
+          </SecondaryButton>
+          {failed && (
+            <p role="alert" className="text-small text-error">
+              We couldn’t prepare this form. Try again.
+            </p>
+          )}
+          <p className="text-small text-text-muted">A PDF marked “Prototype estimate, not for filing” on every page. ID numbers show only their last 4 digits.</p>
+          <button type="button" aria-expanded={open} aria-controls={panel} onClick={() => setOpen(!open)} className={`self-start ${linkClass}`}>
+            {open ? 'Hide what’s left blank' : `What’s left blank (${blank.length})`}
+          </button>
+          {open && (
+            <div id={panel} className="flex flex-col gap-4">
+              <FormList heading="Left blank" items={blank} empty="Nothing" />
+              <FormList heading="Please check" items={form.check ?? []} />
+              <FormList heading="Not included" items={form.notIncluded ?? []} />
+            </div>
+          )}
+        </>
+      )}
+    </li>
+  )
+}
+
+function FormList({ heading, items, empty }: { heading: string; items: string[]; empty?: string }) {
+  if (!items.length && !empty) return null
+  return (
+    <section aria-label={heading} className="flex flex-col gap-1">
+      <h3 className="text-small font-semibold text-text-muted">{heading}</h3>
+      {items.length ? (
+        <ul className="flex list-disc flex-col gap-1 pl-6 text-small">
+          {items.map((t) => (
+            <li key={t}>{t}</li>
+          ))}
+        </ul>
+      ) : (
+        <p className="text-small">{empty}</p>
+      )}
+    </section>
+  )
 }
 
 function TargetLink({ target, children }: { target: Target; children: ReactNode }) {

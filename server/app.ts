@@ -22,7 +22,8 @@
 //   POST   /api/extraction/:itemId/retry?year=2025 → 204
 //   POST   /api/extraction/scenario { scenario }  → 204 (dev only: what the mock does next)
 //
-//   POST /api/estimate?year=&numbers=0|1 { person, income, items } → the Estimate (src/tax/estimate.ts)
+//   POST /api/estimate?year=&numbers=0|1 { person, income, items, facts } → the Estimate (src/tax/estimate.ts)
+//   POST /api/forms/form-8843|form-1040nr?year=&numbers= (same body) → the filled PDF, made in memory, never saved or logged
 //   Development only: POST /api/dev/tax-input?year= (same body) → the TaxInput (R1)
 //
 //   Review (server/review.ts; ID numbers masked except on reveal):
@@ -46,6 +47,10 @@ import { readingJobs, type ExtractionUpdate } from './extraction/jobs.ts'
 import { isScenario, mockProvider, type Scenario } from './extraction/mockProvider.ts'
 import { fingerprintOf, type Notice } from './notice.ts'
 import { reviewStore } from './review.ts'
+import { downloadName, renderForm } from './forms.ts'
+import { cleanFacts } from '../src/forms/clean.ts'
+import { buildForms, formStatuses } from '../src/forms/index.ts'
+import type { FormId } from '../src/forms/templates.ts'
 import { estimateReturn, hideNumbers } from '../src/tax/estimate.ts'
 import { buildTaxInput, type TaxItem } from '../src/tax/input.ts'
 import { sniff, storage, type ConsentRecord } from './storage.ts'
@@ -128,9 +133,11 @@ export function createApp(overrides: Partial<ServerOptions> = {}): Handler {
 
     if (path.startsWith('/api/extraction')) return extraction(req, res, url, sessionId)
 
-    // The tax input (R1) and the estimate built from this person's confirmed values. The browser sends a small,
-    // non-sensitive summary of its required documents; the confirmed values stay here.
-    if ((path === '/api/estimate' || path === '/api/dev/tax-input') && req.method === 'POST') {
+    // The tax input (R1), the estimate and the form downloads, all built from this person's confirmed values. The
+    // browser sends a small, non-sensitive summary of its required documents (and the facts the forms need from its
+    // answers); the confirmed values stay here. A form is generated in memory per request: never saved, never logged.
+    const formRoute = /^\/api\/forms\/(form-8843|form-1040nr)$/.exec(path)
+    if ((path === '/api/estimate' || path === '/api/dev/tax-input' || formRoute) && req.method === 'POST') {
       if (path.startsWith('/api/dev/') && !options.dev) return send(res, 404, { error: 'not-found' })
       const year = taxYear(url.searchParams.get('year'))
       const body = await readJson(req, 16_384)
@@ -138,11 +145,28 @@ export function createApp(overrides: Partial<ServerOptions> = {}): Handler {
       if (!year || !body || !Array.isArray(items) || !items.every((i) => i && typeof i.id === 'string' && typeof i.label === 'string' && typeof i.status === 'string' && (i.kind === 'document' || i.kind === 'income'))) return send(res, 400, { error: 'malformed' })
       const person = (body.person ?? {}) as { citizenship?: string; visa?: string }
       const income = Array.isArray(body.income) ? body.income.filter((x): x is string => typeof x === 'string') : []
-      const input = buildTaxInput({ year, person: { citizenship: person.citizenship ? String(person.citizenship) : undefined, visa: person.visa ? String(person.visa) : undefined }, income, items: items as TaxItem[], documents: await review.taxDocuments(sessionId, year) })
+      const docs = await review.taxDocuments(sessionId, year)
+      const input = buildTaxInput({ year, person: { citizenship: person.citizenship ? String(person.citizenship) : undefined, visa: person.visa ? String(person.visa) : undefined }, income, items: items as TaxItem[], documents: docs })
       if (path === '/api/dev/tax-input') return send(res, 200, input)
       const estimate = estimateReturn(input)
-      // "Show estimate number" off: no amount leaves the server
-      return send(res, 200, url.searchParams.get('numbers') === '0' ? hideNumbers(estimate) : estimate)
+      const fills = buildForms({ year, docs, facts: cleanFacts(body.facts), estimate })
+      const numbersOff = url.searchParams.get('numbers') === '0'
+      if (formRoute) {
+        const fill = fills[formRoute[1] as FormId]
+        // The 1040-NR is made of the amounts: not while "Show estimate number" is off
+        if (numbersOff && fill.id === 'form-1040nr') return send(res, 409, { error: 'numbers-hidden' })
+        if (fill.status !== 'ready') return send(res, 409, { error: 'not-ready' })
+        const pdf = await renderForm(fill, year)
+        res.statusCode = 200
+        res.setHeader('content-type', 'application/pdf')
+        res.setHeader('content-length', String(pdf.length))
+        res.setHeader('content-disposition', `attachment; filename="${downloadName(fill, year)}"`)
+        res.setHeader('x-content-type-options', 'nosniff')
+        return void res.end(pdf)
+      }
+      // The estimate, with what each form needs and leaves blank (never the values). "Show estimate number" off: no amount leaves the server
+      const withForms = { ...estimate, forms: formStatuses(fills, year) }
+      return send(res, 200, numbersOff ? hideNumbers(withForms) : withForms)
     }
 
     if (path === '/api/review' || path.startsWith('/api/review/')) {

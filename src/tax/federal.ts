@@ -57,7 +57,7 @@ export function federalSection(input: TaxInput): Calculated | NotCalculated | No
   const treatyLines: EstimateLine[] = china
     ? [
         line({ id: 'wages-w2', group: 'income', label: 'Wages on your W-2', formLine: 'Form W-2, box 1', from: fromW2, source: 'Instructions for Form 1040-NR (2025), page 17', dollars: w2Wages }),
-        line({ id: 'treaty', group: 'income', label: `Less: treaty exemption (${china.country})`, formLine: 'Form 1040-NR, line 1k', from: `Student wages, up to ${usd(china.exemptWagesPerYear)} a year, ${china.article}`, source: 'Publication 901 (9-2024), page 30; Publication 519 (2025), page 80', dollars: exempt }),
+        line({ id: 'treaty', group: 'income', label: `Less: treaty exemption (${china.country})`, formLine: 'Form 1040-NR, line 1k', from: `Student wages, up to ${usd(china.exemptWagesPerYear)} a year, ${china.article}`, source: 'Publication 901 (9-2024), page 30; Publication 519 (2025), page 80', treaty: true, dollars: exempt }),
       ]
     : []
   const lines: EstimateLine[] = [
@@ -73,7 +73,7 @@ export function federalSection(input: TaxInput): Calculated | NotCalculated | No
     }),
     line({ id: 'total-income', group: 'income', label: 'Total income', formLine: 'Form 1040-NR, line 9', from: 'Wages are the only income counted', source: 'Form 1040-NR (2025), page 1', dollars: totalIncome }),
     treaty?.kind === 'standard-deduction'
-      ? line({ id: 'deduction', group: 'deductions', label: `Standard deduction (${treaty.country} treaty)`, formLine: 'Form 1040-NR, line 12', from: `Student, U.S.–${treaty.country} treaty, ${treaty.article}`, source: 'Publication 519 (2025), pages 39 and 40', dollars: deductions })
+      ? line({ id: 'deduction', group: 'deductions', label: `Standard deduction (${treaty.country} treaty)`, formLine: 'Form 1040-NR, line 12', from: `Student, U.S.–${treaty.country} treaty, ${treaty.article}`, source: 'Publication 519 (2025), pages 39 and 40', treaty: true, dollars: deductions })
       : line({ id: 'deduction', group: 'deductions', label: 'Deductions', formLine: 'Form 1040-NR, line 12', from: 'Not included yet', source: 'Instructions for Form 1040-NR (2025), page 20', dollars: deductions }),
     line({ id: 'taxable', group: 'deductions', label: 'Taxable income', formLine: 'Form 1040-NR, line 15', source: 'Form 1040-NR (2025), page 2', dollars: taxable }),
     line({

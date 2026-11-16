@@ -51,6 +51,18 @@ export function mask(value: string | null | undefined, kind: SensitiveId): strin
 }
 
 /**
+ * The mask for a form box that holds at most `maxLength` characters (the 1040-NR identifying number
+ * holds 9). The usual mask if it fits; otherwise bullets up to the limit, then the last 4. Still only
+ * the last 4 characters are ever shown.
+ */
+export function maskForBox(value: string | null | undefined, kind: SensitiveId, maxLength: number): string {
+  const full = mask(value, kind)
+  if (full.length <= maxLength) return full
+  const l = last4(value)
+  return b(Math.max(0, maxLength - 4)) + (l ?? b(4))
+}
+
+/**
  * What a screen reader says instead of the bullets, e.g. "SSN ending in 6 7 8 9"
  * (digits spaced so they're read one by one). Render the mask with
  * aria-hidden and this text in a visually hidden span next to it.
