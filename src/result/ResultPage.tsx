@@ -371,6 +371,7 @@ function LineRow({ line }: { line: EstimateLine }) {
       <div className="flex min-w-0 flex-col">
         <span className="text-body">{line.label}</span>
         {(line.formLine || line.from) && <span className="text-small text-text-muted">{[line.formLine, line.from].filter(Boolean).join(' · ')}</span>}
+        {line.source && <span className="text-small text-text-muted">{line.source}</span>}
       </div>
       <span className="shrink-0 text-body tabular-nums">{usd(line.amount)}</span>
     </li>

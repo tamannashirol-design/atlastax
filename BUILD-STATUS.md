@@ -19,8 +19,8 @@ Open the app with `npm run dev`, then http://localhost:5173.
 | **5** | **Reading page** (redone Nov 15) | One status pill: "Reading your documents" → "Extracting your details" → "Done" (success fill + small settle), each changed only by the mock reader (3–5s per stage); hold 600ms, then Review. Reading starts only when /reading opens (never at upload), every visit reads again. Failures: "Couldn't read" + Try again / Choose another file / Enter it myself, Continue waits. Removed: reading at upload, Reading/Couldn't read on cards, 10s/60s messages, skip-to-Review, minimum display time, Home's "Reading N documents". | **Done** (stall fixed, see below) | `/documents` → **Continue**, or `/reading?reading=normal` / `?reading=fail` | Opus |
 | **6** | **Review screen** | "Check your details": one document per screen (passport, I-94, then income), "2 of n", file placeholder left (iPad/laptop) or "View document" sheet (phone), editable fields, tick rule, masked IDs with Show, Confirm and continue (locked, says what's left), Skip for now, summary → "Looks good" → `/result`; saved on the server as you go, resumes; states: needs review, all ticked, couldn't read, wrong document, being read after Replace; `check:review` | **Built, waiting for your "next"** | `/review` after the Reading page; states: `/motion` → "Review" or `/review?review=needs` etc. See "How to see step 6". | Opus |
 | **R1** | **Transcription** | Confirmed Review values → `TaxInput` (cents, `buildTaxInput` in `src/tax/input.ts`); only ticked values go in; blockers link to the screen to fix; no ID numbers in the output; 1042-S boxes fixed (Box 10, Box 12d); realistic fake W-2; `check:taxinput` | **Built, waiting for your "next"** | `/motion` → "Tax input (R1)". See "How to see R1". | Sonnet |
-| **R6a** | **Result screen (built ahead of the engine)** | `/result`: Federal and State sections ("Estimate (prototype)", refund / amount owed / not calculated / not supported), "Show how we got this", combined total only when both are calculated, notes (single filing status, treaty benefits not included), Download area (both forms "Not ready yet"), R1 blockers with links to fix, "Show estimate number" switch. Reads one interface (`Estimate`, `src/tax/estimate.ts`); today a stub fills it, so nothing is ever calculated or invented. `check:result` | **Built, waiting for your "next"** | Documents → Review → **Looks good** lands on `/result`; test inputs: `/motion` → "Result (test inputs)". See "How to see /result". | Sonnet |
-| R2 | Engine core, 2025 | 2025 tables with sources, Tax Table method, wages-only; `check:tax` | Not started | Nothing on screen | Opus |
+| **R6a** | **Result screen (built ahead of the engine)** | `/result`: Federal and State sections ("Estimate (prototype)", refund / amount owed / not calculated / not supported), "Show how we got this", combined total only when both are calculated, notes (single filing status, treaty benefits not included), Download area (both forms "Not ready yet"), R1 blockers with links to fix, "Show estimate number" switch. Reads one interface (`Estimate`, `src/tax/estimate.ts`); R2 now fills in Federal, State is still a placeholder. `check:result` | **Built, waiting for your "next"** | Documents → Review → **Looks good** lands on `/result`; test inputs: `/motion` → "Result (test inputs)". See "How to see /result". | Sonnet |
+| **R2** | **Engine core, 2025** (connected to `/result`) | 2025 figures with IRS sources (`src/tax/years/2025.ts`), Tax Table and Tax Computation Worksheet (`src/tax/engine.ts`), the federal estimate for wages only: nonresident, single, no treaty, no deductions yet (`src/tax/federal.ts`); income it can't handle gives no number and a message; refund or amount owed = withholding − tax; runs on the server; `/result` Federal shows it with every line and its IRS page; State still "Not calculated yet"; `check:tax` (all 2,062 Tax Table rows, worksheet, rounding, synthetic cases; official vs mine labelled in the output). Pulled in from R5: nothing new (`POST /api/estimate`, `numbers=0` on the server and the switch already existed). | **Built, waiting for your "next"** | Home → answer the questions → Documents → Continue → Review (tick everything) → **Looks good** → `/result`. See "How to see R2". | Opus |
 | R5 | Estimate endpoint | `POST /api/estimate`, stale detection, number switch on the server | Not started | Nothing on screen | Opus |
 | R6 | Result screen | All states (blocked, refund, owed, zero, needs review, stale), the visible switch that hides the number. **Also replaces the old step 7** (summary and download lock). | Not started | `/result` (`?result=refund` etc.) | Opus for states, Sonnet for UI |
 | R3 | Engine: the rest | Scholarships, treaty (from the 1042-S only), India standard deduction, itemized, "needs review" flags | Not started | Nothing on screen | Opus |
@@ -53,7 +53,7 @@ Form 8843 and 1040-NR, filled, every page marked "Prototype estimate, not for fi
    (**Check your W-2**) and a cobalt **Fix what's missing**.
 2. Confirm everything, **Looks good** again: **Your estimate**, with Federal and State
    (New York) each saying **Not calculated yet** and what's missing, and both forms
-   **Not ready yet**. This is what you'll see until R2 and the state step exist.
+   **Not ready yet**. (Since R2, Federal shows a real estimate for a W-2-only return: see "How to see R2". State stays **Not calculated yet** until the state step.)
 3. Test inputs (made-up numbers, labelled on screen; development only): `/motion` →
    **Result (test inputs)**, or `/result?result=refund`, `owed`, `blocked`, `waiting`.
    Refund and owed show **Show how we got this** and the combined total.
@@ -62,9 +62,9 @@ Form 8843 and 1040-NR, filled, every page marked "Prototype estimate, not for fi
 
 ## /result: things to know
 
-- **Engine interface:** the page reads only `Estimate`. R2 fills in `federal`, the state
-  step fills in `state`; the page won't change. `estimateReturn()` in
-  `src/tax/estimate.ts` is the stub; `POST /api/estimate` serves it.
+- **Engine interface:** the page reads only `Estimate`. `estimateReturn()` in
+  `src/tax/estimate.ts` fills in `federal` from the engine (R2); the state step will fill
+  in `state`; the page won't change. `POST /api/estimate` serves it.
 - **Recalculating:** it recalculates every time `/result` opens, and when the answers
   change while it's open (it says "Estimate updated"). Confirmed values change on Review,
   so the new result shows when you come back. There is no separate "out of date" screen
@@ -76,6 +76,51 @@ Form 8843 and 1040-NR, filled, every page marked "Prototype estimate, not for fi
   treaty logic.
 - The test inputs' numbers are made up, add up (tested), and are not in the production
   bundle.
+
+## How to see R2
+
+1. Run `npm run dev`, open http://localhost:5173. The mock reader's fake W-2 is wages
+   $38,450, federal tax withheld $3,186 (it reads the same fake values for every file).
+2. Home → start the questions (visa F-1, income: **OPT or CPT job** only) → upload any
+   file on each upload screen → **Documents → Continue** → wait for **Done** → on each
+   Review screen tick every **Please check** box and press **Confirm and continue** →
+   **Looks good**. Or after the documents are in, open `/review` and go through it.
+3. `/result` → Federal: **We estimate you owe $1,193**. Press **Show how we got this**:
+   Wages $38,450 → Taxable income $38,450 → Tax $4,379 (2025 Tax Table, Single column)
+   → Federal tax withheld $3,186 → Amount owed $1,193, each with its Form 1040-NR line
+   and IRS publication and page, then **Figures used** with the full citations.
+4. State (New York) stays **Not calculated yet**. No combined total (needs both).
+5. **Show estimate number** off: no amount on the page and none in what the server
+   sends. A scholarship (1042-S), freelance or other income card: Federal says **We can't
+   include … in the estimate yet** and shows no number. An earlier year (2024, 2023):
+   **We can't estimate this tax year yet.**
+6. Checks: `npm run check:tax` (part of the build).
+
+### R2: things to know
+
+- **What it assumes (and is wrong about, on purpose, for now):** wages only; single;
+  no treaty benefits; **no deductions yet**, so the breakdown shows Deductions $0, "Not
+  included yet". A student who could deduct state income tax (Schedule A) or who
+  qualifies for the India standard deduction will see a number that is too HIGH until R3.
+  The page's notes ("Assumes single filing status.", "Treaty benefits aren't included
+  yet.") are unchanged; there is no third note about deductions (the breakdown says it).
+- **Tax Table:** computed from the IRS rate table the way the IRS prints it (tax on the
+  row's middle amount, rounded); `check:tax` proves it equals ALL 2,062 printed rows
+  (`fixtures/irs/tax-table-2025.json`, read from the IRS PDF) and every whole dollar
+  from $0 to $99,999. At $100,000 and up: Tax Computation Worksheet, Section A.
+- **Official vs mine** (labelled in the `check:tax` output): OFFICIAL = the Tax Table
+  rows, the IRS's own example ($25,300–25,350 = $2,801), the rounding examples, and the
+  worksheet checked against the amounts printed in Rev. Proc. 2024-40 (the IRS publishes
+  no worked example for the worksheet). MINE = the fake W-2, refund, zero withholding,
+  even, $120,000, cents, two W-2s, and every "no number" case.
+- **Rounding:** cents are added across W-2s first, only the totals are rounded (50 to 99
+  cents up), as the Form 1040 instructions say; every amount shown is in whole dollars.
+- **Figures** live only in `src/tax/years/2025.ts`, each with publication and page; all
+  marked TODO confirm with CPA. `yearConfig()` returns nothing for a year without final
+  IRS figures. The signature is `estimateReturn(input)`: the year is in the input.
+- **Married people:** Form 1040-NR sends a married nonresident to the "Married filing
+  separately" column; in 2025 it gives the same tax as Single, but we don't ask about marital status
+  yet (the note says "single"). Revisit with the marital-status question.
 
 ## How to see R1
 

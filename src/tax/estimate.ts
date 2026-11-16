@@ -2,12 +2,13 @@
 // and nothing else; connecting the real engine later only changes what produces it.
 // Pure: no React, no network (the server calls estimateReturn, the browser reads the result).
 //
-// Right now only the stub exists: every section is "not-calculated" with what's
-// missing, never a made-up number. R2 fills in `federal`, the state step fills in
-// `state`. Money is in whole CENTS. Amounts are `null` when the person turned the
-// number off (hideNumbers).
+// `federal` comes from the engine (src/tax/federal.ts, R2: wages only). `state` is still
+// "not calculated" (the state step fills it in). Never a made-up number: anything the
+// engine can't handle says what is missing. Money is in whole CENTS. Amounts are `null`
+// when the person turned the number off (hideNumbers).
 //
 // Every section is labelled "Estimate (prototype)" on screen (ESTIMATE_LABEL).
+import { federalSection } from './federal.ts'
 import type { Blocker, TaxInput } from './input.ts'
 
 export const ESTIMATE_LABEL = 'Estimate (prototype)'
@@ -25,6 +26,8 @@ export type EstimateLine = {
   amount: number | null
   /** Where it came from, e.g. "From your W-2, Sample Employer" */
   from?: string
+  /** The IRS publication and page behind this line, e.g. "Instructions for Form 1040-NR (2025), page 17" */
+  source?: string
 }
 /** An IRS (or state) figure the calculation used, with its citation */
 export type Source = { table: string; citation: string }
@@ -73,15 +76,15 @@ export const FORMS_NOT_READY: FormStatus[] = [
 ]
 
 /**
- * THE STUB. Replaced piece by piece: R2 computes `federal`, the state step `state`.
- * Until then nothing is calculated, and each section says what is missing.
+ * The estimate from the confirmed values. Federal: the engine (R2). State: not built yet,
+ * so it says what is missing. Pure; the server runs it, the browser only reads the result.
  */
 export function estimateReturn(input: TaxInput): Estimate {
   const waiting = input.blockers.length ? ['Waiting for the items listed above.'] : []
   return {
     year: input.year,
     blockers: input.blockers,
-    federal: { status: 'not-calculated', missing: [...waiting, 'The federal calculation isn’t built yet.'] },
+    federal: federalSection(input),
     state: { code: input.wages[0]?.stateCode ?? null, status: 'not-calculated', missing: [...waiting, 'The state calculation isn’t built yet.'] },
     notes: [...RESULT_NOTES],
     forms: FORMS_NOT_READY,
