@@ -31,6 +31,7 @@ export type FieldKind =
   | 'code' // a code printed on the form (e.g. 1042-S income code)
   | 'country'
   | 'state' // two-letter U.S. state
+  | 'address' // a postal address (shown on two lines on Review, so all of it can be checked)
   | 'text'
 
 export type FieldSpec = {
@@ -58,6 +59,8 @@ export const FIELDS: Record<FormType, FieldSpec[]> = {
     // Same mask shape for SSN and ITIN; the Review screen uses answers.taxId
     // to say "ITIN" instead of "SSN" when that's what the person has.
     { key: 'employeeTaxId', label: 'Your SSN or ITIN', box: 'Box a', kind: 'id', sensitive: 'ssn', needsTick: true },
+    // Box f, "Employee's address and ZIP code" (Form W-2 (2025)): goes on the 1040-NR as your home address, so it needs a tick
+    { key: 'employeeAddress', label: 'Your address', box: 'Box f', kind: 'address', needsTick: true, mayBeBlank: true },
     { key: 'employerName', label: 'Employer', box: 'Box c', kind: 'name', needsTick: false },
     { key: 'employerEin', label: 'Employer EIN', box: 'Box b', kind: 'id', sensitive: 'ein', needsTick: true },
     money('wages', 'Wages', 'Box 1'),
@@ -101,7 +104,9 @@ export const FIELDS: Record<FormType, FieldSpec[]> = {
     money('federalWithheld', 'Federal tax withheld', 'Box 4', true),
   ],
   Passport: [
-    { key: 'fullName', label: 'Full name', kind: 'name', needsTick: true },
+    // Two names, as the passport prints them (the forms ask for first and last name: nothing is split or guessed)
+    { key: 'firstName', label: 'First name', box: 'Given names', kind: 'name', needsTick: true },
+    { key: 'lastName', label: 'Last name', box: 'Surname', kind: 'name', needsTick: true },
     { key: 'passportNumber', label: 'Passport number', kind: 'id', sensitive: 'passport', needsTick: true },
     { key: 'country', label: 'Country that issued it', kind: 'country', needsTick: true },
     { key: 'dateOfBirth', label: 'Date of birth', kind: 'date', needsTick: true },

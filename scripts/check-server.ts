@@ -264,7 +264,7 @@ type TInput = { wages: { wages: number; stateCode: string | null; stateWithheld:
 const taxInput = async (items: unknown[]) => (await (await fetch(`${base}/api/dev/tax-input?year=2025`, { method: 'POST', headers: reader, body: JSON.stringify({ person: { citizenship: 'IN', visa: 'F-1' }, income: ['opt-cpt'], items }) })).json()) as TInput
 const w2Item = [{ id: 'opt-cpt', kind: 'document', label: 'W-2', status: 'added' }]
 check('tax input: an unconfirmed W-2 blocks and no value is used', await taxInput(w2Item).then((t) => t.wages.length === 0 && t.blockers.some((b) => b.id === 'opt-cpt:unconfirmed')))
-const tickAll = Object.fromEntries(['employeeTaxId', 'employerEin', 'wages', 'federalWithheld', 'state', 'stateWages', 'stateWithheld'].map((k) => [k, { ticked: true }]))
+const tickAll = Object.fromEntries(['employeeTaxId', 'employeeAddress', 'employerEin', 'wages', 'federalWithheld', 'state', 'stateWages', 'stateWithheld'].map((k) => [k, { ticked: true }]))
 await put('opt-cpt', { fields: tickAll })
 check('tax input: ticked but not confirmed yet still blocks', await taxInput(w2Item).then((t) => t.wages.length === 0))
 check('confirming the W-2 works once every tick is done', (await put('opt-cpt', { status: 'confirmed' })).status === 200)

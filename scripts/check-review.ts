@@ -12,6 +12,7 @@ function check(name: string, got: unknown, want: unknown) {
 
 const w2: Suggestion[] = [
   { key: 'employeeTaxId', suggested: '123-45-6789', confidence: 'high' },
+  { key: 'employeeAddress', suggested: '123 Sample St Apt 4B, New York, NY 10001', confidence: 'high' },
   { key: 'employerName', suggested: 'Sample Employer Inc.', confidence: 'high' },
   { key: 'employerEin', suggested: '12-3456789', confidence: 'high' },
   { key: 'wages', suggested: '24180.00', confidence: 'high' },
@@ -51,8 +52,8 @@ check('no full ID number anywhere in what the screen gets', JSON.stringify(view(
 check('a typed ID number is masked too', field('employeeTaxId', patch(EMPTY_REVIEW, { employeeTaxId: { value: '555-55-5555' } })).shown, '•••-••-5555')
 
 console.log('\nWHAT’S LEFT, CONFIRMING\n')
-check('says what’s left', leftLine(view().fields!), '6 details to check and 1 to type')
-const done = patch(EMPTY_REVIEW, Object.fromEntries([...['employeeTaxId', 'employerEin', 'wages', 'federalWithheld', 'state', 'stateWages'].map((k) => [k, { ticked: true }]), ['stateWithheld', { notOnForm: true }]]))
+check('says what’s left', leftLine(view().fields!), '7 details to check and 1 to type')
+const done = patch(EMPTY_REVIEW, Object.fromEntries([...['employeeTaxId', 'employeeAddress', 'employerEin', 'wages', 'federalWithheld', 'state', 'stateWages'].map((k) => [k, { ticked: true }]), ['stateWithheld', { notOnForm: true }]]))
 check('everything done → can confirm, nothing left', [canConfirm(view(done).fields), leftLine(view(done).fields!)], [true, null])
 check('one detail left → can’t confirm', canConfirm(view(patch(done, { wages: { ticked: false } })).fields), false)
 

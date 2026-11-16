@@ -45,8 +45,8 @@ for (const [form, fields] of Object.entries(FIELDS)) {
     failed++
   }
   for (const f of fields) {
-    // Names of organisations (employer, bank, client) don't identify the person
-    const orgName = f.kind === 'name' && f.key !== 'fullName'
+    // Names of organisations (employer, bank, client) don't identify the person; a person's names do
+    const orgName = f.kind === 'name' && !['fullName', 'firstName', 'lastName'].includes(f.key)
     if (ALWAYS_TICK.includes(f.kind) && !orgName && !f.needsTick) {
       console.log(`✗ ${form} · ${f.label}: a ${f.kind} goes into a tax form or identifies the person, so it needs needsTick`)
       failed++

@@ -25,7 +25,7 @@ import { F1040NR, build1040NR } from '../src/forms/map-1040nr.ts'
 import { F8843, build8843 } from '../src/forms/map-8843.ts'
 import { PROTOTYPE_MARK, TEMPLATES, TEMPLATE_DIR } from '../src/forms/templates.ts'
 import { EMPTY_FACTS, type FormFacts, type FormFill } from '../src/forms/types.ts'
-import { countryName, splitName, toMDY, visaLabel } from '../src/forms/data.ts'
+import { countryName, parseUSAddress, toMDY, visaLabel } from '../src/forms/data.ts'
 import { mask, maskForBox } from '../src/lib/mask.ts'
 import { estimateReturn, hideNumbers, type Estimate } from '../src/tax/estimate.ts'
 import { buildTaxInput, type ConfirmedDocument, type TaxItem } from '../src/tax/input.ts'
@@ -83,6 +83,11 @@ const spots1040: Spot[] = [
   [F1040NR.first, 1, 36, 666, 'first name and middle initial'],
   [F1040NR.last, 1, 246, 666, 'last name'],
   [F1040NR.id, 1, 469, 666, 'identifying number'],
+  [F1040NR.street, 1, 36, 642, 'home address (street)'],
+  [F1040NR.apt, 1, 527, 642, 'apt. no.'],
+  [F1040NR.city, 1, 36, 618, 'city'],
+  [F1040NR.state, 1, 433, 618, 'state'],
+  [F1040NR.zip, 1, 498, 618, 'ZIP code'],
   [F1040NR.single, 1, 103, 584, 'filing status: Single'],
   [F1040NR.digitalYes, 1, 513, 531, 'digital assets: Yes box'],
   [F1040NR.digitalNo, 1, 547, 531, 'digital assets: No box'],
@@ -104,6 +109,8 @@ const spots1040: Spot[] = [
   [F1040NR.line33, 2, 504, 300, 'line 33'],
   [F1040NR.line34, 2, 504, 288, 'line 34 (overpaid)'],
   [F1040NR.line37, 2, 504, 198, 'line 37 (amount you owe)'],
+  [F1040NR.designeeYes, 2, 427, 176, 'third-party designee: Yes box'],
+  [F1040NR.designeeNo, 2, 535, 176, 'third-party designee: No box'],
 ]
 function where(doc: PDFDocument, name: string) {
   const field = doc.getForm().getField(name)
@@ -196,11 +203,11 @@ console.log('\nMINE: only confirmed values are used; the rest is left blank and 
 // An unticked value on a required document is a BLOCKER (src/tax/input.ts), so a real form is then not ready at all.
 // These go straight to the data layer to prove it never uses a value that isn't properly confirmed.
 const est = makeEstimate('IN')
-const unDocs = [doc('passport', 'Passport', { fullName: { ticked: false }, passportNumber: { ticked: false } }), doc('i94', 'I-94'), doc('opt-cpt', 'W-2', { employeeTaxId: { ticked: false } })]
+const unDocs = [doc('passport', 'Passport', { firstName: { ticked: false }, lastName: { ticked: false }, passportNumber: { ticked: false } }), doc('i94', 'I-94'), doc('opt-cpt', 'W-2', { employeeTaxId: { ticked: false } })]
 const un8843 = build8843({ docs: unDocs, facts: FACTS, year: 2025 })
 const un1040 = build1040NR({ docs: unDocs, estimate: est })
 check('an unticked name, passport number and SSN are never used (fields empty)', [v(un8843, F8843.first), v(un8843, F8843.tin), v(un8843, F8843.line3b), v(un1040, F1040NR.id)], [undefined, undefined, undefined, undefined])
-check('…and said so in the blank lists', [un8843.blank.some((b) => /^Your name/.test(b)), un8843.blank.some((b) => /taxpayer identification number/.test(b)), un8843.blank.some((b) => /^Line 3b/.test(b)), un1040.blank.some((b) => /identifying number/.test(b))], [true, true, true, true])
+check('…and said so in the blank lists', [un8843.blank.some((b) => /^Your first name/.test(b)) && un8843.blank.some((b) => /^Your last name/.test(b)), un8843.blank.some((b) => /taxpayer identification number/.test(b)), un8843.blank.some((b) => /^Line 3b/.test(b)), un1040.blank.some((b) => /identifying number/.test(b))], [true, true, true, true])
 check('and in the real flow that same unticked value holds the form back (a blocker), it is never half-filled', (() => { const e = makeEstimate('IN', unDocs); const f = buildForms({ year: 2025, docs: unDocs, facts: FACTS, estimate: e }); return [e.blockers.length > 0, f['form-8843'].status, f['form-1040nr'].status] })(), [true, 'not-ready', 'not-ready'])
 const openDocs = [doc('passport', 'Passport', {}, 'open'), doc('i94', 'I-94', {}, 'skipped'), doc('opt-cpt', 'W-2')]
 const open8843 = build8843({ docs: openDocs, facts: FACTS, year: 2025 })
@@ -208,10 +215,17 @@ check('a document still open or skipped is not used at all (no name, no entry da
 check('with no I-94 the visa type comes from your answers, and the missing entry date is listed', [v(open8843, F8843.line1a), open8843.blank.some((b) => /^Line 1a: the date of your most recent entry/.test(b))], ['F-1', true])
 const noDays = forms('IN', { facts: { ...FACTS, daysComplete: false, days: {}, inScope: null } })['form-8843']
 check('days not finished: lines 4a, 4b and 12 are left blank and listed', [v(noDays, F8843.days[0]), v(noDays, F8843.line4b), v(noDays, F8843.line12No), noDays.blank.filter((b) => /^Line (4a|4b|12)/.test(b)).length], [undefined, undefined, undefined, 5])
-check('a passport with one name: the first-name box is listed, not guessed', build8843({ docs: [doc('passport', 'Passport', { fullName: { value: 'MADONNA' } }), doc('i94', 'I-94'), doc('opt-cpt', 'W-2')], facts: FACTS, year: 2025 }).blank.some((b) => /first name and initial \(your passport shows a single name\)/.test(b)), true)
+check('a passport with no first name confirmed: the first-name box is listed, the last name still filled (nothing guessed)', (() => { const f = build8843({ docs: [doc('passport', 'Passport', { firstName: { value: '' } }), doc('i94', 'I-94'), doc('opt-cpt', 'W-2')], facts: FACTS, year: 2025 }); return [f.values[F8843.first], f.values[F8843.last], f.blank.some((b) => /^Your first name and initial/.test(b))] })(), [undefined, 'PERSON', true])
 check('refund: the refund-payment lines are listed; owed: they are not', [inNR.blank.some((b) => /^Lines 35a to 35e/.test(b)), cnNR.blank.some((b) => /^Lines 35a to 35e/.test(b))], [true, false])
 check('1040-NR without the India deduction lists line 12 (itemized deductions not included yet); with it, it does not', [frNR.blank.some((b) => /^Line 12/.test(b)), inNR.blank.some((b) => /^Line 12/.test(b))], [true, false])
-check('1040-NR lists addresses, the digital assets question, signature and the designee question', ['Your home address', 'The digital assets', 'Your signature', 'The third-party'].map((s) => inNR.blank.some((b) => b.startsWith(s))), [true, true, true, true])
+check('1040-NR lists the digital assets question (when not answered) and the signature; not the address (from the W-2) and not the designee (always No)', ['The digital assets', 'Your signature', 'Your home address', 'The third-party'].map((x) => inNR.blank.some((b) => b.startsWith(x))), [true, true, false, false])
+check('the names are the passport’s two confirmed fields, as they are: first SAMPLE, last PERSON, on both forms; no "name was split" line anywhere', [v(inNR, F1040NR.first), v(inNR, F1040NR.last), v(f8843, F8843.first), v(f8843, F8843.last), [...inNR.check, ...f8843.check].some((c) => /split/.test(c))], ['SAMPLE', 'PERSON', 'SAMPLE', 'PERSON', false])
+check('home address from the W-2 (box f): street, apt, city, state, ZIP in their boxes, and a note to check it', [F1040NR.street, F1040NR.apt, F1040NR.city, F1040NR.state, F1040NR.zip].map((n) => v(inNR, n)).concat(inNR.check.some((c) => /box f/.test(c))), ['123 Sample St', '4B', 'New York', 'NY', '10001', true])
+const addr = (value: string, extra: Partial<ConfirmedDocument['fields'][string]> = {}) => build1040NR({ docs: [doc('passport', 'Passport'), doc('i94', 'I-94'), doc('opt-cpt', 'W-2', { employeeAddress: { value, ...extra } })], estimate: makeEstimate('IN') })
+check('an address we can’t split: all on the street line, city/state/ZIP listed as blank (nothing guessed)', (() => { const f = addr('Room 12, Sample Hall, Sample University'); return [v(f, F1040NR.street), v(f, F1040NR.city), f.blank.some((b) => /^Your city, state and ZIP/.test(b))] })(), ['Room 12, Sample Hall, Sample University', undefined, true])
+check('no address confirmed (unticked, or "Not on my form"): the home address is listed as blank', [addr('123 Sample St, New York, NY 10001', { ticked: false }).blank.some((b) => /^Your home address/.test(b)), addr('', { notOnForm: true }).blank.some((b) => /^Your home address/.test(b))], [true, true])
+check('third-party designee: No is ticked, Yes is empty', [v(inNR, F1040NR.designeeNo), v(inNR, F1040NR.designeeYes)], [true, undefined])
+check('the last page says: "Attach Copy B of your W-2 to the front of this form when you mail it."', inNR.notIncluded.includes('Attach Copy B of your W-2 to the front of this form when you mail it.'), true)
 check('1040-NR says what it does not include: lines 2 to 8, Schedule OI (and, for China, item L and the statement), W-2 copies', [inNR.notIncluded.length, /item L/.test(cnNR.notIncluded.join(' ')), /item L/.test(inNR.notIncluded.join(' '))], [3, true, false])
 
 console.log('\nMINE: when a form is not ready\n')
@@ -231,7 +245,20 @@ check('the status list carries lines to leave blank, never values', JSON.stringi
 console.log('\nMINE: what the browser sends is cleaned, not trusted\n')
 check('junk facts become safe defaults', cleanFacts({ visa: 'B-2', citizenship: 'Narnia', days: { '2025': 9999, abc: 1, '2024': 12 }, daysComplete: 'yes', studentYears: [2024, 'x', 1], inScope: 'maybe' }), { ...EMPTY_FACTS, days: { '2024': 12 }, studentYears: [2024] })
 check('good facts pass through (region code upper-cased)', cleanFacts({ ...FACTS, citizenship: 'in' }), FACTS)
-check('small helpers: name split, dates, visa codes, countries', [splitName('SAMPLE PERSON'), splitName('Ana Maria Lopez'), toMDY('2025-08-15'), toMDY('15/08/2025'), visaLabel('F1'), visaLabel('j-1'), countryName('IN'), countryName('CN'), countryName('ZZZ')], [{ first: 'SAMPLE', last: 'PERSON' }, { first: 'Ana Maria', last: 'Lopez' }, '08/15/2025', null, 'F-1', 'J-1', 'India', 'China', null])
+check('small helpers: dates, visa codes, countries', [toMDY('2025-08-15'), toMDY('15/08/2025'), visaLabel('F1'), visaLabel('j-1'), countryName('IN'), countryName('CN'), countryName('ZZZ')], ['08/15/2025', null, 'F-1', 'J-1', 'India', 'China', null])
+check('reading a W-2 address: one line, two lines, Apt / Unit / #, ZIP+4; anything else is not guessed', [
+  parseUSAddress('123 Sample St Apt 4B, New York, NY 10001'),
+  parseUSAddress('45 Example Ave\nSan Diego, CA 92101-1234'),
+  parseUSAddress('9 Test Rd #12, Austin, TX 73301'),
+  parseUSAddress('9 Test Rd Unit 3, Boston MA 02108'),
+  parseUSAddress('Room 12, Sample Hall'),
+], [
+  { street: '123 Sample St', apt: '4B', city: 'New York', state: 'NY', zip: '10001' },
+  { street: '45 Example Ave', apt: null, city: 'San Diego', state: 'CA', zip: '92101-1234' },
+  { street: '9 Test Rd', apt: '12', city: 'Austin', state: 'TX', zip: '73301' },
+  { street: '9 Test Rd', apt: '3', city: 'Boston', state: 'MA', zip: '02108' },
+  null,
+])
 
 // ---------------------------------------------------------------------------------------------
 console.log('\nMINE: the generated PDFs\n')

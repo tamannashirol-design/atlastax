@@ -5,7 +5,7 @@
 // checks every name used here exists and is the right kind of field (text with the right limit, or a box).
 //
 //   Page 1                                           field
-//   Your first name and initial / Last name          f1_04 / f1_05
+//   Your first name and initial / Last name          f1_04 / f1_05   (the passport's first and last name, as confirmed)
 //   Your U.S. taxpayer identification number (TIN)   f1_06   (max 11: the masked form "•••-••-6789" fits)
 //   Address in country of residence / in the U.S.    f1_07 / f1_08   (only if filed by itself: left blank, listed)
 //   Line 1a  visa type and date of most recent entry f1_09   (Instructions for Form 8843, page 3: "…the date of the most recent entry")
@@ -24,7 +24,7 @@
 //   Line 14  explain line 13                         f1_34
 //   Page 2   Parts IV (athletes) and V (medical): not for a student, left empty
 import type { ConfirmedDocument } from '../tax/input.ts'
-import { confirmedValue, countryName, maskedId, splitName, toMDY, visaLabel } from './data.ts'
+import { confirmedValue, countryName, maskedId, toMDY, visaLabel } from './data.ts'
 import type { FormFacts, FormFill } from './types.ts'
 
 const f = (name: string, i = 0) => `topmostSubform[0].Page1[0].${name}[${i}]`
@@ -52,12 +52,13 @@ export function build8843({ docs, facts, year }: Build8843): FormFill {
   const check: string[] = []
 
   // ---- who you are
-  const fullName = confirmedValue(docs, 'Passport', 'fullName')
-  const name = fullName ? splitName(fullName) : null
-  if (name?.first) values[F8843.first] = name.first
-  if (name?.last) values[F8843.last] = name.last
-  if (!name?.first || !name?.last) blank.push(name ? 'Your first name and initial (your passport shows a single name)' : 'Your name: first name and initial, last name (not on a passport you confirmed)')
-  else check.push('Your name was split from your passport’s full name: the last word is the last name. Check which part is which.')
+  // The two names exactly as confirmed on the passport (nothing is split or guessed)
+  const first = confirmedValue(docs, 'Passport', 'firstName')
+  const last = confirmedValue(docs, 'Passport', 'lastName')
+  if (first) values[F8843.first] = first
+  else blank.push('Your first name and initial (not on a passport you confirmed)')
+  if (last) values[F8843.last] = last
+  else blank.push('Your last name (not on a passport you confirmed)')
 
   const tin = maskedId(docs, 'W-2', 'employeeTaxId', 'ssn', 11)
   if (tin) values[F8843.tin] = tin

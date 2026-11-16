@@ -10,8 +10,8 @@
 //   Page 1                                          field
 //   First name and middle initial / Last name       f1_14 / f1_15
 //   Your identifying number (max 9)                 f1_16   (masked: "•••••6789", last 4 only)
-//   Home address, apt., city, state, ZIP            f1_17, f1_18, f1_19, f1_20, f1_21   (we don't ask: listed)
-//   Foreign country, province, postal code          f1_22, f1_23, f1_24                 (we don't ask: listed)
+//   Home address, apt., city, state, ZIP            f1_17, f1_18, f1_19, f1_20, f1_21   (W-2 box f, as confirmed on Review)
+//   Foreign country, province, postal code          f1_22, f1_23, f1_24                 (only for a foreign address: empty)
 //   Filing status: Single                           c1_5[0]
 //   Digital assets: Yes / No                        c1_6[0] / c1_6[1]                   (from your answer; unanswered: listed)
 //   Line 1a  W-2 box 1 (after any treaty exemption) f1_42
@@ -24,9 +24,10 @@
 //   Line 16 tax / 18 / 22 / 24 total tax            f2_09 / f2_11 / f2_15 / f2_20
 //   Line 25a W-2 withheld / 25d / 33 total payments f2_21 / f2_24 / f2_35
 //   Line 34 overpaid (refund) / Line 37 amount owed f2_36 / f2_42
+//   Third-party designee: Yes / No                  c2_7[0] / c2_7[1]   (always No: AtlasTax doesn't ask)
 import { isCalculated, type Estimate, type EstimateLine } from '../tax/estimate.ts'
 import type { ConfirmedDocument, TaxInput } from '../tax/input.ts'
-import { confirmedValue, dollars, maskedId, splitName } from './data.ts'
+import { confirmedValue, dollars, maskedId, parseUSAddress } from './data.ts'
 import type { FormFill } from './types.ts'
 
 const p1 = (tail: string) => `topmostSubform[0].Page1[0].${tail}`
@@ -36,6 +37,11 @@ export const F1040NR = {
   first: p1('f1_14[0]'),
   last: p1('f1_15[0]'),
   id: p1('f1_16[0]'),
+  street: p1('f1_17[0]'),
+  apt: p1('f1_18[0]'),
+  city: p1('f1_19[0]'),
+  state: p1('f1_20[0]'),
+  zip: p1('f1_21[0]'),
   single: p1('c1_5[0]'),
   digitalYes: p1('c1_6[0]'),
   digitalNo: p1('c1_6[1]'),
@@ -57,6 +63,8 @@ export const F1040NR = {
   line33: p2('f2_35[0]'),
   line34: p2('f2_36[0]'),
   line37: p2('f2_42[0]'),
+  designeeYes: p2('c2_7[0]'),
+  designeeNo: p2('c2_7[1]'),
 } as const
 
 export type Build1040NR = { docs: readonly ConfirmedDocument[]; estimate: Estimate; person?: Pick<TaxInput['person'], 'marital' | 'digitalAssets'> }
@@ -76,19 +84,33 @@ export function build1040NR({ docs, estimate, person = { marital: null, digitalA
   }
 
   // ---- who you are
-  const fullName = confirmedValue(docs, 'Passport', 'fullName')
-  const name = fullName ? splitName(fullName) : null
-  if (name?.first) values[F1040NR.first] = name.first
-  if (name?.last) values[F1040NR.last] = name.last
-  if (!name?.first || !name?.last) blank.push(name ? 'Your first name and middle initial (your passport shows a single name)' : 'Your name: first name and middle initial, last name (not on a passport you confirmed)')
-  else check.push('Your name was split from your passport’s full name: the last word is the last name. Check which part is which.')
+  // The two names exactly as confirmed on the passport (nothing is split or guessed)
+  const first = confirmedValue(docs, 'Passport', 'firstName')
+  const last = confirmedValue(docs, 'Passport', 'lastName')
+  if (first) values[F1040NR.first] = first
+  else blank.push('Your first name and middle initial (not on a passport you confirmed)')
+  if (last) values[F1040NR.last] = last
+  else blank.push('Your last name (not on a passport you confirmed)')
   const id = maskedId(docs, 'W-2', 'employeeTaxId', 'ssn', 9)
   if (id) {
     values[F1040NR.id] = id
     check.push('Your identifying number shows only its last 4 digits.')
   } else blank.push('Your identifying number (SSN or ITIN): not on a document you confirmed')
 
-  blank.push('Your home address, and your foreign address if you have one (we don’t ask for it yet)')
+  // Home address: the W-2's box f, as confirmed on Review
+  const address = confirmedValue(docs, 'W-2', 'employeeAddress')
+  const parts = address ? parseUSAddress(address) : null
+  if (parts) {
+    values[F1040NR.street] = parts.street
+    if (parts.apt) values[F1040NR.apt] = parts.apt
+    values[F1040NR.city] = parts.city
+    values[F1040NR.state] = parts.state
+    values[F1040NR.zip] = parts.zip
+    check.push('Your home address is the one on your W-2 (box f). If you’ve moved since, change it.')
+  } else if (address) {
+    values[F1040NR.street] = address.slice(0, 80)
+    blank.push('Your city, state and ZIP code (we couldn’t read them from the address on your W-2, so it is all on the first line)')
+  } else blank.push('Your home address (not on a W-2 you confirmed)')
   // Filing status: Single (married gives no estimate, so no 1040-NR: src/tax/stops.ts)
   values[F1040NR.single] = true
   if (person.marital !== 'single') check.push('Filing status is Single: you haven’t answered the marital status question.')
@@ -136,12 +158,15 @@ export function build1040NR({ docs, estimate, person = { marital: null, digitalA
 
   // ---- what a signed return would still need
   blank.push('Your signature, date, occupation, phone and email')
-  blank.push('The third-party designee question, Yes or No')
+  // Third-party designee: No (AtlasTax doesn't ask: nobody else is named to talk to the IRS about this return)
+  values[F1040NR.designeeNo] = true
   if (treaty || deduction?.treaty) check.push(`A student treaty benefit is included (${treaty ? 'line 1k' : 'line 12'}), based on the country you lived in before coming to the U.S.`)
 
   notIncluded.push('Lines 2 to 8 (interest, dividends, retirement income, capital gains and other income) are not part of this estimate yet, so they are empty.')
   notIncluded.push('Schedule OI (Form 1040-NR) is required with every Form 1040-NR' + (treaty ? ', and its item L explains the treaty-exempt income on line 1k, plus a statement of why you qualify (Instructions for Form 1040-NR, page 18)' : '') + '. It is not included yet.')
-  notIncluded.push('Your Form W-2 copies, which are attached to a real return.')
+  // Instructions for Form 1040-NR (2025), page 23, Assemble Your Return: "Attach a copy of Forms W-2 … to the front of
+  // Form 1040-NR"; Form W-2 (2025): "Copy B—To Be Filed With Employee’s FEDERAL Tax Return"
+  notIncluded.push('Attach Copy B of your W-2 to the front of this form when you mail it.')
 
   return { id: 'form-1040nr', status: 'ready', values, overlays, blank, check, notIncluded }
 }

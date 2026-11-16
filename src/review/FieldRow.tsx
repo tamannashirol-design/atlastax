@@ -103,6 +103,23 @@ export function FieldRow({ itemId, f, manual, save, registerFlush, say }: Props)
           </button>
         </div>
       )
+    // An address can be long: two lines, so the whole of it is visible before you tick it
+    if (f.kind === 'address')
+      return (
+        <div className="flex h-18 w-full rounded-sm border border-border-strong bg-surface px-4 py-3 focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-text">
+          <textarea
+            id={inputId}
+            rows={2}
+            aria-describedby={described}
+            autoComplete="off"
+            spellCheck={false}
+            value={text}
+            onChange={(e) => change(e.target.value)}
+            onBlur={() => void flush()}
+            className="h-full min-w-0 flex-1 resize-none bg-transparent text-body outline-none"
+          />
+        </div>
+      )
     if (f.kind === 'money') return <AmountField id={inputId} labelledBy={labelId} describedBy={described} value={text} onChange={change} onBlur={() => void flush()} />
     return (
       <div className="flex items-center gap-2">

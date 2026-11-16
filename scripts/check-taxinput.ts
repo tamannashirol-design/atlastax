@@ -14,6 +14,7 @@ function check(name: string, got: unknown, want: unknown) {
 const f = (value: string, o: Partial<ConfirmedField> = {}): ConfirmedField => ({ value, ticked: true, notOnForm: false, confidence: 'high', ...o })
 const w2Fields = (o: Record<string, ConfirmedField> = {}): Record<string, ConfirmedField> => ({
   employeeTaxId: f('123-45-6789'),
+  employeeAddress: f('123 Sample St Apt 4B, New York, NY 10001'),
   employerName: f('Sample Employer Inc. (FAKE)'),
   employerEin: f('12-3456789'),
   wages: f('38,450.00'),
@@ -24,7 +25,7 @@ const w2Fields = (o: Record<string, ConfirmedField> = {}): Record<string, Confir
   ...o,
 })
 const doc = (itemId: string, form: ConfirmedDocument['form'], fields: Record<string, ConfirmedField>, status: ConfirmedDocument['status'] = 'confirmed'): ConfirmedDocument => ({ itemId, form, status, fields })
-const passport = doc('passport', 'Passport', { fullName: f('SAMPLE PERSON'), passportNumber: f('X1234567'), country: f('Sample Country'), dateOfBirth: f('2000-01-01'), expires: f('2031-01-01') })
+const passport = doc('passport', 'Passport', { firstName: f('SAMPLE'), lastName: f('PERSON'), passportNumber: f('X1234567'), country: f('Sample Country'), dateOfBirth: f('2000-01-01'), expires: f('2031-01-01') })
 const i94 = doc('i94', 'I-94', { admissionNumber: f('12345678901'), classOfAdmission: f('F1'), mostRecentEntry: f('2025-08-15') })
 const item = (id: string, label: string, status = 'added', extra: Partial<TaxItem> = {}): TaxItem => ({ id, kind: 'document', label, status, ...extra })
 const items = [item('passport', 'Passport'), item('i94', 'Most recent I-94'), item('opt-cpt', 'W-2')]

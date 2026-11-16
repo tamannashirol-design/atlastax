@@ -34,11 +34,25 @@ export function maskedId(docs: readonly ConfirmedDocument[], form: FormType, key
   return maxLength ? maskForBox(v, kind, maxLength) : mask(v, kind)
 }
 
-/** "SAMPLE PERSON" → first "SAMPLE", last "PERSON" (the last word is the last name, everything before it the first name and initial). */
-export function splitName(full: string): { first: string; last: string } {
-  const words = full.trim().split(/\s+/).filter(Boolean)
-  if (words.length <= 1) return { first: '', last: words[0] ?? '' }
-  return { first: words.slice(0, -1).join(' '), last: words[words.length - 1] }
+export type USAddress = { street: string; apt: string | null; city: string; state: string; zip: string }
+
+/**
+ * A U.S. address as the W-2 prints it in box f ("123 Main St Apt 4B, New York, NY 10001", or the same on two
+ * lines) → the 1040-NR's separate boxes. null when it isn't in that shape (then nothing is guessed: the whole
+ * text goes on the street line and the rest is listed as blank).
+ */
+export function parseUSAddress(text: string): USAddress | null {
+  const t = text.trim().replace(/\s*\n\s*/g, ', ')
+  const m = /^(.+?),\s*([^,]+?),?\s+([A-Za-z]{2})\s+(\d{5}(?:-\d{4})?)$/.exec(t)
+  if (!m) return null
+  let street = m[1].trim().replace(/,$/, '')
+  let apt: string | null = null
+  const a = /^(.*?)[\s,]+(?:apt|apartment|unit|suite|ste|#)\.?\s*#?\s*([\w-]+)$/i.exec(street)
+  if (a && a[1]) {
+    street = a[1].trim()
+    apt = a[2]
+  }
+  return { street, apt, city: m[2].trim(), state: m[3].toUpperCase(), zip: m[4] }
 }
 
 /** "2025-08-15" → "08/15/2025"; null for anything else. */
