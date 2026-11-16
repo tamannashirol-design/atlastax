@@ -16,13 +16,15 @@ const calc = (status: 'refund' | 'owed' | 'zero', amount: number | null): Sectio
 const wait: Section = { status: 'not-calculated', missing: ['x'] }
 const withState = (s: Section) => ({ ...s, code: 'NY' as string | null }) as Estimate['state']
 
-console.log('NOTHING IS INVENTED (the state has no engine yet; federal says no when it can’t)\n')
+console.log('NOTHING IS INVENTED (federal and state say no when they can’t)\n')
 const stubIn = buildTaxInput({ year: 2025, person: {}, income: [], items: [], documents: [] })
 const w2 = { itemId: 'w', employer: null, wages: 3_845_000, federalWithheld: 318_600, stateCode: 'NY', stateWages: 3_845_000, stateWithheld: 189_300 }
 const stub = estimateReturn({ ...stubIn, wages: [w2] })
 const unsupported = estimateReturn({ ...stubIn, wages: [w2], other: [{ itemId: 's', form: '1042-S', label: '1042-S' }] })
-check('state says "not calculated" with what’s missing (federal is calculated: R2)', [stub.federal.status, stub.state.status, (stub.state as { missing: string[] }).missing], ['owed', 'not-calculated', ['The state calculation isn’t built yet.']])
-check('no amount anywhere in the state section', /"amount"|"lines"/.test(JSON.stringify(stub.state)), false)
+check('federal and state are both calculated for a New York W-2 (R2 and the state step)', [stub.federal.status, stub.state.status], ['owed', 'refund'])
+const unsupportedState = estimateReturn({ ...stubIn, wages: [{ ...w2, stateCode: 'OR' }] })
+check('a state we don’t do: “State return not supported yet”, the withheld amount, nothing calculated', [unsupportedState.state.status, (unsupportedState.state as { message: string }).message, /"lines"/.test(JSON.stringify(unsupportedState.state))], ['not-supported', 'State return not supported yet', false])
+check('a state with no tax on wages: no state number at all', [estimateReturn({ ...stubIn, wages: [{ ...w2, stateCode: 'TX' }] }).state.status, /"amount"|"lines"|"withheld"/.test(JSON.stringify(estimateReturn({ ...stubIn, wages: [{ ...w2, stateCode: 'TX' }] }).state))], ['no-tax', false])
 check('income the federal engine can’t handle: "not calculated", no amount anywhere', [unsupported.federal.status, /"amount"|"lines"/.test(JSON.stringify(unsupported.federal))], ['not-calculated', false])
 check('the state comes from the W-2', stub.state.code, 'NY')
 check('blockers from R1 pass through, and sections say they are waiting', (({ blockers, federal }) => [blockers.length > 0, (federal as { missing: string[] }).missing[0]])(estimateReturn(buildTaxInput({ year: 2025, person: {}, income: [], items: [{ id: 'passport', kind: 'document', label: 'Passport', status: 'missing' }], documents: [] }))), [true, 'Waiting for the items listed above.'])

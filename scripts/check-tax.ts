@@ -113,10 +113,11 @@ check('a tax year with no verified figures (2024): not supported, no number', [f
 check('only years with final IRS figures are configured', [yearConfig(2025)?.year, yearConfig(2024), yearConfig(2023), yearConfig(2026)], [2025, null, null, null])
 check('the engine refuses cents or negative taxable income (callers must round first)', [(() => { try { federalTax(cfg, 100.5); return 'ran' } catch { return 'refused' } })(), (() => { try { federalTax(cfg, -1); return 'ran' } catch { return 'refused' } })()], ['refused', 'refused'])
 
-console.log('\nMINE: state stays "not calculated yet"; notes and forms unchanged\n')
+console.log('\nMINE: the state is figured by src/tax/state.ts (tested by check:state); notes unchanged\n')
 const e: Estimate = estimateReturn(input({ wages: w }))
-check('state: not calculated, and says so', [e.state.status, (e.state as { missing: string[] }).missing, e.state.code], ['not-calculated', ['The state calculation isn’t built yet.'], 'NY'])
-check('no combined total possible (state isn’t calculated)', [isCalculated(e.federal), isCalculated(e.state)], [true, false])
+// the W-2 here says New York with $1,893 withheld: see check:state for the figures
+check('state: calculated from the W-2’s state (New York)', [e.state.status, e.state.code], ['refund', 'NY'])
+check('both sections are calculated, so there is a combined total', [isCalculated(e.federal), isCalculated(e.state)], [true, true])
 check('notes: single filing status and treaty benefits', [...e.notes], ['Assumes single filing status.', 'Treaty benefits aren’t included yet.'])
 
 console.log('\nMINE: "Show estimate number" off removes every amount\n')

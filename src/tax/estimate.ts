@@ -2,14 +2,16 @@
 // and nothing else; connecting the real engine later only changes what produces it.
 // Pure: no React, no network (the server calls estimateReturn, the browser reads the result).
 //
-// `federal` comes from the engine (src/tax/federal.ts, R2: wages only). `state` is still
-// "not calculated" (the state step fills it in). Never a made-up number: anything the
-// engine can't handle says what is missing. Money is in whole CENTS. Amounts are `null`
+// `federal` comes from the engine (src/tax/federal.ts, R2: wages only), `state` from
+// src/tax/state.ts (New York and California, wages only; no-tax states say so; every
+// other state says "not supported yet"). Never a made-up number: anything the engine
+// can't handle says what is missing. Money is in whole CENTS. Amounts are `null`
 // when the person turned the number off (hideNumbers).
 //
 // Every section is labelled "Estimate (prototype)" on screen (ESTIMATE_LABEL).
 import { federalSection } from './federal.ts'
 import type { Blocker, TaxInput } from './input.ts'
+import { stateSection } from './state.ts'
 
 export const ESTIMATE_LABEL = 'Estimate (prototype)'
 /** Always shown on /result, in this wording */
@@ -38,7 +40,9 @@ export type Calculated = { status: 'refund' | 'owed' | 'zero'; amount: number | 
 export type NotCalculated = { status: 'not-calculated'; missing: string[] }
 /** A part we can't do (e.g. another state): a plain message, and what was withheld if we know it */
 export type NotSupported = { status: 'not-supported'; message: string; withheld?: number | null }
-export type Section = Calculated | NotCalculated | NotSupported
+/** A state with no income tax on wages: nothing to calculate, nothing to file. No number. */
+export type NoTax = { status: 'no-tax'; message: string; sources: Source[] }
+export type Section = Calculated | NotCalculated | NotSupported | NoTax
 
 export type FormStatus = { id: 'form-8843' | 'form-1040nr'; label: string; status: 'not-ready' | 'ready'; reason?: string }
 
@@ -76,16 +80,15 @@ export const FORMS_NOT_READY: FormStatus[] = [
 ]
 
 /**
- * The estimate from the confirmed values. Federal: the engine (R2). State: not built yet,
- * so it says what is missing. Pure; the server runs it, the browser only reads the result.
+ * The estimate from the confirmed values. Federal: the engine (R2). State: src/tax/state.ts
+ * (the W-2's state). Pure; the server runs it, the browser only reads the result.
  */
 export function estimateReturn(input: TaxInput): Estimate {
-  const waiting = input.blockers.length ? ['Waiting for the items listed above.'] : []
   return {
     year: input.year,
     blockers: input.blockers,
     federal: federalSection(input),
-    state: { code: input.wages[0]?.stateCode ?? null, status: 'not-calculated', missing: [...waiting, 'The state calculation isn’t built yet.'] },
+    state: stateSection(input),
     notes: [...RESULT_NOTES],
     forms: FORMS_NOT_READY,
     numbersHidden: false,

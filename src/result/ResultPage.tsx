@@ -297,6 +297,8 @@ function SectionCard({ id, title, section, card, reduce }: { id: string; title: 
             ))}
           </ul>
         </div>
+      ) : section.status === 'no-tax' ? (
+        <p className="text-body">{section.message}</p>
       ) : (
         <div className="flex flex-col gap-2">
           <p className="text-body">{section.message}</p>
