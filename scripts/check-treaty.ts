@@ -9,7 +9,7 @@ import { estimateReturn, hideNumbers, isCalculated, RESULT_NOTES, type Section }
 import { buildTaxInput, type TaxInput } from '../src/tax/input.ts'
 import { treatyFor } from '../src/tax/treaty.ts'
 import { YEAR_2025 } from '../src/tax/years/2025.ts'
-import { CHINA, INDIA, TREATY_NOTES } from '../src/tax/years/treaties-2025.ts'
+import { CHINA, INDIA } from '../src/tax/years/treaties-2025.ts'
 
 let failed = 0
 function check(name: string, got: unknown, want: unknown) {
@@ -20,7 +20,9 @@ function check(name: string, got: unknown, want: unknown) {
 const D = (n: number) => n * 100
 const wage = (wagesCents: number, withheldCents: number, state = 'NY') => ({ itemId: 'opt-cpt', employer: 'Sample Employer Inc. (FAKE)', wages: wagesCents, federalWithheld: withheldCents, stateCode: state, stateWages: wagesCents, stateWithheld: D(1_893) })
 const base = buildTaxInput({ year: 2025, person: {}, income: ['opt-cpt'], items: [], documents: [] })
-const input = (citizenship: string | null, over: Partial<TaxInput> = {}, visa: string | null = 'F-1'): TaxInput => ({ ...base, person: { citizenship, visa }, ...over })
+// `lived`: the answer to "Where did you live before coming to the U.S.?" (the treaty goes by this). Citizenship is set
+// to something else on purpose (Brazil), to show it is not what decides.
+const input = (lived: string | null, over: Partial<TaxInput> = {}, visa: string | null = 'F-1'): TaxInput => ({ ...base, person: { citizenship: 'BR', visa, livedBefore: lived, marital: null, digitalAssets: null }, ...over })
 const est = (citizenship: string | null, wagesCents: number, withheldCents: number, over: Partial<TaxInput> = {}, visa: string | null = 'F-1') => estimateReturn(input(citizenship, { wages: [wage(wagesCents, withheldCents)], ...over }, visa))
 const line = (s: Section, id: string) => (isCalculated(s) ? (s.lines.find((l) => l.id === id)?.amount ?? NaN) : NaN)
 const summary = (s: Section) => (isCalculated(s) ? [s.status, s.amount, line(s, 'wages'), line(s, 'deduction'), line(s, 'taxable'), line(s, 'tax')] : [s.status])
@@ -70,15 +72,24 @@ check('no student visa (or none given): no treaty', [null, 'B-2', 'H-1B'].map((v
 check('F-1, J-1 and M-1 all count', ['F-1', 'J-1', 'M-1'].map((v) => treatyFor(input('CN', {}, v), YEAR_2025)?.code), ['CN', 'CN', 'CN'])
 check('a tax year with no verified figures (2024): nothing calculated, so no treaty', est('IN', D(38_450), 0, { year: 2024 }).federal.status, 'not-supported')
 
+console.log('\nMINE: where you lived decides, not citizenship\n')
+const person = (citizenship: string | null, livedBefore: string | null) => ({ citizenship, visa: 'F-1', livedBefore, marital: null, digitalAssets: null })
+check('an Indian citizen who lived in the U.K. before coming: no India treaty', treatyFor({ ...base, person: person('IN', 'GB') }, YEAR_2025), null)
+check('a British citizen who lived in India before coming: the India treaty', treatyFor({ ...base, person: person('GB', 'IN') }, YEAR_2025)?.code, 'IN')
+check('a Chinese citizen who lived in Hong Kong before coming: no China treaty (it doesn’t cover Hong Kong)', treatyFor({ ...base, person: person('CN', 'HK') }, YEAR_2025), null)
+check('citizenship India, the "lived before" question not answered: no treaty (nothing is assumed)', treatyFor({ ...base, person: person('IN', null) }, YEAR_2025), null)
+check('the numbers follow: British citizen who lived in India gets the $15,750 deduction; Indian citizen who lived in the U.K. does not', [line(estimateReturn({ ...base, person: person('GB', 'IN'), wages: [wage(D(38_450), 0)] }).federal, 'deduction'), line(estimateReturn({ ...base, person: person('IN', 'GB'), wages: [wage(D(38_450), 0)] }).federal, 'deduction')], [D(15_750), 0])
+
 console.log('\nMINE: the notes\n')
-check('India: "Treaty benefits aren’t included yet." is replaced by what was included', est('IN', D(38_450), 0).notes, [RESULT_NOTES[0], TREATY_NOTES.IN])
-check('China: the same', est('CN', D(38_450), 0).notes, [RESULT_NOTES[0], TREATY_NOTES.CN])
-check('every other country keeps both notes, exactly as before', [est('FR', D(38_450), 0).notes, est(null, D(38_450), 0).notes], [[...RESULT_NOTES], [...RESULT_NOTES]])
+check('India: "Treaty benefits aren’t included yet." goes away, and no "assumes you lived in India" note replaces it', est('IN', D(38_450), 0).notes, [RESULT_NOTES[0]])
+check('China: the same', est('CN', D(38_450), 0).notes, [RESULT_NOTES[0]])
+check('no note anywhere mentions an assumption about where you lived', [est('IN', D(38_450), 0).notes, est('CN', D(38_450), 0).notes].flat().some((n) => /resident of|lived in|assumes you/i.test(n)), false)
+check('every other country keeps both notes', [est('FR', D(38_450), 0).notes, est(null, D(38_450), 0).notes], [[...RESULT_NOTES], [...RESULT_NOTES]])
 check('India or China without a student visa keep both notes', est('IN', D(38_450), 0, {}, 'B-2').notes, [...RESULT_NOTES])
 const blocked = buildTaxInput({ year: 2025, person: {}, income: [], items: [{ id: 'passport', kind: 'document', label: 'Passport', status: 'missing' }], documents: [] })
-check('no federal number (something unconfirmed): India has no treaty note at all, nothing is claimed', estimateReturn({ ...blocked, person: { citizenship: 'IN', visa: 'F-1' }, wages: [wage(D(38_450), 0)] }).notes, [RESULT_NOTES[0]])
-check('no federal number (a 1042-S we can’t handle): China has no treaty note either', estimateReturn(input('CN', { wages: [wage(D(38_450), 0)], other: [{ itemId: 's', form: '1042-S', label: '1042-S' }] })).notes, [RESULT_NOTES[0]])
-check('the notes say what is assumed', [TREATY_NOTES.IN.includes('resident of India just before'), TREATY_NOTES.CN.includes('resident of China when you arrived')], [true, true])
+check('no federal number (something unconfirmed): still no treaty note for India', estimateReturn({ ...blocked, person: person('BR', 'IN'), wages: [wage(D(38_450), 0)] }).notes, [RESULT_NOTES[0]])
+check('marital status answered single: "Assumes single filing status." goes too (nothing is assumed)', [estimateReturn(input('IN', { wages: [wage(D(38_450), 0)], person: { ...person('BR', 'IN'), marital: 'single' } })).notes, estimateReturn(input('FR', { wages: [wage(D(38_450), 0)], person: { ...person('BR', 'FR'), marital: 'single' } })).notes], [[], [RESULT_NOTES[1]]])
+check('the treaty assumptions no longer include where you lived (it is asked now)', [...INDIA.assumptions, ...CHINA.assumptions].some((x) => /resident of/i.test(x)), false)
 
 console.log('\nMINE: federal only: the state numbers do not change\n')
 check('New York: identical with or without the treaty', [JSON.stringify(est('IN', D(38_450), D(3_186)).state) === JSON.stringify(est('FR', D(38_450), D(3_186)).state), JSON.stringify(est('CN', D(38_450), D(3_186)).state) === JSON.stringify(est('FR', D(38_450), D(3_186)).state)], [true, true])
@@ -91,7 +102,7 @@ check('the treaty lines name their IRS publication and page', [lineHas(est('CN',
 check('"Figures used" for India cites Publication 519 pages 39 and 40 and Publication 901 pages 33 and 34', (est('IN', D(38_450), 0).federal as { sources: { citation: string }[] }).sources.map((s) => s.citation).join(' ').match(/Publication 519 \(2025\), page 39|page 40, Worksheet 5-1|Publication 901 \(Rev\. 9-2024\), pages 33 and 34/g), ['Publication 519 (2025), page 39', 'page 40, Worksheet 5-1', 'Publication 901 (Rev. 9-2024), pages 33 and 34'])
 check('"Figures used" for China cites Publication 901 page 30, Publication 519 page 80, and the 1040-NR instructions page 18', (est('CN', D(38_450), 0).federal as { sources: { citation: string }[] }).sources.map((s) => s.citation).join(' ').match(/Publication 901 \(Rev\. 9-2024\), page 30|Publication 519 \(2025\), page 80|Instructions for Form 1040-NR \(2025\), page 18/g), ['Publication 901 (Rev. 9-2024), page 30', 'Publication 519 (2025), page 80', 'Instructions for Form 1040-NR (2025), page 18'])
 check('what the publications don’t give as a number (the time limits) is marked TODO confirm with CPA, and not enforced', [INDIA.sources.conditions.citation, CHINA.sources.reporting.citation].map((c) => c.includes('TODO confirm with CPA')), [true, true])
-check('the assumptions we can’t check are listed for both', [INDIA.assumptions.length > 2, CHINA.assumptions.length > 2], [true, true])
+check('the assumptions we can’t check are listed for both', [INDIA.assumptions.length >= 2, CHINA.assumptions.length >= 2], [true, true])
 for (const cit of ['IN', 'CN']) {
   const hidden = hideNumbers(est(cit, D(38_450), D(3_186)))
   check(`${cit}: with the number off, no amount of this person’s remains anywhere (cents or dollars)`, /3845000|3345000|1575000|2270000|500000|248900|377900|59300|69700|318600|38,?450|33,?450|22,?700|2,?489|3,?779|3,?186/.test(JSON.stringify(hidden)), false)

@@ -12,12 +12,13 @@ help link, and Continue.
 0. Intro: the logged-out entry page ("/" while logged out)
 1. Home
 2. **About you:** Visa type (J-1: "Are you in the U.S. as a student?") ·
-   Enrolled · State · Country of citizenship
+   Enrolled · State · Country of citizenship · Where you lived before the U.S. ·
+   Marital status
 3. **Time in the U.S.:** first arrival year · arrival date (sometimes) ·
    a full year abroad (sometimes) · trips out of the U.S. · check
 4. **Tax details:** SSN / ITIN · Filed U.S. taxes before? ("Yes" opens the
    "Previous return" sheet)
-5. **Income:** income sources + follow-ups
+5. **Income:** income sources + follow-ups · Digital assets
 6. **Documents** (one page for the tab and the flow)
 7. **Review** (not built yet)
 
@@ -30,10 +31,13 @@ help link, and Continue.
 | /enrolled | Enrolled at a U.S. university or college? | Tiles Yes / No |
 | /state | State | Dropdown: phone picker below 600px, custom list above |
 | /citizenship | Country of citizenship | Searchable country list |
+| /lived-before | "Where did you live before coming to the U.S.?" Helper: "Some tax treaties depend on where you lived, not your citizenship" | Searchable country list. The India and China student treaties use this answer, not citizenship |
+| /marital | "What was your marital status at the end of {year}?" Helper: "Your filing status depends on it" | Tiles Single ("Including divorced or widowed") / Married ("Even if your spouse lives abroad"). Married: no estimate number, says why |
 | /arrival-year … /time-in-us | Time in the U.S. (see that section) | |
 | /tax-id | SSN / ITIN | Tiles SSN / ITIN / N/A |
 | /filed-before | Filed before | Tiles Yes / No; Yes opens the previous-return sheet |
 | /income | Income sources | Multi-select income cards in two groups (see below) |
+| /digital-assets | "In {year}, did you receive or sell digital assets?" Helper: "Such as crypto or NFTs. Form 1040‑NR asks everyone this" (last Income step; the designer's "…crypto, NFTs or other digital assets?" was 4 lines on a phone, so crypto and NFTs moved to the helper) | Tiles Yes / No. Yes: no estimate number, says why. Fills the Digital Assets question on the 1040-NR |
 
 ## Stepper sections
 
@@ -44,10 +48,10 @@ section. "2 of 3" is shown only for sections with more than one step.
 
 | # | Section | Steps (when they apply) |
 |---|---|---|
-| 1 | About you | Visa type, J-1 student?, Enrolled, State, Country of citizenship |
+| 1 | About you | Visa type, J-1 student?, Enrolled, State, Country of citizenship, Lived before the U.S., Marital status |
 | 2 | Time in the U.S. | Arrival year, Arrival date, Full year abroad, Trips, Check |
 | 3 | Tax details | SSN or ITIN, Filed before |
-| 4 | Income | Income sources + follow-ups |
+| 4 | Income | Income sources + follow-ups, Digital assets |
 | 5 | Documents | One page |
 | 6 | Review | Review and submit |
 

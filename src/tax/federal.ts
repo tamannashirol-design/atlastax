@@ -6,6 +6,7 @@
 import { federalTax, roundToDollars } from './engine.ts'
 import type { Calculated, EstimateLine, NotCalculated, NotSupported, Source } from './estimate.ts'
 import type { TaxInput } from './input.ts'
+import { noNumberReasons } from './stops.ts'
 import { treatyFor } from './treaty.ts'
 import { yearConfig } from './years/index.ts'
 
@@ -17,7 +18,9 @@ export function federalSection(input: TaxInput): Calculated | NotCalculated | No
   if (!cfg) return { status: 'not-supported', message: 'We can’t estimate this tax year yet.' }
 
   // 1. Something the person still has to confirm
-  if (input.blockers.length) return { status: 'not-calculated', missing: ['Waiting for the items listed above.'] }
+  // 1b. An answer that means no number yet (married, digital assets): say why (src/tax/stops.ts)
+  const stops = noNumberReasons(input)
+  if (input.blockers.length || stops.length) return { status: 'not-calculated', missing: [...(input.blockers.length ? ['Waiting for the items listed above.'] : []), ...stops] }
 
   // 2. Income the engine can't handle: no number, and say which
   if (input.other.length) {

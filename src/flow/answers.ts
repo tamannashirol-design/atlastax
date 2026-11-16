@@ -12,6 +12,12 @@ export type Answers = {
   filedBefore?: 'yes' | 'no'
   priorReturn?: 'skipped' | { fileName: string }
   citizenship?: string // two-letter region code
+  /** Where the person lived just before coming to the U.S. (two-letter region code). Tax treaties go by this, not citizenship. */
+  livedBefore?: string
+  /** Marital status at the end of the tax year (filing status depends on it) */
+  marital?: 'single' | 'married'
+  /** Did they receive or sell crypto, NFTs or other digital assets in the tax year (the 1040-NR asks everyone) */
+  digitalAssets?: 'yes' | 'no'
   income?: import('../data/income').IncomeId[]
   /** Income follow-up answers, keyed by screen id: a choice, an amount, file names, or "later" (skipped). */
   details?: Record<string, string | string[]>

@@ -10,7 +10,7 @@ import { taxItemsFrom } from './input'
 
 /** What the server needs: a small non-sensitive summary of the documents, and the facts the forms need from the answers (visa, citizenship, days counted). No ID numbers, no travel history. */
 export function estimateRequest(a: Answers, year: number) {
-  return { person: { citizenship: a.citizenship, visa: a.visa }, income: a.income ?? [], items: taxItemsFrom(requiredItems(a)), facts: formFacts(a, year) }
+  return { person: { citizenship: a.citizenship, visa: a.visa, livedBefore: a.livedBefore, marital: a.marital, digitalAssets: a.digitalAssets }, income: a.income ?? [], items: taxItemsFrom(requiredItems(a)), facts: formFacts(a, year) }
 }
 
 export async function fetchEstimate(year: number, a: Answers, numbers: boolean): Promise<Estimate> {

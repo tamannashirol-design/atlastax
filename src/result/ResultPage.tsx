@@ -86,7 +86,7 @@ export default function ResultPage() {
   const [announce, setAnnounce] = useState('')
   const last = useRef<string | null>(null)
   // What the estimate depends on in the browser (documents and answers): a change recalculates it
-  const sig = JSON.stringify([answers.income, answers.details, answers.citizenship, answers.visa, answers.state, answers.residency])
+  const sig = JSON.stringify([answers.income, answers.details, answers.citizenship, answers.visa, answers.state, answers.residency, answers.livedBefore, answers.marital, answers.digitalAssets])
 
   useEffect(() => {
     let live = true

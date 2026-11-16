@@ -9,12 +9,14 @@
 //   3. no W-2, no state on a W-2, or more than one state → no number, says why
 //   4. a state with no tax on wages               → "This state has no income tax on wages. No state return needed"
 //   5. any state but NY and CA                    → "State return not supported yet" + the amount withheld
-//   6. income this engine can't handle            → no number, says which
-//   7. NY / CA                                    → the estimate (refund or amount owed)
+//   6. married, or digital assets (src/tax/stops.ts) → no number, says why
+//   7. income this engine can't handle            → no number, says which
+//   8. NY / CA                                    → the estimate (refund or amount owed)
 import { roundToDollars } from './engine.ts'
 import type { Calculated, EstimateLine, NoTax, NotCalculated, NotSupported, Section, Source } from './estimate.ts'
 import type { TaxInput } from './input.ts'
 import { caTax, nyHouseholdCredit, nyTax } from './stateEngine.ts'
+import { noNumberReasons } from './stops.ts'
 import type { CaConfig, NyConfig } from './years/states-2025.ts'
 import { yearConfig } from './years/index.ts'
 
@@ -33,7 +35,8 @@ export function stateSection(input: TaxInput): StateSection {
 
   const cfg = yearConfig(input.year)
   if (!cfg) return { code, status: 'not-supported', message: 'We can’t estimate this tax year yet.' } satisfies NotSupported & { code: string | null }
-  if (input.blockers.length) return notCalculated('Waiting for the items listed above.')
+  const stops = noNumberReasons(input) // married, digital assets: no number (src/tax/stops.ts)
+  if (input.blockers.length) return notCalculated('Waiting for the items listed above.', ...stops)
   if (!input.wages.length) return notCalculated('There’s no W-2 to take the state from.')
   if (codes.some((c) => !c)) return notCalculated('Your W-2 doesn’t show a state, so we can’t tell which state return applies.')
   if (codes.length > 1) return { ...notCalculated('Your W-2s are from more than one state. The estimate can’t handle that yet.'), code: null }
@@ -47,6 +50,7 @@ export function stateSection(input: TaxInput): StateSection {
   const supported = code === states.ny.code || code === states.ca.code
   if (!supported) return { code, status: 'not-supported', message: NOT_SUPPORTED_MESSAGE, withheld: cents(withheld) }
 
+  if (stops.length) return notCalculated(...stops)
   if (input.other.length) {
     const names = [...new Set(input.other.map((o) => o.label))]
     return notCalculated(...names.map((n) => `We can’t include ${n} in the estimate yet.`))

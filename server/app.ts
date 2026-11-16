@@ -143,13 +143,16 @@ export function createApp(overrides: Partial<ServerOptions> = {}): Handler {
       const body = await readJson(req, 16_384)
       const items = body?.items
       if (!year || !body || !Array.isArray(items) || !items.every((i) => i && typeof i.id === 'string' && typeof i.label === 'string' && typeof i.status === 'string' && (i.kind === 'document' || i.kind === 'income'))) return send(res, 400, { error: 'malformed' })
-      const person = (body.person ?? {}) as { citizenship?: string; visa?: string }
+      const person = (body.person ?? {}) as Record<string, unknown>
+      // Only plain, expected values are kept (it comes from a browser)
+      const code = (x: unknown) => (typeof x === 'string' && /^[A-Za-z]{2}$/.test(x) ? x.toUpperCase() : undefined)
+      const pick = <T extends string>(x: unknown, allowed: readonly T[]) => (allowed as readonly unknown[]).includes(x) ? (x as T) : undefined
       const income = Array.isArray(body.income) ? body.income.filter((x): x is string => typeof x === 'string') : []
       const docs = await review.taxDocuments(sessionId, year)
-      const input = buildTaxInput({ year, person: { citizenship: person.citizenship ? String(person.citizenship) : undefined, visa: person.visa ? String(person.visa) : undefined }, income, items: items as TaxItem[], documents: docs })
+      const input = buildTaxInput({ year, person: { citizenship: person.citizenship ? String(person.citizenship) : undefined, visa: person.visa ? String(person.visa) : undefined, livedBefore: code(person.livedBefore), marital: pick(person.marital, ['single', 'married'] as const), digitalAssets: pick(person.digitalAssets, ['yes', 'no'] as const) }, income, items: items as TaxItem[], documents: docs })
       if (path === '/api/dev/tax-input') return send(res, 200, input)
       const estimate = estimateReturn(input)
-      const fills = buildForms({ year, docs, facts: cleanFacts(body.facts), estimate })
+      const fills = buildForms({ year, docs, facts: cleanFacts(body.facts), estimate, person: input.person })
       const numbersOff = url.searchParams.get('numbers') === '0'
       if (formRoute) {
         const fill = fills[formRoute[1] as FormId]

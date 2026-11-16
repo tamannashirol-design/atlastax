@@ -14,7 +14,6 @@ import type { Blocker, TaxInput } from './input.ts'
 import { stateSection } from './state.ts'
 import { treatyFor } from './treaty.ts'
 import { yearConfig } from './years/index.ts'
-import { TREATY_NOTES } from './years/treaties-2025.ts'
 
 export const ESTIMATE_LABEL = 'Estimate (prototype)'
 /** Always shown on /result, in this wording */
@@ -105,22 +104,26 @@ export function estimateReturn(input: TaxInput): Estimate {
     blockers: input.blockers,
     federal,
     state: stateSection(input),
-    notes: notesFor(input, federal),
+    notes: notesFor(input),
     forms: FORMS_NOT_READY,
     numbersHidden: false,
   }
 }
 
 /**
- * The notes under the headline. "Treaty benefits aren't included yet." goes away ONLY for India and
- * China (with a student visa). With a calculated federal number the note then says what was included
- * and what it assumes; without one, there is no treaty note at all (nothing was applied or claimed).
+ * The notes under the headline.
+ *   "Assumes single filing status." only while marital status isn't answered (an older session): once it is,
+ *   nothing is assumed (married gives no number at all: src/tax/stops.ts).
+ *   "Treaty benefits aren't included yet." goes away ONLY for someone who lived in India or China before coming
+ *   (student visa): the treaty line then shows in the breakdown.
  */
-function notesFor(input: TaxInput, federal: Section): string[] {
+function notesFor(input: TaxInput): string[] {
   const cfg = yearConfig(input.year)
   const treaty = cfg ? treatyFor(input, cfg) : null
-  if (!treaty) return [...RESULT_NOTES]
-  return isCalculated(federal) ? [RESULT_NOTES[0], TREATY_NOTES[treaty.code]] : [RESULT_NOTES[0]]
+  const notes: string[] = []
+  if (input.person.marital === null) notes.push(RESULT_NOTES[0])
+  if (!treaty) notes.push(RESULT_NOTES[1])
+  return notes
 }
 
 /** The person turned the number off: every amount disappears (also on the server, so none is sent). */

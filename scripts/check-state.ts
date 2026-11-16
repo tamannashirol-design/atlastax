@@ -155,5 +155,13 @@ check('"Figures used" cites a state publication for each figure', [e, estimateRe
 check('no ID numbers or file names in the estimate', /\d{3}-\d{2}-\d{4}|\d{2}-\d{7}|X1234567|\.pdf|\.jpg|\.png/i.test(JSON.stringify(e)), false)
 check('the estimate’s notes are unchanged', [...e.notes], ['Assumes single filing status.', 'Treaty benefits aren’t included yet.'])
 
+console.log('\nMINE: answers that mean no number (married, digital assets) stop the state number too\n')
+const asked = (state: string, marital: 'single' | 'married' | null, digitalAssets: 'yes' | 'no' | null) => st({ wages: [wage(state, D(38_450), D(1_893))], person: { ...ready.person, marital, digitalAssets } })
+check('New York, married: no number, says why', [asked('NY', 'married', 'no').status, (asked('NY', 'married', 'no') as { missing: string[] }).missing], ['not-calculated', ['You were married at the end of 2025. The estimate only works for single filers so far.']])
+check('California, digital assets Yes: no number, says why', [asked('CA', 'single', 'yes').status, (asked('CA', 'single', 'yes') as { missing: string[] }).missing], ['not-calculated', ['You received or sold digital assets in 2025. The estimate can’t include them yet.']])
+check('Texas stays "no state return needed" (there is no number to withhold)', asked('TX', 'married', 'yes').status, 'no-tax')
+check('Oregon stays "not supported yet", with what was withheld', [asked('OR', 'married', 'yes').status, (asked('OR', 'married', 'yes') as { withheld: number }).withheld], ['not-supported', D(1_893)])
+check('single and No: New York’s refund as before ($381)', [asked('NY', 'single', 'no').status, (asked('NY', 'single', 'no') as { amount: number }).amount], ['refund', D(381)])
+
 console.log(failed ? `\n${failed} check(s) FAILED` : '\nAll state checks passed.')
 process.exit(failed ? 1 : 0)

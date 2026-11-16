@@ -13,7 +13,7 @@
 //   Home address, apt., city, state, ZIP            f1_17, f1_18, f1_19, f1_20, f1_21   (we don't ask: listed)
 //   Foreign country, province, postal code          f1_22, f1_23, f1_24                 (we don't ask: listed)
 //   Filing status: Single                           c1_5[0]
-//   Digital assets: Yes / No                        c1_6[0] / c1_6[1]                   (we don't ask: listed)
+//   Digital assets: Yes / No                        c1_6[0] / c1_6[1]                   (from your answer; unanswered: listed)
 //   Line 1a  W-2 box 1 (after any treaty exemption) f1_42
 //   Line 1k  treaty-exempt income                   f1_53   (China)
 //   Line 1z  add lines 1a to 1h                     f1_54
@@ -25,7 +25,7 @@
 //   Line 25a W-2 withheld / 25d / 33 total payments f2_21 / f2_24 / f2_35
 //   Line 34 overpaid (refund) / Line 37 amount owed f2_36 / f2_42
 import { isCalculated, type Estimate, type EstimateLine } from '../tax/estimate.ts'
-import type { ConfirmedDocument } from '../tax/input.ts'
+import type { ConfirmedDocument, TaxInput } from '../tax/input.ts'
 import { confirmedValue, dollars, maskedId, splitName } from './data.ts'
 import type { FormFill } from './types.ts'
 
@@ -37,6 +37,8 @@ export const F1040NR = {
   last: p1('f1_15[0]'),
   id: p1('f1_16[0]'),
   single: p1('c1_5[0]'),
+  digitalYes: p1('c1_6[0]'),
+  digitalNo: p1('c1_6[1]'),
   line1a: p1('f1_42[0]'),
   line1k: p1('Line1k_ReadOrder[0].f1_53[0]'), // inside the IRS's own group
   line1z: p1('f1_54[0]'),
@@ -57,9 +59,9 @@ export const F1040NR = {
   line37: p2('f2_42[0]'),
 } as const
 
-export type Build1040NR = { docs: readonly ConfirmedDocument[]; estimate: Estimate }
+export type Build1040NR = { docs: readonly ConfirmedDocument[]; estimate: Estimate; person?: Pick<TaxInput['person'], 'marital' | 'digitalAssets'> }
 
-export function build1040NR({ docs, estimate }: Build1040NR): FormFill {
+export function build1040NR({ docs, estimate, person = { marital: null, digitalAssets: null } }: Build1040NR): FormFill {
   const fed = estimate.federal
   const lines = isCalculated(fed) ? fed.lines : []
   const get = (id: string): EstimateLine | undefined => lines.find((l) => l.id === id)
@@ -87,9 +89,13 @@ export function build1040NR({ docs, estimate }: Build1040NR): FormFill {
   } else blank.push('Your identifying number (SSN or ITIN): not on a document you confirmed')
 
   blank.push('Your home address, and your foreign address if you have one (we don’t ask for it yet)')
+  // Filing status: Single (married gives no estimate, so no 1040-NR: src/tax/stops.ts)
   values[F1040NR.single] = true
-  check.push('Filing status is Single: we don’t ask about marital status yet.')
-  blank.push('The digital assets question, Yes or No (we don’t ask)')
+  if (person.marital !== 'single') check.push('Filing status is Single: you haven’t answered the marital status question.')
+  // Digital assets: from the answer to "did you receive or sell crypto, NFTs or other digital assets?"
+  if (person.digitalAssets === 'no') values[F1040NR.digitalNo] = true
+  else if (person.digitalAssets === 'yes') values[F1040NR.digitalYes] = true
+  else blank.push('The digital assets question, Yes or No (you haven’t answered it)')
 
   // ---- income, from the estimate's own lines
   const wages = amount('wages')
@@ -131,7 +137,7 @@ export function build1040NR({ docs, estimate }: Build1040NR): FormFill {
   // ---- what a signed return would still need
   blank.push('Your signature, date, occupation, phone and email')
   blank.push('The third-party designee question, Yes or No')
-  if (treaty || deduction?.treaty) check.push(estimate.notes.find((n) => /^Includes the/.test(n)) ?? 'A student treaty benefit is included.')
+  if (treaty || deduction?.treaty) check.push(`A student treaty benefit is included (${treaty ? 'line 1k' : 'line 12'}), based on the country you lived in before coming to the U.S.`)
 
   notIncluded.push('Lines 2 to 8 (interest, dividends, retirement income, capital gains and other income) are not part of this estimate yet, so they are empty.')
   notIncluded.push('Schedule OI (Form 1040-NR) is required with every Form 1040-NR' + (treaty ? ', and its item L explains the treaty-exempt income on line 1k, plus a statement of why you qualify (Instructions for Form 1040-NR, page 18)' : '') + '. It is not included yet.')

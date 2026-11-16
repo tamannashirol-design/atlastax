@@ -2,7 +2,7 @@
 // form whether it can be prepared, and if so exactly what goes in it. Pure: no PDF, no network, no files.
 // The server turns a ready FormFill into a PDF (server/forms.ts), in memory, per request.
 import { isCalculated, type Estimate, type FormStatus } from '../tax/estimate.ts'
-import type { ConfirmedDocument } from '../tax/input.ts'
+import type { ConfirmedDocument, TaxInput } from '../tax/input.ts'
 import { build1040NR } from './map-1040nr.ts'
 import { build8843 } from './map-8843.ts'
 import { templatesFor, type FormId } from './templates.ts'
@@ -14,11 +14,13 @@ export type BuildForms = {
   facts?: FormFacts
   /** The estimate with its amounts (never the one with numbers hidden) */
   estimate: Estimate
+  /** The answers the 1040-NR needs from the person (marital status, digital assets), as in the tax input */
+  person?: Pick<TaxInput['person'], 'marital' | 'digitalAssets'>
 }
 
 const notReady = (id: FormId, reason: string): FormFill => ({ id, status: 'not-ready', reason, values: {}, overlays: [], blank: [], check: [], notIncluded: [] })
 
-export function buildForms({ year, docs, facts = EMPTY_FACTS, estimate }: BuildForms): Record<FormId, FormFill> {
+export function buildForms({ year, docs, facts = EMPTY_FACTS, estimate, person }: BuildForms): Record<FormId, FormFill> {
   const templates = templatesFor(year)
   if (!templates) return { 'form-8843': notReady('form-8843', 'We can’t prepare this tax year yet.'), 'form-1040nr': notReady('form-1040nr', 'We can’t prepare this tax year yet.') }
 
@@ -30,7 +32,7 @@ export function buildForms({ year, docs, facts = EMPTY_FACTS, estimate }: BuildF
 
   return {
     'form-8843': waiting ? notReady('form-8843', waiting) : build8843({ docs, facts, year }),
-    'form-1040nr': fedReason ? notReady('form-1040nr', fedReason) : build1040NR({ docs, estimate }),
+    'form-1040nr': fedReason ? notReady('form-1040nr', fedReason) : build1040NR({ docs, estimate, person }),
   }
 }
 

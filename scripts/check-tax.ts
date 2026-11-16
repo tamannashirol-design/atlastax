@@ -129,5 +129,15 @@ check('the labels, form lines and IRS sources are still there', [hidden.numbersH
 const shown = JSON.stringify(estimateReturn(input({ wages: w })))
 check('no ID numbers or file names in the estimate (SSN, EIN, passport shapes)', /\d{3}-\d{2}-\d{4}|\d{2}-\d{7}|X1234567|\.pdf|\.jpg|\.png/i.test(shown), false)
 
+console.log('\nMINE: answers that mean no number (src/tax/stops.ts)\n')
+const withPerson = (marital: 'single' | 'married' | null, digitalAssets: 'yes' | 'no' | null) => estimateReturn(input({ wages: [wage(3_845_000, 318_600)], person: { ...ready.person, marital, digitalAssets } }))
+const MARRIED = 'You were married at the end of 2025. The estimate only works for single filers so far.'
+const CRYPTO = 'You received or sold digital assets in 2025. The estimate can’t include them yet.'
+check('married: no federal number, and it says why', [withPerson('married', 'no').federal.status, (withPerson('married', 'no').federal as { missing: string[] }).missing, /"amount"/.test(JSON.stringify(withPerson('married', 'no').federal))], ['not-calculated', [MARRIED], false])
+check('digital assets Yes: no federal number, and it says why', [withPerson('single', 'yes').federal.status, (withPerson('single', 'yes').federal as { missing: string[] }).missing], ['not-calculated', [CRYPTO]])
+check('both: both reasons', (withPerson('married', 'yes').federal as { missing: string[] }).missing, [MARRIED, CRYPTO])
+check('single and No: the number as before ($1,193 owed); not answered (an older session): the same', [withPerson('single', 'no').federal.status, (withPerson('single', 'no').federal as { amount: number }).amount, (withPerson(null, null).federal as { amount: number }).amount], ['owed', 119_300, 119_300])
+check('something unconfirmed AND married: waits, and still says why', (estimateReturn({ ...blockedInput, person: { ...ready.person, marital: 'married', digitalAssets: null }, wages: w }).federal as { missing: string[] }).missing, ['Waiting for the items listed above.', MARRIED])
+
 console.log(failed ? `\n${failed} check(s) FAILED` : '\nAll tax checks passed.')
 process.exit(failed ? 1 : 0)

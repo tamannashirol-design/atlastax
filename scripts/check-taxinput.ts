@@ -39,7 +39,7 @@ console.log('\nA COMPLETE, CONFIRMED RETURN\n')
 const ready = build(good)
 check('no blockers', ready.blockers, [])
 check('the W-2 becomes wage input, in cents', ready.wages, [{ itemId: 'opt-cpt', employer: 'Sample Employer Inc. (FAKE)', wages: 3845000, federalWithheld: 318600, stateCode: 'NY', stateWages: 3845000, stateWithheld: 189300 }])
-check('person, year, filing status, assumption', [ready.year, ready.filingStatus, ready.person, ready.assumptions], [2025, 'single', { citizenship: 'IN', visa: 'F-1' }, ['Filing status: single (we don’t ask yet).']])
+check('person, year, filing status, assumption', [ready.year, ready.filingStatus, ready.person, ready.assumptions], [2025, 'single', { citizenship: 'IN', visa: 'F-1', livedBefore: null, marital: null, digitalAssets: null }, ['Filing status: single (we don’t ask yet).']])
 check('output holds NO ID numbers (SSN, EIN, passport, admission number)', /123-45-6789|12-3456789|X1234567|12345678901|\d{3}-\d{2}-\d{4}|\d{2}-\d{7}/.test(JSON.stringify(ready)), false)
 check('two W-2s → two wage entries', build([...good, doc('on-campus-job', 'W-2', w2Fields({ wages: f('5000.00') }))], [...items, item('on-campus-job', 'W-2')], ['opt-cpt', 'on-campus-job']).wages.map((w) => w.wages), [3845000, 500000])
 

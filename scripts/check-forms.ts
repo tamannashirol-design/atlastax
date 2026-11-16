@@ -84,6 +84,8 @@ const spots1040: Spot[] = [
   [F1040NR.last, 1, 246, 666, 'last name'],
   [F1040NR.id, 1, 469, 666, 'identifying number'],
   [F1040NR.single, 1, 103, 584, 'filing status: Single'],
+  [F1040NR.digitalYes, 1, 513, 531, 'digital assets: Yes box'],
+  [F1040NR.digitalNo, 1, 547, 531, 'digital assets: No box'],
   [F1040NR.line1a, 1, 504, 384, 'line 1a'],
   [F1040NR.line1k, 1, 410, 252, 'line 1k'],
   [F1040NR.line1z, 1, 504, 240, 'line 1z'],
@@ -139,7 +141,7 @@ const items: TaxItem[] = [
 ]
 const FACTS: FormFacts = { visa: 'F-1', citizenship: 'IN', days: { '2025': 365, '2024': 366, '2023': 140 }, daysComplete: true, studentYears: [2023, 2024, 2025], inScope: true }
 const makeEstimate = (citizenship: string | null, documents = docs, extra: Partial<Parameters<typeof buildTaxInput>[0]> = {}): Estimate =>
-  estimateReturn(buildTaxInput({ year: 2025, person: { citizenship: citizenship ?? undefined, visa: 'F-1' }, income: ['opt-cpt'], items, documents, ...extra }))
+  estimateReturn(buildTaxInput({ year: 2025, person: { citizenship: citizenship ?? undefined, livedBefore: citizenship ?? undefined, visa: 'F-1' }, income: ['opt-cpt'], items, documents, ...extra }))
 const forms = (citizenship: string | null, over: { docs?: ConfirmedDocument[]; facts?: FormFacts; estimate?: Estimate } = {}) => {
   const d = over.docs ?? docs
   return buildForms({ year: 2025, docs: d, facts: over.facts ?? { ...FACTS, citizenship }, estimate: over.estimate ?? makeEstimate(citizenship, d) })
@@ -158,6 +160,15 @@ check('China: no standard deduction (lines 12 and 14 empty), line 34 empty, no m
 const frNR = forms('FR')['form-1040nr']
 check('another country: no treaty line, tax $4,379, owes $1,193', [v(frNR, F1040NR.line1k), v(frNR, F1040NR.line12), v(frNR, F1040NR.line16), v(frNR, F1040NR.line37)], [undefined, undefined, '4,379', '1,193'])
 check('filing status Single is ticked, and the form says we assumed it', [v(inNR, F1040NR.single), inNR.check.some((c) => /Filing status is Single/.test(c))], [true, true])
+const answered = (marital: 'single' | 'married' | null, digitalAssets: 'yes' | 'no' | null) => {
+  const est = estimateReturn(buildTaxInput({ year: 2025, person: { citizenship: 'BR', livedBefore: 'BR', visa: 'F-1', marital: marital ?? undefined, digitalAssets: digitalAssets ?? undefined }, income: ['opt-cpt'], items, documents: docs }))
+  return buildForms({ year: 2025, docs, facts: FACTS, estimate: est, person: { marital, digitalAssets } })['form-1040nr']
+}
+check('digital assets answered No: the No box is ticked, the Yes box empty, and it is not listed as blank', [v(answered('single', 'no'), F1040NR.digitalNo), v(answered('single', 'no'), F1040NR.digitalYes), answered('single', 'no').blank.some((b) => /digital assets/.test(b))], [true, undefined, false])
+check('digital assets not answered: both boxes empty, and listed as blank', [v(answered(null, null), F1040NR.digitalNo), v(answered(null, null), F1040NR.digitalYes), answered(null, null).blank.some((b) => /^The digital assets question/.test(b))], [undefined, undefined, true])
+check('digital assets Yes: no estimate number, so no 1040-NR, and it says why', [answered('single', 'yes').status, answered('single', 'yes').reason], ['not-ready', 'You received or sold digital assets in 2025. The estimate can’t include them yet.'])
+check('married: no estimate number, so no 1040-NR, and it says why', [answered('married', 'no').status, answered('married', 'no').reason], ['not-ready', 'You were married at the end of 2025. The estimate only works for single filers so far.'])
+check('marital status answered single: Single ticked, and no "you haven’t answered" note', [v(answered('single', 'no'), F1040NR.single), answered('single', 'no').check.some((c) => /Filing status/.test(c))], [true, false])
 check('amounts are the page’s own numbers: every filled amount is in the estimate’s lines', (() => { const lines = (makeEstimate('IN').federal as { lines: { amount: number }[] }).lines.map((l) => Math.round(l.amount / 100).toLocaleString('en-US')); return Object.entries(inNR.values).filter(([n, x]) => typeof x === 'string' && /f1_(42|54|69|71)|f2_(01|02|06|07|09|11|15|20|21|24|35|36)/.test(n)).every(([, x]) => lines.includes(x as string)) })(), true)
 
 console.log('\nMINE: Form 8843 (arrived on the I-94: F-1, most recent entry 08/15/2025; days counted 365, 366, 140)\n')
@@ -316,7 +327,7 @@ try {
   }
   const reviewDocs = ((await (await call('/api/review?year=2025')).json()) as { documents: { itemId: string; form: FormType }[] }).documents
   for (const d of reviewDocs) await call(`/api/review/${d.itemId}?year=2025`, { method: 'PUT', body: JSON.stringify({ fields: Object.fromEntries(FIELDS[d.form].map((s) => [s.key, { ticked: true }])), status: 'confirmed' }) })
-  const request = { person: { citizenship: 'IN', visa: 'F-1' }, income: ['opt-cpt'], items: items.map(({ id, kind, label, status }) => ({ id, kind, label: label === 'W-2' ? 'W-2' : label, status })), facts: FACTS }
+  const request = { person: { citizenship: 'IN', livedBefore: 'IN', visa: 'F-1', marital: 'single', digitalAssets: 'no' }, income: ['opt-cpt'], items: items.map(({ id, kind, label, status }) => ({ id, kind, label: label === 'W-2' ? 'W-2' : label, status })), facts: FACTS }
 
   const filesBefore = await walk(dataDir)
   // from here on, anything logged is a failure: capture it
@@ -341,6 +352,7 @@ try {
   const nrDoc = await PDFDocument.load(nrBytes)
   const nrForm = nrDoc.getForm()
   check('what was confirmed through the real review flow ends up in the PDF: wages, the India deduction, tax, the refund, the masked ID', [F1040NR.line1a, F1040NR.line12, F1040NR.line16, F1040NR.line34, F1040NR.id].map((n) => nrForm.getTextField(n).getText()), ['38,450', '15,750', '2,489', '697', '•••••6789'])
+  check('…and the digital assets answer (No) ticks the No box', [nrForm.getCheckBox(F1040NR.digitalNo).isChecked(), nrForm.getCheckBox(F1040NR.digitalYes).isChecked()], [true, false])
   const f8843Form = (await PDFDocument.load(f8843Bytes)).getForm()
   check('Form 8843 from the real flow: masked TIN and passport, line 1a from the I-94', [F8843.tin, F8843.line3b, F8843.line1a].map((n) => f8843Form.getTextField(n).getText()), ['•••-••-6789', '•••••4567', 'F-1, entered 08/15/2025'])
   check('both files: every page marked, no full ID anywhere in the bytes', await Promise.all([nrBytes, f8843Bytes].map(async (b) => { const d = await PDFDocument.load(b); return Array.from({ length: d.getPageCount() }, (_, i) => pageContent(d, i).toString('latin1').toUpperCase().includes(MARK_HEX)).every(Boolean) && !WHOLE.some((s) => allStreams(d).some((x) => x.includes(s) || x.toString('latin1').toUpperCase().includes(hex(s))) || b.includes(s)) && !FORBIDDEN.some((s) => shownStreams(d).some((x) => x.includes(s) || x.toString('latin1').toUpperCase().includes(hex(s)))) })), [true, true])

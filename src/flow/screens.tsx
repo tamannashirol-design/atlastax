@@ -263,6 +263,39 @@ export const flow: FlowScreen[] = [
       />
     ),
   },
+  {
+    // Tax treaties go by where you lived (were a resident) before coming, not by citizenship (Pub 901: "a resident of India
+    // immediately before visiting"; China: "a resident … on the date of arrival"). The student treaty rule reads this.
+    id: 'lived-before',
+    path: '/lived-before',
+    section: 'about',
+    question: 'Where did you live before coming to the U.S.?',
+    helper: 'Some tax treaties depend on where you lived, not your citizenship',
+    isAnswered: (a) => !!a.livedBefore,
+    answers: (a, id) => (
+      <SearchSelect labelledBy={id} options={countries()} value={a.livedBefore} onChange={(livedBefore) => setAnswers({ livedBefore })} placeholder="Search countries" />
+    ),
+  },
+  {
+    // Filing status depends on marital status at the end of the year. Married: no estimate number yet (src/tax/stops.ts).
+    id: 'marital',
+    path: '/marital',
+    section: 'about',
+    question: (_, year) => `What was your marital status at the end of ${year}?`,
+    helper: 'Your filing status depends on it',
+    isAnswered: (a) => !!a.marital,
+    answers: (a, id) => (
+      <TileGroup
+        labelledBy={id}
+        value={a.marital}
+        onChange={(marital) => setAnswers({ marital: marital as 'single' | 'married' })}
+        options={[
+          { value: 'single', code: 'Single', description: 'Including divorced or widowed' },
+          { value: 'married', code: 'Married', description: 'Even if your spouse lives abroad' },
+        ]}
+      />
+    ),
+  },
   // ---------- Time in the U.S. (rules: residency.config.ts; working: src/residency) ----------
   {
     id: 'arrival-year',
@@ -408,6 +441,18 @@ export const flow: FlowScreen[] = [
     answers: (a, id) => <IncomePicker labelledBy={id} value={a.income ?? []} onChange={(income) => setAnswers({ income })} />,
   },
   ...incomeFollowUps(),
+  {
+    // Form 1040-NR asks everyone this (page 1, "Digital Assets"). Yes: no estimate number yet (src/tax/stops.ts).
+    id: 'digital-assets',
+    path: '/digital-assets',
+    section: 'income',
+    // Asked as "…crypto, NFTs or other digital assets?"; that runs to 4 lines on a phone (3 from 600px), so crypto and NFTs
+    // moved to the helper to keep the question within 3 lines (2 from 600px)
+    question: (_, year) => `In ${year}, did you receive or sell digital assets?`,
+    helper: 'Such as crypto or NFTs. Form 1040‑NR asks everyone this',
+    isAnswered: (a) => !!a.digitalAssets,
+    answers: (a, id) => <TileGroup labelledBy={id} value={a.digitalAssets} onChange={(digitalAssets) => setAnswers({ digitalAssets: digitalAssets as 'yes' | 'no' })} options={yesNo} />,
+  },
 ]
 
 // Out of scope: every screen after the stop screen is hidden, so Back/Continue,

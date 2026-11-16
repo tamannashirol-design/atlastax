@@ -60,7 +60,16 @@ export type TaxInput = {
   year: number
   /** Always single for now: there is no marital-status question yet (assumption, shown on the result) */
   filingStatus: 'single'
-  person: { citizenship: string | null; visa: string | null }
+  person: {
+    citizenship: string | null
+    visa: string | null
+    /** Where they lived just before coming to the U.S. (region code): what the student treaties go by */
+    livedBefore: string | null
+    /** Marital status at the end of the year; null = not answered (single is assumed, and said so) */
+    marital: 'single' | 'married' | null
+    /** Received or sold digital assets in the year; null = not answered */
+    digitalAssets: 'yes' | 'no' | null
+  }
   wages: WageInput[]
   other: OtherIncome[]
   /** The income cards the person picked (decides what the engine must handle) */
@@ -72,7 +81,7 @@ export type TaxInput = {
 
 export type BuildArgs = {
   year: number
-  person: { citizenship?: string; visa?: string }
+  person: { citizenship?: string; visa?: string; livedBefore?: string; marital?: 'single' | 'married'; digitalAssets?: 'yes' | 'no' }
   income: string[]
   items: TaxItem[]
   documents: ConfirmedDocument[]
@@ -164,7 +173,7 @@ export function buildTaxInput({ year, person, income, items, documents: docs }: 
   return {
     year,
     filingStatus: 'single',
-    person: { citizenship: person.citizenship ?? null, visa: person.visa ?? null },
+    person: { citizenship: person.citizenship ?? null, visa: person.visa ?? null, livedBefore: person.livedBefore ?? null, marital: person.marital ?? null, digitalAssets: person.digitalAssets ?? null },
     wages,
     other,
     incomeTypesPresent: [...income],
