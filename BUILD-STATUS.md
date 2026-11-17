@@ -497,3 +497,16 @@ Things to know:
 ## Downloads card, simplified
 
 "What's left blank" is gone from the download rows (what a form leaves blank is still on the form's own last page). There is ONE "How to mail it" button in the card, below both forms and above "Want to e-file instead?"; it opens "What to do next" without downloading. The E-file button no longer has a "Concept" tag; it still only shows "E-file is coming soon". Check: `npm run audit:nextsteps`.
+
+## How to see the E-file concept screen
+
+1. `npm run dev`; get to `/result` (Documents → Continue → Review, tick everything → Looks good). Press **E-file** at the bottom of "Download your forms" (or open `/result/efile?result=owed` / `?result=refund` for sample numbers).
+2. The screen: title **E-file**, the label **Concept: not connected to the IRS**, a wallet holding three generic cards (debit, credit, bank account; sage and a light cobalt wash, no brand names or colors), then **Amount owed** or **Your refund** with the federal amount. On open (about 600ms) the bank card slides into the wallet, then the amount counts up. With "Reduce motion" on, it only fades and the amount shows at once.
+3. **Owed:** rows **Debit or credit card** and **Bank account** (a tap shows "Coming soon" on the row, nothing else), and a small **Pay by check** link that opens "What to do next". **Refund:** **Direct deposit** ("Coming soon") and **Paper check by mail** (opens the same sheet). Nothing owed and no refund, or no number yet: a plain message and a link back.
+4. Checks: `npm run check:efile` (which label, amount and options; part of the build); `npm run audit:efile` (real clicks, needs `npm run dev`).
+
+Things to know:
+- **No solid cobalt on this screen.** CLAUDE.md reserves cobalt for the one primary button (and this screen has none), so the cards use sage and a light cobalt wash. Say if you want a stronger cobalt card.
+- **The amount is the federal one** (the 1040-NR); the state is not shown here.
+- **The count-up changes digits only** (no layout movement); the finished number is also plain text for screen readers.
+- **Method names are placeholders** (TODO confirm with CPA): which payment and refund methods exist for a Form 1040-NR, and whether a student can e-file it at all.

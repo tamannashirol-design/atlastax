@@ -129,6 +129,13 @@
   --folder-highlight: var(--color-surface);
   --folder-shadow: var(--color-text);
 
+  /* Wallet illustration (E-file concept): sage and a light cobalt wash only, never solid cobalt (that is the primary button's) */
+  --wallet-back: color-mix(in oklch, var(--color-sage-100), var(--color-border-decorative) 40%);
+  --wallet-front-top: color-mix(in srgb, var(--color-sage-100), var(--color-surface) 60%);
+  --wallet-front-bottom: var(--color-primary-tint);
+  --wallet-card-tint: color-mix(in srgb, var(--color-primary-tint), var(--color-border-strong) 22%);
+  --wallet-card-sage: color-mix(in srgb, var(--color-sage-100), var(--color-border-decorative) 55%);
+
   /* Stroke widths for inline SVG (match Tailwind's border / border-2) */
   --stroke-1: 1px;
   --stroke-1-5: 1.5px; /* thin progress lines and check marks */

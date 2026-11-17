@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "npm run check:files && npm run check:consent && npm run check:reading && npm run check:review && npm run check:taxinput && npm run check:tax && npm run check:state && npm run check:treaty && npm run check:income && npm run check:investments && npm run check:nextsteps && npm run check:forms && npm run check:result && npm run contrast && tsc -b && vite build && node scripts/check-prod-build.mjs",
+    "build": "npm run check:files && npm run check:consent && npm run check:reading && npm run check:review && npm run check:taxinput && npm run check:tax && npm run check:state && npm run check:treaty && npm run check:income && npm run check:investments && npm run check:nextsteps && npm run check:efile && npm run check:forms && npm run check:result && npm run contrast && tsc -b && vite build && node scripts/check-prod-build.mjs",
     "lint": "oxlint",
     "preview": "vite preview",
     "contrast": "node scripts/contrast.ts",
@@ -31,7 +31,9 @@
     "check:nextsteps": "node scripts/check-nextsteps.ts",
     "check:forms": "node scripts/check-forms.ts",
     "check:result": "node scripts/check-result.ts",
-    "audit:school": "node scripts/audit-school.mjs"
+    "audit:school": "node scripts/audit-school.mjs",
+    "check:efile": "node scripts/check-efile.ts",
+    "audit:efile": "node scripts/audit-efile.mjs"
   },
   "dependencies": {
     "@fontsource-variable/fraunces": "^5.3.0",

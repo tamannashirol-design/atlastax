@@ -527,7 +527,7 @@ for (const screen of flow.slice(STOP_INDEX + 1)) {
 export function isGatedPath(path: string, a: Answers, year = TAX_YEAR): boolean {
   if (!isOutOfScope(a, year)) return false
   const i = flow.findIndex((s) => s.path === path)
-  return i > STOP_INDEX || path === AFTER_FLOW || path === REVIEW_PATH || path === READING_PATH || path === RESULT_PATH
+  return i > STOP_INDEX || path === AFTER_FLOW || path === REVIEW_PATH || path === READING_PATH || path === RESULT_PATH || path === EFILE_PATH
 }
 export const STOP_PATH = '/not-supported'
 
@@ -536,6 +536,8 @@ export const AFTER_FLOW = '/documents'
 export const REVIEW_PATH = '/review'
 /** After Review's "Looks good": the estimate and downloads. The flow ends here. */
 export const RESULT_PATH = '/result'
+/** The E-file concept screen, from "Want to e-file instead?" on the result page */
+export const EFILE_PATH = '/result/efile'
 /** After Documents → Continue. Skips straight to Review when nothing is still being read (EXTRACTION-PLAN.md, Reading page). Page built in step 5. */
 export const READING_PATH = '/reading'
 

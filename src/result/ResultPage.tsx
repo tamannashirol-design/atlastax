@@ -7,7 +7,7 @@ import { SecondaryButton } from '../components/SecondaryButton'
 import { ESTIMATE_NUMBER_VISIBLE } from '../config'
 import { usStates } from '../data/places'
 import { useAnswers, useFilingYear, type Answers } from '../flow/answers'
-import { REVIEW_PATH } from '../flow/screens'
+import { EFILE_PATH, REVIEW_PATH } from '../flow/screens'
 import { spring } from '../lib/motion'
 import { Link, navigate } from '../lib/router'
 import { downloadForm } from '../forms/client'
@@ -251,22 +251,14 @@ function DownloadRow({ form, year, answers, numbers, tellMe, onDownloaded }: { f
   )
 }
 
-/**
- * "Want to e-file instead?": a CONCEPT only. The quiet button shows "E-file is coming soon" and does nothing else
- * (the e-file flow isn't built).
- */
+/** "Want to e-file instead?": opens the E-file concept screen (not connected to the IRS: src/result/EfilePage.tsx). */
 function EfileLine() {
-  const [note, setNote] = useState(false)
   return (
     <div className="flex flex-col gap-3 border-t border-border-decorative pt-4">
       <p className="text-body">
         Want to e-file instead?
       </p>
-      <PrimaryButton onClick={() => setNote(true)}>E-file</PrimaryButton>
-      {/* Always in the page, so the note is announced when it appears */}
-      <p aria-live="polite" className="min-h-5 text-small text-text-muted">
-        {note ? 'E-file is coming soon' : ''}
-      </p>
+      <PrimaryButton onClick={() => navigate(EFILE_PATH)}>E-file</PrimaryButton>
     </div>
   )
 }
