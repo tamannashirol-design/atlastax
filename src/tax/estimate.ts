@@ -21,6 +21,8 @@ export const RESULT_NOTES = ['Assumes single filing status.', 'Treaty benefits a
 /** With a 1099-INT: the interest is excluded only if it's from a U.S. bank (Pub 519 (2025), page 22) */
 export const INTEREST_NOTE = 'Assumes this is interest from a U.S. bank account.'
 /** With a scholarship partly or wholly for tuition, fees and books: only a degree candidate can leave that part out (Pub 519 (2025), page 25) */
+/** With a 1099-DIV: it shows no rate, so the general 30% is used (Pub 519 (2025), page 30) */
+export const DIVIDEND_NOTE = 'Assumes no tax treaty lowers the 30% rate on your dividends.'
 export const DEGREE_NOTE = 'Assumes you’re studying for a degree, so the part of your scholarship for tuition, fees and books isn’t taxed.'
 
 export type LineGroup = 'income' | 'deductions' | 'tax' | 'payments' | 'result'
@@ -128,6 +130,7 @@ function notesFor(input: TaxInput): string[] {
   if (input.person.marital === null) notes.push(RESULT_NOTES[0])
   if (!treaty) notes.push(RESULT_NOTES[1])
   if (input.bankInterest.length) notes.push(INTEREST_NOTE)
+  if (input.investments.some((i) => i.form === '1099-DIV')) notes.push(DIVIDEND_NOTE)
   if (input.scholarships.length && (input.scholarshipUse.paidFor === 'tuition' || input.scholarshipUse.paidFor === 'both')) notes.push(DEGREE_NOTE)
   return notes
 }

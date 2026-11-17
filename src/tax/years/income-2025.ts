@@ -19,13 +19,62 @@ export type IncomeConfig = {
    * no number (TODO confirm with CPA: e.g. 04 "Exempt under tax treaty", 02 "Exempt under IRC").
    */
   notExemptCodes: readonly (string | null)[]
+  /** The general rate on income not effectively connected (dividends, interest), in whole percent (Pub 519 p. 30) */
+  necRatePercent: number
+  /** 1042-S box 1 codes worked out at that rate: 06 dividends paid by U.S. corporations, 01 interest paid by U.S. obligors (I1042S page 36) */
+  dividendCodes: readonly string[]
+  interestCodes: readonly string[]
+  /** 1042-S interest that is exempt (rate 00.00): box 1 income code + box 3a exemption code (I1042S pages 36–37; Pub 519 p. 22) */
+  exemptInterest: readonly { incomeCode: string; exemptionCode: string; what: string }[]
+  /** Capital gains: taxed only with this many days or more in the U.S. in the tax year (Pub 519 p. 32) */
+  capitalGainDays: number
   sources: Record<string, Source>
 }
 
 export const INCOME_2025: IncomeConfig = {
   scholarshipIncomeCode: '16',
   notExemptCodes: ['00', null],
+  necRatePercent: 30,
+  dividendCodes: ['06'],
+  interestCodes: ['01'],
+  exemptInterest: [
+    { incomeCode: '29', exemptionCode: '02', what: 'deposit interest' },
+    { incomeCode: '01', exemptionCode: '05', what: 'portfolio interest' },
+  ],
+  // TODO confirm with CPA: Pub 519 counts days "in the United States" for this rule and doesn't say whether days as an
+  // exempt individual (a student) count; it only matters at 183 days or more, which gives no number anyway (tax home)
+  capitalGainDays: 183,
   sources: {
+    nec30: {
+      table: 'Dividends and interest: the 30% tax',
+      citation:
+        'Publication 519 (2025), pages 30 and 31, The 30% Tax: “Tax at a 30% (or lower treaty) rate applies to certain items of income … from U.S. sources but only if the items are not effectively connected”; it applies to the gross amount, and includes interest and dividends. Reported on Schedule NEC (Form 1040-NR), in the column for the rate (column (c) is 30%), and its tax goes to Form 1040-NR line 23a (Form 1040-NR (2025), page 2, line 23a: “from Schedule NEC (Form 1040-NR), line 15”; Instructions for Form 1040-NR (2025), page 42). Pub 519 page 65 (Arthur Banks): dividends of $1,400 × 30% = $420.',
+    },
+    necCodes: {
+      table: 'Dividends and interest: Form 1042-S codes',
+      citation:
+        'Instructions for Form 1042-S (2025): box 1 income code 06 “Dividends paid by U.S. corporations—general”, 01 “Interest paid by U.S. obligors—general”, 29 “Deposit interest” (Appendix A, page 36); box 3b is the rate withheld, with “00” in box 3a when tax was withheld (page 26); box 3a exemption codes 02 “Exempt under IRC”, 05 “Portfolio interest exempt under IRC” (page 37). A rate other than 30.00 comes from a tax treaty (Instructions for Form 1040-NR (2025), page 42: “The withholding tax rate may be lower … if your country of tax residence and the United States have a treaty”), which this estimate doesn’t cover.',
+    },
+    necLines: {
+      table: 'Dividends and interest: where they go',
+      citation:
+        'Instructions for Form 1040-NR (2025), page 43: Schedule NEC line 1a, “dividends paid by U.S. corporations”; lines 2a to 2c, interest. Exempt from the 30% tax: “Interest from a U.S. bank, savings and loan association, or similar institution” and “Portfolio interest on obligations issued after July 18, 1984” (also Publication 519 (2025), page 22).',
+    },
+    dividends1099: {
+      table: 'Dividends on a 1099-DIV',
+      citation:
+        'A 1099-DIV shows no tax rate. The general rate, 30%, is used (Publication 519 (2025), page 30), assuming no tax treaty lowers it (TODO confirm with CPA). Its box 4 withholding is credited on Form 1040-NR line 25b, “Form(s) 1099” (Instructions for Form 1040-NR (2025), page 22).',
+    },
+    capitalGains: {
+      table: 'Trading: the 183-day rule',
+      citation:
+        'Publication 519 (2025), page 32: “If you were in the United States for 183 days or more during the tax year, your net gain from sales or exchanges of capital assets is taxed at a 30% (or lower treaty) rate”; net gain is U.S.-source gains minus U.S.-source losses, and “Capital losses in excess of capital gains” don’t count; “If you were in the United States for less than 183 days during the tax year, capital gains … are tax exempt” unless effectively connected. Instructions for Form 1040-NR (2025), page 44, Schedule NEC lines 16 to 18: “Include these gains and losses only if you were in the United States at least 183 days during 2025.” The days are the ones counted on the Time in the U.S. screens.',
+    },
+    gainSource: {
+      table: 'Trading: where a gain comes from',
+      citation:
+        'Publication 519 (2025), page 20, Personal Property: a gain “generally has its source in the United States if you have a tax home in the United States”; tax home: page 8. AtlasTax doesn’t ask where your tax home was, so with 183 days or more there is no number (TODO confirm with CPA).',
+    },
     bankInterest: {
       table: 'U.S. bank interest',
       citation:

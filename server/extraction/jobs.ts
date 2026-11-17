@@ -84,7 +84,7 @@ export function readingJobs({ providerFor, filesDir, listFiles }: Deps) {
     }
     try {
       const forms = ITEM_FORMS[doc.itemId]
-      for await (const e of providerFor(sessionId).read({ files: files.map((f) => join(filesDir, f.fileId)), forms, fieldsFor: (f) => FIELDS[f], trigger, signal: doc.abort!.signal })) {
+      for await (const e of providerFor(sessionId).read({ itemId: doc.itemId, files: files.map((f) => join(filesDir, f.fileId)), forms, fieldsFor: (f) => FIELDS[f], trigger, signal: doc.abort!.signal })) {
         if (e.type === 'stage' && !update({ status: e.stage })) return
         if (e.type === 'failed' && !update({ status: 'failed', failure: e.reason, abort: undefined })) return
         if (e.type === 'result' && !update({ status: 'ready', fields: e.fields, form: e.form, abort: undefined })) return

@@ -18,6 +18,14 @@ export const FAKE: Record<FormType, Record<string, string | null>> = {
   'State ID': { fullName: 'SAMPLE PERSON', state: 'CA', expires: '2030-01-01' },
   'Previous return': { taxYear: '2024', totalIncome: '18000.00', totalTax: '1700.00' },
 }
+/**
+ * Per-document fakes, where one form type means different things per document. A 1042-S for "investments" is dividends,
+ * shaped like Publication 519 (2025), page 65 (Arthur Banks): $1,400 of dividends from a U.S. corporation (income
+ * code 06), 30% withheld ($420), box 3a "00".
+ */
+export const FAKE_BY_ITEM: Record<string, Partial<Record<FormType, Record<string, string | null>>>> = {
+  investments: { '1042-S': { withholdingAgent: 'Sample Brokerage', incomeCode: '06', grossIncome: '1400.00', exemptionCode: '00', taxRate: '30.00', federalWithheld: '420.00', recipientCountry: 'Sample Country' } },
+}
 /** In the normal results, these come back as "Please check" */
 export const NORMALLY_LOW = new Set(['federalWithheld', 'exemptionCode', 'expires'])
 

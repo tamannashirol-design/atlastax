@@ -23,6 +23,8 @@
 //   Page 2
 //   Line 11b / 12 / 14 / 15                         f2_01 / f2_02 / f2_06 / f2_07   (line 12: the India treaty standard deduction)
 //   Line 16 tax / 18 / 22 / 24 total tax            f2_09 / f2_11 / f2_15 / f2_20
+//   Line 23a tax from Schedule NEC / 23d            Line23a_ReadOrder.f2_16 / f2_19   (dividends and interest at 30%)
+//   Line 25b Form(s) 1099 withheld                  f2_22
 //   Line 25a W-2 withheld / 25d / 25g 1042-S / 33   f2_21 / f2_24 / f2_27 / f2_35
 //   U.S. bank interest: NOT entered (exempt: Instructions for Form 1040-NR (2025), page 19, line 2a Exception 2, line 2b Exception 3)
 //   Line 34 overpaid (refund) / Line 37 amount owed f2_36 / f2_42
@@ -60,8 +62,11 @@ export const F1040NR = {
   line16: p2('f2_09[0]'),
   line18: p2('f2_11[0]'),
   line22: p2('f2_15[0]'),
+  line23a: p2('Line23a_ReadOrder[0].f2_16[0]'), // inside the IRS's own group
+  line23d: p2('f2_19[0]'),
   line24: p2('f2_20[0]'),
   line25a: p2('Line25_ReadOrder[0].f2_21[0]'), // inside the IRS's own group
+  line25b: p2('f2_22[0]'),
   line25d: p2('f2_24[0]'),
   line25g: p2('f2_27[0]'),
   line33: p2('f2_35[0]'),
@@ -150,10 +155,19 @@ export function build1040NR({ docs, estimate, person = { marital: null, digitalA
   put(F1040NR.line16, tax)
   put(F1040NR.line18, tax)
   put(F1040NR.line22, tax)
-  put(F1040NR.line24, tax)
+  // Line 23a: the 30% tax on dividends and interest (Schedule NEC line 15); line 24 = 22 + 23d
+  const necTax = get('nec-tax')
+  if (necTax) {
+    put(F1040NR.line23a, necTax.amount)
+    put(F1040NR.line23d, necTax.amount)
+  }
+  put(F1040NR.line24, amount('total-tax') ?? tax)
   const withheld = amount('withheld')
   put(F1040NR.line25a, withheld)
-  put(F1040NR.line25d, withheld)
+  // Line 25b: 1099-DIV and 1099-B box 4; line 25d = 25a + 25b
+  const withheld1099 = get('withheld-1099')
+  if (withheld1099) put(F1040NR.line25b, withheld1099.amount)
+  put(F1040NR.line25d, withheld === null ? null : withheld + (withheld1099?.amount ?? 0))
   // Line 25g: 1042-S box 10 (Instructions page 22); line 33: all payments
   const withheld1042 = get('withheld-1042s')
   if (withheld1042) put(F1040NR.line25g, withheld1042.amount)
@@ -173,6 +187,8 @@ export function build1040NR({ docs, estimate, person = { marital: null, digitalA
   if (treaty || deduction?.treaty) check.push(`A student treaty benefit is included (${treaty ? 'line 1k' : 'line 12'}), based on the country you lived in before coming to the U.S.`)
 
   notIncluded.push(scholarshipLine ? 'Lines 2 to 7 (other interest, dividends, retirement income and capital gains) are not part of this estimate yet, so they are empty.' : 'Lines 2 to 8 (other interest, dividends, retirement income, capital gains and other income) are not part of this estimate yet, so they are empty.')
+  if (get('dividends') || get('nec-interest') || get('investment-interest-exempt')) notIncluded.push('Schedule NEC (Form 1040-NR), with your dividends and interest (its line 15 gives line 23a of this form), is not included yet.')
+  if (get('trading')) notIncluded.push('Your trading is not entered: capital gains are taxed only if you were in the U.S. at least 183 days, and losses beyond gains aren’t allowed (Instructions for Form 1040-NR (2025), page 44).')
   if (get('bank-interest')) notIncluded.push('Your U.S. bank interest is not entered: for a nonresident it is exempt, and the instructions say not to include it on lines 2a or 2b (Instructions for Form 1040-NR (2025), page 19).')
   if (scholarshipLine) {
     notIncluded.push('Schedule 1 (Form 1040), with your taxable scholarship on line 8r (it goes to line 8 of this form), is not included yet.')

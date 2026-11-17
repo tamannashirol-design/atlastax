@@ -27,6 +27,7 @@ Open the app with `npm run dev`, then http://localhost:5173.
 | **Q1** | **Three questions: lived before, marital status, digital assets** | About you: "Where did you live before coming to the U.S.?" (after citizenship; the India and China treaties now use this, not citizenship) and "What was your marital status at the end of {year}?" (married: no estimate number, says why). Income (last step): "In {year}, did you receive or sell digital assets?" (Yes: no estimate number, says why; fills the 1040-NR's Digital Assets question). "Assumes you lived in India/China" note dropped. Rules: `src/tax/stops.ts`, `src/tax/treaty.ts` | **Built, waiting for your "next"** | `/lived-before`, `/marital`, `/digital-assets`, then `/result`. See "How to see the three questions". | Opus |
 | **Q2** | **Names, W-2 address, designee, W-2 wording** | Passport on Review: First name and Last name as two fields (no "name was split" line). W-2 on Review: "Your address" (box f), confirm or edit, used as the 1040-NR home address. Third-party designee: No, not asked. Last page: "Attach Copy B of your W-2 to the front of this form when you mail it." (checked against the 1040-NR instructions, page 23, and Form W-2) | **Built, waiting for your "next"** | Review → passport and W-2 screens; `/result` → Download Form 1040-NR. | Opus |
 | **I1** | **Bank interest (1099-INT) and scholarships (1042-S), federal** | Bank interest: exempt for a nonresident (Pub 519 p. 22), shown as a "not taxed" line, not entered on the 1040-NR (instructions p. 19), note "Assumes this is interest from a U.S. bank account." Scholarship: only the taxable part (Pub 519 pp. 24–26; 1040-NR instructions p. 31, line 8r → line 8), box 10 credited on line 25g (p. 22; 1042-S instructions p. 29). New questions "What did your scholarship pay for?" and the living-costs amount. Anything not covered (other income codes, an exemption code, China with a taxable scholarship, tax withheld from interest): no number, says why, TODO confirm with CPA. State: no number with either. `check:income` | **Built, waiting for your "next"** | See "How to see bank interest and scholarships". | Opus |
+| **I2** | **Investments (1042-S, 1099-DIV) and trading (1099-B), federal** | Dividends and interest not connected with a U.S. business: the flat 30% (Pub 519 pp. 30–31), Schedule NEC column (c) → line 23a; 1042-S income code and rate used (codes 06, 01; deposit and portfolio interest exempt); box 10 → 25g; 1099-DIV/1099-B box 4 → 25b. Trading: 183-day rule (Pub 519 p. 32; 1040-NR instructions p. 44) with the days from Time in the U.S. Arthur Banks (Pub 519 p. 65) reproduced: $3,125. No number (says why, TODO confirm with CPA): a treaty rate, another code, an exemption code, India/China with taxed dividends or interest, a 1042-S for trading, no cost basis, days missing, 183 days or more (tax home not asked). State: no number. `check:investments` | **Built, waiting for your "next"** | See "How to see investments and trading". | Opus |
 | R5 | Estimate endpoint | `POST /api/estimate`, stale detection, number switch on the server | Not started | Nothing on screen | Opus |
 | R6 | Result screen | All states (blocked, refund, owed, zero, needs review, stale), the visible switch that hides the number. **Also replaces the old step 7** (summary and download lock). | Not started | `/result` (`?result=refund` etc.) | Opus for states, Sonnet for UI |
 | R3 | Engine: the rest | Scholarships, treaty (from the 1042-S only), India standard deduction, itemized, "needs review" flags | Not started | Nothing on screen | Opus |
@@ -93,6 +94,25 @@ first), React opened the inner privacy sheet before the upload sheet around it. 
 so it is always on top. The consent record and "no file leaves before agreement" are
 untouched. Test: `npm run audit:consent` (dev server running; real clicks: Not now → Add
 again → Continue to upload → upload a file, three refusals in a row, Escape, the X).
+
+## How to see investments and trading
+
+1. `npm run dev`. In the questions pick **Investments** and **Trading** with your job, and upload any file for each. For trading to give a number, the Time in the U.S. answers must come to under 183 days in 2025: first arrival **2025**, arrival date **August 15, 2025**, no trips (about 139 days).
+2. Review: the investments document reads as a 1042-S for dividends (FAKE, the Arthur Banks example: income code 06, $1,400, rate 30.00, box 10 $420); trading reads as a 1099-B (proceeds $5,200, cost basis $4,950). Tick everything.
+3. `/result` → Federal **owes $1,193**. **Show how we got this**: Dividends (taxed at 30%) $1,400 (Schedule NEC line 1a) · Trading gains (not taxed) $250 ("In the U.S. 139 days in 2025: fewer than 183") · Tax $4,379 · Tax on dividends and interest (30%) $420 (line 23a) · Total tax $4,799 · W-2 withheld $3,186 · Tax withheld on your 1042-S forms $420 (line 25g) · Total payments $3,606.
+4. With an arrival in 2023 (365 days in 2025): "You were in the U.S. 365 days in 2025, so your trading gains may be taxed. That depends on where your tax home was, which we don't ask yet." No number.
+5. State (New York): "We can't include your investment income in the state estimate yet."
+6. **Download** the 1040-NR: line 23a 420, 23d 420, 24 4,799, 25g 420, 33 3,606; the last page says Schedule NEC isn't included and why trading isn't entered.
+7. Checks: `npm run check:investments` (OFFICIAL and MINE labelled).
+
+### Investments and trading: things to know
+
+- **Rates:** only the general 30% is worked out. A 1042-S rate other than 30.00 means a treaty rate: no number. A 1099-DIV shows no rate, so 30% is used with the note "Assumes no tax treaty lowers the 30% rate on your dividends."
+- **India and China:** the existing rules are unchanged; with taxed dividends or interest there's no number (their treaties may set lower rates).
+- **183-day rule:** the days come from Time in the U.S. (only when every count is answered). Under 183: gains not taxed. 183 or more: no number, because a gain is U.S.-source only with a U.S. tax home (Pub 519 p. 20), which we don't ask. TODO confirm with CPA: Pub 519 doesn't say whether a student's days count for this rule (it only matters at 183 or more).
+- **Exempt interest on a 1042-S:** deposit interest (code 29, exemption 02) and portfolio interest (code 01, exemption 05), at 00.00: shown, not taxed (Pub 519 p. 22; 1040-NR instructions p. 43).
+- **Development fake:** a 1042-S on the investments document now reads as dividends (`FAKE_BY_ITEM` in `server/extraction/fakeValues.ts`); the scholarship 1042-S is unchanged.
+- **Line 23a** comes from Schedule NEC line 15 (the form, page 2). Schedule NEC itself isn't in the download yet.
 
 ## How to see bank interest and scholarships
 

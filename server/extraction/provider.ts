@@ -31,6 +31,8 @@ export type ProviderEvent =
 export type ReadInput = {
   /** Paths of the document's files on disk (a document can have several) */
   files: string[]
+  /** Which document this is (documents.config.ts id), e.g. "investments" */
+  itemId?: string
   /** The forms this document may be (from extraction.config.ts ITEM_FORMS) */
   forms: FormType[]
   /** Fields to read for each possible form */

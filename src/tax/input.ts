@@ -83,6 +83,39 @@ export type InterestInput = {
   withheld: number
 }
 
+/** Dividends or interest on the "investments" document: a 1042-S (boxes 1, 2, 3a, 3b, 10, as for scholarships) or a
+ *  1099-DIV (box 1a ordinary dividends, box 4 withheld; it shows no rate) */
+export type InvestmentInput = {
+  itemId: string
+  form: '1042-S' | '1099-DIV'
+  payer: string | null
+  /** 1042-S box 1; null for a 1099-DIV */
+  incomeCode: string | null
+  /** 1042-S box 2 or 1099-DIV box 1a, cents */
+  gross: number
+  /** 1042-S box 3a; null for a 1099-DIV or "Not on my form" */
+  exemptionCode: string | null
+  /** 1042-S box 3b (e.g. "30.00"); null for a 1099-DIV or "Not on my form" */
+  taxRate: string | null
+  /** 1042-S box 10 (line 25g) or 1099-DIV box 4 (line 25b), cents */
+  withheld: number
+}
+
+/** Sales on the "trading" document: a 1099-B (box 1d proceeds, 1e cost basis, 4 withheld) or a 1042-S */
+export type TradeInput = {
+  itemId: string
+  form: '1099-B' | '1042-S'
+  payer: string | null
+  /** 1099-B box 1d, cents (1042-S: box 2) */
+  proceeds: number
+  /** 1099-B box 1e, cents; null when "Not on my form" (then the gain can't be worked out) */
+  costBasis: number | null
+  /** 1099-B box 4 (line 25b) or 1042-S box 10, cents */
+  withheld: number
+  /** 1042-S box 1 only */
+  incomeCode: string | null
+}
+
 /** The answers to the scholarship questions (src/flow/screens.tsx): what it paid for, and the stipend for living costs */
 export type ScholarshipUse = {
   paidFor: 'tuition' | 'living' | 'both' | null
@@ -106,11 +139,15 @@ export type TaxInput = {
     marital: 'single' | 'married' | null
     /** Received or sold digital assets in the year; null = not answered */
     digitalAssets: 'yes' | 'no' | null
+    /** Days in the U.S. in the tax year, from "Time in the U.S." (only when every count is answered); null = not known */
+    daysInUS: number | null
   }
   wages: WageInput[]
   scholarships: ScholarshipInput[]
   bankInterest: InterestInput[]
   scholarshipUse: ScholarshipUse
+  investments: InvestmentInput[]
+  trades: TradeInput[]
   other: OtherIncome[]
   /** The income cards the person picked (decides what the engine must handle) */
   incomeTypesPresent: string[]
@@ -121,7 +158,7 @@ export type TaxInput = {
 
 export type BuildArgs = {
   year: number
-  person: { citizenship?: string; visa?: string; livedBefore?: string; marital?: 'single' | 'married'; digitalAssets?: 'yes' | 'no' }
+  person: { citizenship?: string; visa?: string; livedBefore?: string; marital?: 'single' | 'married'; digitalAssets?: 'yes' | 'no'; daysInUS?: number }
   income: string[]
   items: TaxItem[]
   documents: ConfirmedDocument[]
@@ -150,6 +187,8 @@ export function buildTaxInput({ year, person, income, items, documents: docs, sc
   const wages: WageInput[] = []
   const scholarships: ScholarshipInput[] = []
   const bankInterest: InterestInput[] = []
+  const investments: InvestmentInput[] = []
+  const trades: TradeInput[] = []
   const other: OtherIncome[] = []
   const block = (b: Blocker) => blockers.push(b)
 
@@ -218,8 +257,25 @@ export function buildTaxInput({ year, person, income, items, documents: docs, sc
       const withheld = money('federalWithheld', 'Federal tax withheld')
       if (interest === null || withheld === null) continue
       bankInterest.push({ itemId: item.id, payer: used.payerName ?? null, interest, withheld })
+    } else if (item.id === 'investments' && (doc.form === '1042-S' || doc.form === '1099-DIV')) {
+      const is1042 = doc.form === '1042-S'
+      const gross = money(is1042 ? 'grossIncome' : 'ordinaryDividends', is1042 ? 'Gross income' : 'Total ordinary dividends')
+      const withheld = money('federalWithheld', 'Federal tax withheld')
+      if (gross === null || withheld === null) continue
+      investments.push({ itemId: item.id, form: doc.form, payer: (is1042 ? used.withholdingAgent : used.payerName) ?? null, incomeCode: is1042 ? (used.incomeCode ?? '').trim() : null, gross, exemptionCode: is1042 ? used.exemptionCode?.trim() || null : null, taxRate: is1042 ? used.taxRate?.trim() || null : null, withheld })
+    } else if (item.id === 'trading' && doc.form === '1099-B') {
+      const proceeds = money('proceeds', 'Total proceeds')
+      const basis = used.costBasis === null ? null : money('costBasis', 'Total cost basis')
+      const withheld = money('federalWithheld', 'Federal tax withheld')
+      if (proceeds === null || withheld === null || (used.costBasis !== null && basis === null)) continue
+      trades.push({ itemId: item.id, form: '1099-B', payer: used.payerName ?? null, proceeds, costBasis: basis, withheld, incomeCode: null })
+    } else if (item.id === 'trading' && doc.form === '1042-S') {
+      const gross = money('grossIncome', 'Gross income')
+      const withheld = money('federalWithheld', 'Total tax withheld')
+      if (gross === null || withheld === null) continue
+      trades.push({ itemId: item.id, form: '1042-S', payer: used.withholdingAgent ?? null, proceeds: gross, costBasis: null, withheld, incomeCode: (used.incomeCode ?? '').trim() })
     } else if (doc.form !== 'Passport' && doc.form !== 'I-94') {
-      // Other 1042-S and 1099s (investments, trading, freelance): confirmed, but the engine doesn't read them yet
+      // Other forms (freelance, contract work): confirmed, but the engine doesn't read them yet
       other.push({ itemId: item.id, form: doc.form, label: item.label })
     }
   }
@@ -236,11 +292,13 @@ export function buildTaxInput({ year, person, income, items, documents: docs, sc
   return {
     year,
     filingStatus: 'single',
-    person: { citizenship: person.citizenship ?? null, visa: person.visa ?? null, livedBefore: person.livedBefore ?? null, marital: person.marital ?? null, digitalAssets: person.digitalAssets ?? null },
+    person: { citizenship: person.citizenship ?? null, visa: person.visa ?? null, livedBefore: person.livedBefore ?? null, marital: person.marital ?? null, digitalAssets: person.digitalAssets ?? null, daysInUS: Number.isInteger(person.daysInUS) && person.daysInUS! >= 0 && person.daysInUS! <= 366 ? person.daysInUS! : null },
     wages,
     scholarships,
     bankInterest,
     scholarshipUse,
+    investments,
+    trades,
     other,
     incomeTypesPresent: [...income],
     blockers,

@@ -15,7 +15,7 @@
 //
 // Every value below is FAKE (SSN-like values only from the allowed list).
 import { setTimeout as wait } from 'node:timers/promises'
-import { FAKE, NORMALLY_LOW } from './fakeValues.ts'
+import { FAKE_BY_ITEM, FAKE, NORMALLY_LOW } from './fakeValues.ts'
 import type { ExtractedField, ExtractionProvider, Failure, ProviderEvent, ReadInput } from './provider.ts'
 
 export const SCENARIOS = ['normal', 'fast', 'one-fails', 'wrong-type', 'blurry', 'rotated', 'all-fail', 'no-stages', 'low-confidence'] as const
@@ -58,7 +58,7 @@ export function mockProvider(scenarioFor: () => { scenario: Scenario; takeOneSho
       }
 
       const form = input.forms[0]
-      const values = FAKE[form]
+      const values = (input.itemId && FAKE_BY_ITEM[input.itemId]?.[form]) || FAKE[form]
       const fields: ExtractedField[] = input.fieldsFor(form).map((spec, i) => {
         const suggested = values[spec.key] ?? null
         const low = scenario === 'low-confidence' ? i % 2 === 1 : NORMALLY_LOW.has(spec.key)
