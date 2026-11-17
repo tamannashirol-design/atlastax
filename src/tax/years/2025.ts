@@ -14,6 +14,7 @@ import type { Source } from '../estimate.ts'
 import { STATES_2025, type StatesConfig } from './states-2025.ts'
 import { TREATIES_2025, type Treaty } from './treaties-2025.ts'
 import { INCOME_2025, type IncomeConfig } from './income-2025.ts'
+import { FILING_2025, type FilingConfig } from './filing-2025.ts'
 
 export const TODO_CPA = 'TODO confirm with CPA'
 
@@ -99,6 +100,8 @@ export type YearConfig = {
   treaties: Record<string, Treaty>
   /** U.S. bank interest and scholarships (Form 1042-S): codes and sources */
   income: IncomeConfig
+  /** Due dates, mailing addresses and payment details for the "What to do next" sheet */
+  filing: FilingConfig
   review: typeof TODO_CPA
 }
 
@@ -112,5 +115,6 @@ export const YEAR_2025: YearConfig = {
   states: STATES_2025,
   treaties: TREATIES_2025,
   income: INCOME_2025,
+  filing: FILING_2025,
   review: TODO_CPA,
 }

@@ -77,6 +77,8 @@ export type Estimate = {
   forms: FormStatus[]
   /** The person turned the number off: no amount anywhere */
   numbersHidden: boolean
+  /** Which due date applies (Instructions for Form 1040-NR (2025), page 12): "wages" when there is a W-2, else "no-wages". TODO confirm with CPA. */
+  dueBasis?: 'wages' | 'no-wages'
 }
 
 export const isCalculated = (s: Section): s is Calculated => s.status === 'refund' || s.status === 'owed' || s.status === 'zero'
@@ -111,6 +113,7 @@ export function estimateReturn(input: TaxInput): Estimate {
     federal,
     state: stateSection(input),
     notes: notesFor(input),
+    dueBasis: input.wages.length ? 'wages' : 'no-wages',
     forms: FORMS_NOT_READY,
     numbersHidden: false,
   }

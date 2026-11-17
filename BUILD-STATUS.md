@@ -28,6 +28,7 @@ Open the app with `npm run dev`, then http://localhost:5173.
 | **Q2** | **Names, W-2 address, designee, W-2 wording** | Passport on Review: First name and Last name as two fields (no "name was split" line). W-2 on Review: "Your address" (box f), confirm or edit, used as the 1040-NR home address. Third-party designee: No, not asked. Last page: "Attach Copy B of your W-2 to the front of this form when you mail it." (checked against the 1040-NR instructions, page 23, and Form W-2) | **Built, waiting for your "next"** | Review → passport and W-2 screens; `/result` → Download Form 1040-NR. | Opus |
 | **I1** | **Bank interest (1099-INT) and scholarships (1042-S), federal** | Bank interest: exempt for a nonresident (Pub 519 p. 22), shown as a "not taxed" line, not entered on the 1040-NR (instructions p. 19), note "Assumes this is interest from a U.S. bank account." Scholarship: only the taxable part (Pub 519 pp. 24–26; 1040-NR instructions p. 31, line 8r → line 8), box 10 credited on line 25g (p. 22; 1042-S instructions p. 29). New questions "What did your scholarship pay for?" and the living-costs amount. Anything not covered (other income codes, an exemption code, China with a taxable scholarship, tax withheld from interest): no number, says why, TODO confirm with CPA. State: no number with either. `check:income` | **Built, waiting for your "next"** | See "How to see bank interest and scholarships". | Opus |
 | **I2** | **Investments (1042-S, 1099-DIV) and trading (1099-B), federal** | Dividends and interest not connected with a U.S. business: the flat 30% (Pub 519 pp. 30–31), Schedule NEC column (c) → line 23a; 1042-S income code and rate used (codes 06, 01; deposit and portfolio interest exempt); box 10 → 25g; 1099-DIV/1099-B box 4 → 25b. Trading: 183-day rule (Pub 519 p. 32; 1040-NR instructions p. 44) with the days from Time in the U.S. Arthur Banks (Pub 519 p. 65) reproduced: $3,125. No number (says why, TODO confirm with CPA): a treaty rate, another code, an exemption code, India/China with taxed dividends or interest, a 1042-S for trading, no cost basis, days missing, 183 days or more (tax home not asked). State: no number. `check:investments` | **Built, waiting for your "next"** | See "How to see investments and trading". | Opus |
+| **N1** | **"What to do next" sheet after a download** | After EVERY download on `/result`, a slide-up sheet (same style as the privacy and upload sheets, with the X and a "Done"): 1 Print and sign the 1040-NR · 2 Attach Copy B of your W-2 to the front · 3 Mail it (both addresses from the 1040-NR instructions, pages 12–13) · 4 Pay what you owe (only when owed: irs.gov/payments, or a check with Form 1040-V) · 5 Your refund (only when a refund: no timing). Then an "E-file" button labelled Concept: shows "E-file is coming soon" and does nothing else. Due date shown as upcoming; no late wording. Content in `src/tax/years/filing-2025.ts`, rules in `src/forms/nextSteps.ts`; `check:nextsteps`, `audit:nextsteps` | **Built, waiting for your "next"** | `/result` → **Download**. See "How to see the next-steps sheet". | Sonnet |
 | R5 | Estimate endpoint | `POST /api/estimate`, stale detection, number switch on the server | Not started | Nothing on screen | Opus |
 | R6 | Result screen | All states (blocked, refund, owed, zero, needs review, stale), the visible switch that hides the number. **Also replaces the old step 7** (summary and download lock). | Not started | `/result` (`?result=refund` etc.) | Opus for states, Sonnet for UI |
 | R3 | Engine: the rest | Scholarships, treaty (from the 1042-S only), India standard deduction, itemized, "needs review" flags | Not started | Nothing on screen | Opus |
@@ -94,6 +95,26 @@ first), React opened the inner privacy sheet before the upload sheet around it. 
 so it is always on top. The consent record and "no file leaves before agreement" are
 untouched. Test: `npm run audit:consent` (dev server running; real clicks: Not now → Add
 again → Continue to upload → upload a file, three refusals in a row, Escape, the X).
+
+## How to see the next-steps sheet
+
+1. `npm run dev`; get to `/result` (Documents → Continue → Review, tick everything → **Looks good**).
+2. Press **Download** on Form 1040-NR (or Form 8843). The file downloads and **What to do next** slides up. It says "Your 2025 return is due April 15, 2026." (June 15, 2026 if there's no W-2: Instructions for Form 1040-NR (2025), page 12).
+3. **Owes** (default, lived in Brazil, $1,193): steps 1 to 3, then **4. Pay what you owe** with a link to irs.gov/payments (and one for people with no U.S. bank account). **Refund** (change "Where did you live before coming to the U.S." to India, `/lived-before`; $697): step 4 is **Your refund** instead, with no timing.
+4. Step 3 shows both addresses: not sending a payment (Austin, TX 73301-0215) and sending a payment (P.O. Box 1303, Charlotte, NC 28201-1303), with the page they come from.
+5. Press **E-file** (tagged "Concept"): "E-file is coming soon" appears under it. Nothing else happens.
+6. Close with the **X**, **Done** or Escape; focus goes back to the Download button. Download again: it opens again (once per download).
+7. Checks: `npm run check:nextsteps` (part of the build); `npm run audit:nextsteps` (real clicks, needs `npm run dev`).
+
+### Next-steps sheet: things to know
+
+- **Due dates are in the past as of today (Nov 2026):** the 2025 dates (April 15 and June 15, 2026) have passed. As designed, the sheet shows the date as upcoming and says nothing about filing late. Marked TODO confirm with CPA in `filing-2025.ts`.
+- **The forms say "Prototype estimate, not for filing" on every page**, and the sheet tells people to print and mail them. Marked TODO.
+- **Form 8843 isn't in the steps.** Its instructions (page 3) say to attach it to the 1040-NR. Marked TODO; add a step if you want it.
+- **Which due date:** a W-2 → April 15; none → June 15 (the instructions say "wages subject to U.S. income tax withholding"; a W-2 with $0 in box 2 isn't settled). TODO.
+- **Refund step:** the download leaves how you'd like to be paid (lines 35a to 35e) blank, so the step says to fill that in by hand before mailing. No timing is stated (the instructions only give a timing for refunds of tax withheld on a 1042-S).
+- **Step 2:** "Copy B" is from the Form W-2 itself; the 1040-NR instructions (page 23) say attach a copy of Forms W-2 and 1042-S to the front, so a line about the 1042-S is added.
+- **The sheet appears after the 8843 too**, and when there's no number (steps 1 to 3 only).
 
 ## How to see investments and trading
 

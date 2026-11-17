@@ -12,6 +12,7 @@ import { REVIEW_PATH } from '../flow/screens'
 import { spring } from '../lib/motion'
 import { Link, navigate } from '../lib/router'
 import { downloadForm } from '../forms/client'
+import { NextStepsSheet } from './NextStepsSheet'
 import { fetchEstimate } from '../tax/client'
 import { combined, ESTIMATE_LABEL, hideNumbers, isCalculated, type Calculated, type Estimate, type EstimateLine, type FormStatus, type LineGroup, type Section } from '../tax/estimate'
 import type { Target } from '../tax/input'
@@ -84,6 +85,8 @@ export default function ResultPage() {
   const [failed, setFailed] = useState(false)
   const [attempt, setAttempt] = useState(0)
   const [announce, setAnnounce] = useState('')
+  // "What to do next" slides up after EVERY download (once per download), with a close button
+  const [nextOpen, setNextOpen] = useState(false)
   const last = useRef<string | null>(null)
   // What the estimate depends on in the browser (documents and answers): a change recalculates it
   const sig = JSON.stringify([answers.income, answers.details, answers.citizenship, answers.visa, answers.state, answers.residency, answers.livedBefore, answers.marital, answers.digitalAssets])
@@ -210,7 +213,7 @@ export default function ResultPage() {
                 <Card id="result-downloads" title="Download your forms" motionProps={card(1)}>
                   <ul className="flex flex-col divide-y divide-border-decorative">
                     {estimate.forms.map((f) => (
-                      <DownloadRow key={f.id} form={f} year={year} answers={answers} numbers={showNumber && !fixture} tellMe={setAnnounce} />
+                      <DownloadRow key={f.id} form={f} year={year} answers={answers} numbers={showNumber && !fixture} tellMe={setAnnounce} onDownloaded={() => setNextOpen(true)} />
                     ))}
                   </ul>
                 </Card>
@@ -226,6 +229,7 @@ export default function ResultPage() {
       <p className="sr-only" aria-live="polite">
         {announce}
       </p>
+      <AnimatePresence>{nextOpen && estimate && <NextStepsSheet key="next-steps" estimate={estimate} onClose={() => setNextOpen(false)} />}</AnimatePresence>
     </AppShell>
   )
 }
@@ -240,7 +244,7 @@ const stateTitle = (code: string | null) => {
  * with what the form leaves blank, what to check and what isn't included (also on the form's last page).
  * The PDF is made on the server per click and never saved there; here it is only handed to the browser's download.
  */
-function DownloadRow({ form, year, answers, numbers, tellMe }: { form: FormStatus; year: number; answers: Answers; numbers: boolean; tellMe: (text: string) => void }) {
+function DownloadRow({ form, year, answers, numbers, tellMe, onDownloaded }: { form: FormStatus; year: number; answers: Answers; numbers: boolean; tellMe: (text: string) => void; onDownloaded: () => void }) {
   const [busy, setBusy] = useState(false)
   const [failed, setFailed] = useState(false)
   const [open, setOpen] = useState(false)
@@ -255,8 +259,10 @@ function DownloadRow({ form, year, answers, numbers, tellMe }: { form: FormStatu
     setFailed(false)
     const result = await downloadForm(form.id, year, answers, numbers)
     setBusy(false)
-    if (result === 'done') tellMe(`${form.label} downloaded`)
-    else setFailed(true)
+    if (result === 'done') {
+      tellMe(`${form.label} downloaded`)
+      onDownloaded()
+    } else setFailed(true)
   }
 
   return (
