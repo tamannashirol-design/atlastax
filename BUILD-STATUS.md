@@ -480,3 +480,16 @@ production cases), focus audit **146 checks, 0 failed**, production-build check 
 ## /result clean-up (designer's request)
 
 Removed from `/result`: the "Prototype" bar with the "Show estimate number" switch, the sentence "Based on the details you confirmed. This is an estimate, not a promise, and nothing has been filed.", the notes list under the headline (treaty, bank interest, state assumptions), the "A PDF marked ... last 4 digits" line under each Download, and the word "(prototype)" in the section labels ("Estimate"). The estimate still builds the notes and the server still has the number switch (`ESTIMATE_NUMBER_VISIBLE`, on); only the screen no longer shows them. The downloaded PDFs are still stamped "Prototype estimate, not for filing" and still show only the last 4 digits. CLAUDE.md still describes the old switch and label (to update when you confirm).
+
+## How to see the school and green card questions (Form 8843 lines 9, 10, 13)
+
+1. `npm run dev`; in the questions, Time in the U.S.: after "Did you leave the U.S.", **Tell us about your school** (type it, or press **Fill this in from your I-20 or DS-2019** and upload any file: SAMPLE details fill the empty parts, with a warning to check them). Needs the school name and the program director name; "I'll add it later" skips. Then **In 2025, did you apply for a green card?** (Yes / No), the last question before the Time in the U.S. summary.
+2. `/result` → **Download** Form 8843: line 9 and 10 hold "name, address, phone" in one line each; line 13 has the box ticked. A Yes lists line 14 (explain) to write by hand. Anything left empty (e.g. the director's address) is listed under "What's left blank".
+3. Checks: `npm run check:forms`; `npm run audit:school` (real clicks, needs `npm run dev`).
+
+Things to know:
+- **Upload is a stand-in:** like the travel history, reading the I-20 / DS-2019 isn't built; the upload fills fake sample details (never over what was typed) and the screen says so. The file isn't read or kept beyond the normal upload.
+- **I-20 and DS-2019:** one upload for all three statuses (F-1, M-1: I-20; J-1: DS-2019), as you chose.
+- **Not required documents:** the values are what the person typed or checked, so no Review screen; nothing here is on the Documents page.
+- **Only the two names are needed to continue**; missing address/phone are listed on the form's last page, not guessed.
+- TODO confirm with CPA: what "program director" means for each status, and what a Yes on line 13 means for the return (nothing in the estimate changes on it).

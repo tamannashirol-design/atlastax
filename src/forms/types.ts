@@ -42,6 +42,12 @@ export type FormFacts = {
   studentYears: number[]
   /** Within the v1 scope (the first 5 student years); null = not known yet */
   inScope: boolean | null
+  /** Form 8843 line 9 and line 10: a name, address and phone number each, as typed or read from an I-20 / DS-2019 (each part may be empty) */
+  school: { name: string; address: string; phone: string }
+  director: { name: string; address: string; phone: string }
+  /** Form 8843 line 13: applied for permanent residence (a green card) in the tax year; null = not answered */
+  greenCard: 'yes' | 'no' | null
 }
 
-export const EMPTY_FACTS: FormFacts = { visa: null, citizenship: null, days: {}, daysComplete: false, studentYears: [], inScope: null }
+export const EMPTY_CONTACT = { name: '', address: '', phone: '' }
+export const EMPTY_FACTS: FormFacts = { visa: null, citizenship: null, days: {}, daysComplete: false, studentYears: [], inScope: null, school: EMPTY_CONTACT, director: EMPTY_CONTACT, greenCard: null }

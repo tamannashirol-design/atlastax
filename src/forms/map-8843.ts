@@ -16,12 +16,12 @@
 //   Line 4a  days present in 2025 / 2024 / 2023      f1_14 / f1_15 / f1_16
 //   Line 4b  days you can exclude (2025)             f1_17
 //   Part II (teachers and trainees), lines 5 to 8    f1_18 to f1_25, c1_1: not for a student, left empty
-//   Part III Line 9  school name, address, phone     f1_26   (we don't ask yet: listed)
-//   Line 10  program director                        f1_27   (we don't ask yet: listed)
+//   Part III Line 9  school name, address, phone     f1_26   (typed, or filled in from an I-20 / DS-2019; blank: listed)
+//   Line 10  program director                        f1_27   (the same)
 //   Line 11  visa type held 2019 to 2024             f1_28 to f1_33 (one letter each)
 //   Line 12  exempt for more than 5 calendar years?  c1_2[0] Yes / c1_2[1] No
-//   Line 13  applied for permanent residence?        c1_3[0] Yes / c1_3[1] No   (we don't ask: listed)
-//   Line 14  explain line 13                         f1_34
+//   Line 13  applied for permanent residence?        c1_3[0] Yes / c1_3[1] No   (the green card question in Time in the U.S.)
+//   Line 14  explain line 13                         f1_34   (never filled: listed when line 13 is Yes)
 //   Page 2   Parts IV (athletes) and V (medical): not for a student, left empty
 import type { ConfirmedDocument } from '../tax/input.ts'
 import { confirmedValue, countryName, maskedId, toMDY, visaLabel } from './data.ts'
@@ -39,6 +39,11 @@ export const F8843 = {
   line3b: f('f1_13'),
   days: [f('f1_14'), f('f1_15'), f('f1_16')], // tax year, year before, two years before
   line4b: f('f1_17'),
+  line9: f('f1_26'),
+  line10: f('f1_27'),
+  line13Yes: f('c1_3', 0),
+  line13No: f('c1_3', 1),
+  line14: f('f1_34'),
   line11: [f('f1_28'), f('f1_29'), f('f1_30'), f('f1_31'), f('f1_32'), f('f1_33')], // 2019 … 2024
   line12Yes: f('c1_2', 0),
   line12No: f('c1_2', 1),
@@ -106,8 +111,17 @@ export function build8843({ docs, facts, year }: Build8843): FormFill {
   } else blank.push(`Line 4b: the days in ${year} you can exclude (we couldn’t work it out yet)`)
 
   // ---- Part III (students)
-  blank.push('Line 9: name, address and phone number of your school (we don’t ask for it yet)')
-  blank.push('Line 10: name, address and phone number of your program director (we don’t ask for it yet)')
+  // Lines 9 and 10: one text line each, "name, address, phone", from what the person typed or confirmed from their I-20 or DS-2019
+  // (each part may be empty: the missing parts are listed, never guessed)
+  const contact = (line: 9 | 10, who: 'school' | 'program director', c: FormFacts['school'], field: string) => {
+    const parts = [c.name, c.address, c.phone].filter(Boolean)
+    if (parts.length) values[field] = parts.join(', ')
+    const missing = [!c.name && 'name', !c.address && 'address', !c.phone && 'phone number'].filter(Boolean)
+    if (missing.length === 3) blank.push(`Line ${line}: name, address and phone number of your ${who} (you didn’t add them)`)
+    else if (missing.length) blank.push(`Line ${line}: the ${missing.join(' and ')} of your ${who} (you didn’t add ${missing.length > 1 ? 'them' : 'it'})`)
+  }
+  contact(9, 'school', facts.school, F8843.line9)
+  contact(10, 'program director', facts.director, F8843.line10)
   const letter = facts.visa?.[0] ?? i94Class?.[0] ?? null
   const earlier = Array.from({ length: 6 }, (_, k) => year - 6 + k) // 2019 … 2024 for 2025
   let anyLetter = false
@@ -121,7 +135,10 @@ export function build8843({ docs, facts, year }: Build8843): FormFill {
   if (facts.inScope === true) values[F8843.line12No] = true
   else if (facts.inScope === false) values[F8843.line12Yes] = true
   else blank.push('Line 12: whether you were exempt as a student for more than 5 calendar years')
-  blank.push(`Line 13: whether you applied for permanent residence (a green card) in ${year}, Yes or No (we don’t ask)`)
+  if (facts.greenCard === 'yes') values[F8843.line13Yes] = true
+  else if (facts.greenCard === 'no') values[F8843.line13No] = true
+  else blank.push(`Line 13: whether you applied for permanent residence (a green card) in ${year}, Yes or No (you didn’t answer)`)
+  if (facts.greenCard === 'yes') blank.push('Line 14: your explanation of line 13 (you answered Yes there; write it in by hand)')
 
   // ---- only if filed by itself
   blank.push('Your addresses (country of residence and U.S.): needed only if you file this form by itself')

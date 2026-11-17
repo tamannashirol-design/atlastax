@@ -7,6 +7,8 @@ import { fieldClass } from '../components/SelectField'
 import { TileGroup } from '../components/TileGroup'
 import { UploadAnswer } from '../components/UploadAnswer'
 import { CBP_HELPER, STUDENT_LIMIT_YEARS } from '../residency.config'
+import { CONTACT_LIMITS } from '../forms/clean'
+import { fillFrom, SAMPLE_SCHOOL, SCHOOL_DOC } from './school'
 import { setResidency, useAnswers } from '../flow/answers'
 import { Link } from '../lib/router'
 import { UploadHostContext } from '../lib/uploadHost'
@@ -43,6 +45,99 @@ export function ArrivalDate({ labelledBy, year, value, onChange }: { labelledBy:
         className={`${fieldClass} tabular-nums`}
       />
       {outside && <FlagLine id={`${labelledBy}-error`} message={`Pick a date in ${year}, the year you arrived.`} />}
+    </div>
+  )
+}
+
+// ---------- 5. Your school and program director (Form 8843, lines 9 and 10) ----------
+
+const PARTS = [
+  { key: 'name', label: 'Name', type: 'text', auto: 'off' },
+  { key: 'address', label: 'Address', type: 'text', auto: 'off' },
+  { key: 'phone', label: 'Phone number', type: 'tel', auto: 'off' },
+] as const
+
+export function SchoolStep({ labelledBy }: { labelledBy: string }) {
+  const r = useAnswers().residency ?? {}
+  const files = r.schoolFiles ?? []
+  const [announce, setAnnounce] = useState('')
+  // Like the travel history: the upload mounts only once its section is opened, so the consent sheet appears when it would first show
+  const [docOpen, setDocOpen] = useState(false)
+  const docRef = useRef<HTMLDetailsElement>(null)
+
+  const group = (who: 'school' | 'director', heading: string) => {
+    const c = r[who] ?? {}
+    return (
+      <section aria-labelledby={`${labelledBy}-${who}`} className="flex flex-col gap-3">
+        <h2 id={`${labelledBy}-${who}`} className="text-body font-semibold">
+          {heading}
+        </h2>
+        {PARTS.map((p) => (
+          <div key={p.key} className="flex flex-col gap-1">
+            <label htmlFor={`${labelledBy}-${who}-${p.key}`} className="text-small text-text-muted">
+              {p.label}
+            </label>
+            <input
+              id={`${labelledBy}-${who}-${p.key}`}
+              type={p.type}
+              autoComplete={p.auto}
+              maxLength={CONTACT_LIMITS[p.key]}
+              value={c[p.key] ?? ''}
+              onChange={(e) => setResidency({ [who]: { ...c, [p.key]: e.target.value } })}
+              className={`${inputClass} w-full ${p.key === 'phone' ? 'tabular-nums' : ''}`}
+            />
+          </div>
+        ))}
+      </section>
+    )
+  }
+
+  return (
+    <div className="flex flex-col gap-6">
+      <details ref={docRef} className="flex flex-col" open={files.length > 0} onToggle={(e) => setDocOpen(e.currentTarget.open)}>
+        <summary className="flex min-h-11 cursor-pointer items-center rounded-sm text-body font-semibold underline underline-offset-4 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-text">
+          Fill this in from your {SCHOOL_DOC}
+        </summary>
+        <div className="flex flex-col gap-3 pt-2">
+          <p className="text-small text-text-muted">The I-20 is for F-1 and M-1 students, the DS-2019 for J-1 students. Upload the page with your school’s details. A PDF or a photo works.</p>
+          {(docOpen || files.length > 0) && (
+            <UploadHostContext.Provider
+              // "Not now" on the consent sheet folds this section away again
+              value={{
+                close: () => {
+                  if (docRef.current) docRef.current.open = false
+                  docRef.current?.querySelector('summary')?.focus()
+                },
+              }}
+            >
+              <UploadAnswer
+                docLabel={SCHOOL_DOC}
+                uploaded={files}
+                allowAnother
+                upload={{ key: 'school-doc' }}
+                onUploaded={(name) => {
+                  // TODO: real reading comes later; the details filled in are sample data for now. Typed parts are kept.
+                  setResidency({ schoolFiles: [...files, name], school: fillFrom(r.school, SAMPLE_SCHOOL.school), director: fillFrom(r.director, SAMPLE_SCHOOL.director) })
+                  setAnnounce(`Sample details filled in from your ${SCHOOL_DOC}. Check each one.`)
+                }}
+                onRemove={(i) => setResidency({ schoolFiles: files.filter((_, j) => j !== i) })}
+              />
+            </UploadHostContext.Provider>
+          )}
+          {files.length > 0 && (
+            <p className="flex items-start gap-2 text-small">
+              <WarningCircleIcon size={24} weight="regular" aria-hidden className="shrink-0" />
+              Sample details: reading your file isn’t built yet. Check each one below.
+            </p>
+          )}
+        </div>
+      </details>
+      {group('school', 'Your school')}
+      {group('director', 'Your program director')}
+      <p className="text-small text-text-muted">Only the two names are needed to continue. Anything you leave blank is listed on the last page of Form 8843.</p>
+      <p role="status" className="sr-only">
+        {announce}
+      </p>
     </div>
   )
 }

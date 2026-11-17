@@ -51,7 +51,17 @@ export type ResidencyAnswers = {
   /** Optional: CBP travel history files (travel history is sensitive; kept only in this tab) */
   cbpFiles?: string[]
   historyCutOff?: boolean
+  /** Form 8843 line 9 (the school) and line 10 (the program director): typed, or filled in from an I-20 or DS-2019 */
+  school?: ContactAnswers
+  director?: ContactAnswers
+  /** I-20 or DS-2019 file names (the file itself is never read yet: see TimeInUS.tsx) */
+  schoolFiles?: string[]
+  /** Form 8843 line 13: applied for permanent residence (a green card) in the tax year */
+  greenCard?: 'yes' | 'no'
 }
+
+/** A name, address and phone number, as Form 8843 lines 9 and 10 ask. Each part may be empty. */
+export type ContactAnswers = { name?: string; address?: string; phone?: string }
 
 // Answers are kept per tax year, so starting a previous year never touches
 // the current year's answers. `year` is the return being worked on now.

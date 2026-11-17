@@ -14,7 +14,8 @@ import { ARRIVAL_YEARS_BACK, OUT_OF_SCOPE } from '../residency.config'
 import { requiredDayYears } from '../residency/days'
 import { asksArrivalDate, asksIfStudent, asksYearAbroad, daysFor, inScope, isOutOfScope, isSupportedStudent } from '../residency/fromAnswers'
 import { OtherWaysToFile } from '../residency/OtherWaysToFile'
-import { ArrivalDate, TimeSummary, TripsStep, YearAbroad } from '../residency/TimeInUS'
+import { schoolAnswered } from '../residency/school'
+import { ArrivalDate, SchoolStep, TimeSummary, TripsStep, YearAbroad } from '../residency/TimeInUS'
 import { setAnswers, setDetail, setResidency, type Answers } from './answers'
 import { asksTaxHome } from './taxHome'
 import { documentsDone, ruleForUploadScreen, uploadScreenApplies, type SkipValue } from './requiredDocuments'
@@ -408,6 +409,30 @@ export const flow: FlowScreen[] = [
     isAnswered: (a, year) => !!daysFor(a, year)?.complete,
     answerArea: 'auto',
     answers: (_a, id, year) => <TripsStep labelledBy={id} taxYear={year} />,
+  },
+  {
+    // Form 8843 lines 9 and 10 (the school and the program director): typed, or filled in from an I-20 / DS-2019 (TODO confirm with CPA)
+    id: 'school',
+    path: '/school',
+    section: 'time',
+    question: 'Tell us about your school',
+    helper: 'For Form 8843. From your I-20 or DS-2019',
+    when: (a, year) => isSupportedStudent(a) && inScope(a, year) !== false,
+    isAnswered: (a) => schoolAnswered(a.residency?.school, a.residency?.director) || a.details?.school === 'later',
+    skip: LATER,
+    answerArea: 'auto',
+    answers: (_a, id) => <SchoolStep labelledBy={id} />,
+  },
+  {
+    // Form 8843 line 13. The last question in Time in the U.S. (TODO confirm with CPA what a Yes means for the return)
+    id: 'green-card',
+    path: '/green-card',
+    section: 'time',
+    question: (_a, year) => `In ${year}, did you apply for a green card?`,
+    helper: 'Permanent residence. Form 8843 asks this',
+    when: (a, year) => isSupportedStudent(a) && inScope(a, year) !== false,
+    isAnswered: (a) => !!a.residency?.greenCard,
+    answers: (a, id) => <TileGroup labelledBy={id} value={a.residency?.greenCard} onChange={(greenCard) => setResidency({ greenCard: greenCard as 'yes' | 'no' })} options={yesNo} />,
   },
   {
     id: 'time-summary',

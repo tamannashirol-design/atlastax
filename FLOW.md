@@ -70,6 +70,8 @@ own screen in the standard question layout.
 | /not-supported | **Stop screen:** We can't prepare your return yet | outside the v1 scope (see below) | — |
 | /arrival-date | What date did you arrive? | within scope, and the arrival year is one Form 8843 asks days for | To count your days in the U.S. that year |
 | /trips | Did you leave the U.S. in {Form 8843 years since arrival}? | within scope | To count your days in the U.S. for Form 8843 |
+| /school | Tell us about your school | within scope | For Form 8843. From your I-20 or DS-2019. School name, address, phone and program director name, address, phone (typed, or filled in from an I-20 / DS-2019 upload; the upload fills SAMPLE details for now). Needs the two names; "I'll add it later" skips. Fills Form 8843 lines 9 and 10. TODO confirm with CPA |
+| /green-card | In {year}, did you apply for a green card? | within scope | Permanent residence. Form 8843 asks this. Yes / No. Fills Form 8843 line 13; line 14 (explain) is listed to write by hand on a Yes. TODO confirm with CPA |
 | /time-in-us | Check your time in the U.S. | within scope | Change anything that doesn't look right |
 
 **v1 scope (TODO confirm with CPA; rule in `residency.config.ts`):** AtlasTax

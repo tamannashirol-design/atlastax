@@ -19,12 +19,12 @@ import { createApp } from '../server/app.ts'
 import { FAKE } from '../server/extraction/fakeValues.ts'
 import { renderForm } from '../server/forms.ts'
 import { FIELDS, type FormType } from '../src/extraction.config.ts'
-import { cleanFacts } from '../src/forms/clean.ts'
+import { cleanContact, cleanFacts } from '../src/forms/clean.ts'
 import { buildForms, formStatuses } from '../src/forms/index.ts'
 import { F1040NR, build1040NR } from '../src/forms/map-1040nr.ts'
 import { F8843, build8843 } from '../src/forms/map-8843.ts'
 import { PROTOTYPE_MARK, TEMPLATES, TEMPLATE_DIR } from '../src/forms/templates.ts'
-import { EMPTY_FACTS, type FormFacts, type FormFill } from '../src/forms/types.ts'
+import { EMPTY_CONTACT, EMPTY_FACTS, type FormFacts, type FormFill } from '../src/forms/types.ts'
 import { countryName, parseUSAddress, toMDY, visaLabel } from '../src/forms/data.ts'
 import { mask, maskForBox } from '../src/lib/mask.ts'
 import { estimateReturn, hideNumbers, type Estimate } from '../src/tax/estimate.ts'
@@ -77,6 +77,11 @@ const spots8843: Spot[] = [
   [F8843.line11[5], 1, 347, 192, 'line 11, 2024'],
   [F8843.line12Yes, 1, 511, 170, 'line 12, Yes box'],
   [F8843.line12No, 1, 547, 170, 'line 12, No box'],
+  [F8843.line9, 1, 65, 264, 'line 9, school name, address and phone'],
+  [F8843.line10, 1, 65, 216, 'line 10, program director name, address and phone'],
+  [F8843.line13Yes, 1, 511, 110, 'line 13, Yes box'],
+  [F8843.line13No, 1, 547, 110, 'line 13, No box'],
+  [F8843.line14, 1, 65, 72, 'line 14, explain line 13'],
 ]
 const p = (page: number, tail: string) => `topmostSubform[0].Page${page}[0].${tail}`
 const spots1040: Spot[] = [
@@ -151,7 +156,7 @@ const items: TaxItem[] = [
   { id: 'i94', kind: 'document', label: 'Most recent I-94', status: 'added' },
   { id: 'opt-cpt', kind: 'document', label: 'W-2', status: 'added' },
 ]
-const FACTS: FormFacts = { visa: 'F-1', citizenship: 'IN', days: { '2025': 365, '2024': 366, '2023': 140 }, daysComplete: true, studentYears: [2023, 2024, 2025], inScope: true }
+const FACTS: FormFacts = { visa: 'F-1', citizenship: 'IN', days: { '2025': 365, '2024': 366, '2023': 140 }, daysComplete: true, studentYears: [2023, 2024, 2025], inScope: true, school: EMPTY_CONTACT, director: EMPTY_CONTACT, greenCard: null }
 const makeEstimate = (citizenship: string | null, documents = docs, extra: Partial<Parameters<typeof buildTaxInput>[0]> = {}): Estimate =>
   estimateReturn(buildTaxInput({ year: 2025, person: { citizenship: citizenship ?? undefined, livedBefore: citizenship ?? undefined, visa: 'F-1' }, income: ['opt-cpt'], items, documents, ...extra }))
 const forms = (citizenship: string | null, over: { docs?: ConfirmedDocument[]; facts?: FormFacts; estimate?: Estimate } = {}) => {
@@ -190,6 +195,19 @@ check('line 4a: 365 days in 2025, 366 in 2024, 140 in 2023; line 4b: 365 (a stud
 check('line 11: the visa letter F for the earlier years you were here (2023, 2024), nothing for 2019 to 2022', F8843.line11.map((n) => v(f8843, n)), [undefined, undefined, undefined, undefined, 'F', 'F'])
 check('line 12: exempt for more than 5 years? No (in scope); the Yes box is empty', [v(f8843, F8843.line12No), v(f8843, F8843.line12Yes)], [true, undefined])
 check('what is left blank is listed: lines 9, 10 and 13, the addresses, the signature', ['Line 9', 'Line 10', 'Line 13', 'Your addresses', 'Your signature'].map((s) => f8843.blank.some((b) => b.startsWith(s))), [true, true, true, true, true])
+console.log('\nMINE: Form 8843 lines 9, 10, 13 and 14 (a fake school, a fake director, no real names or numbers)\n')
+const SCHOOL = { name: 'Sample University (FAKE)', address: '1 Example Street, Sampleville, NY 10001', phone: '555-555-0100' }
+const DIRECTOR = { name: 'Pat Sample (FAKE)', address: '', phone: '555-555-0101' }
+const withSchool = (over: Partial<FormFacts>) => forms('IN', { facts: { ...FACTS, citizenship: 'IN', ...over } })['form-8843']
+const filled = withSchool({ school: SCHOOL, director: DIRECTOR, greenCard: 'no' })
+check('line 9: the school’s name, address and phone, in one line; line 10: the director’s (no address: left out, and said so)', [v(filled, F8843.line9), v(filled, F8843.line10)], ['Sample University (FAKE), 1 Example Street, Sampleville, NY 10001, 555-555-0100', 'Pat Sample (FAKE), 555-555-0101'])
+check('line 10 with no address: “the address of your program director” is listed as left blank; line 9 has nothing missing', [filled.blank.some((b) => b === 'Line 10: the address of your program director (you didn’t add it)'), filled.blank.some((b) => b.startsWith('Line 9'))], [true, false])
+check('line 13: “No” ticked, “Yes” empty, nothing to explain on line 14', [v(filled, F8843.line13No), v(filled, F8843.line13Yes), filled.blank.some((b) => b.startsWith('Line 13') || b.startsWith('Line 14'))], [true, undefined, false])
+const yes13 = withSchool({ greenCard: 'yes' })
+check('line 13 “Yes”: the Yes box is ticked, and line 14 (the explanation) is listed to write by hand, never made up', [v(yes13, F8843.line13Yes), v(yes13, F8843.line13No), v(yes13, F8843.line14), yes13.blank.some((b) => b.startsWith('Line 14: your explanation of line 13'))], [true, undefined, undefined, true])
+check('nothing typed: lines 9, 10 and 13 are listed as left blank, as before', ['Line 9: name, address and phone number of your school', 'Line 10: name, address and phone number of your program director', 'Line 13'].map((t) => withSchool({}).blank.some((b) => b.startsWith(t))), [true, true, true])
+check('the checks scrub what arrives: control characters, runs of spaces, over-long parts, and anything that is not text', [cleanContact({ name: '  Sample\u0000 \n  School  ', address: 'x'.repeat(200), phone: 5 }), cleanFacts({ school: 'nope', director: null, greenCard: 'maybe' }).school, cleanFacts({ greenCard: 'maybe' }).greenCard, cleanFacts({ greenCard: 'yes' }).greenCard], [{ name: 'Sample School', address: 'x'.repeat(80), phone: '' }, { name: '', address: '', phone: '' }, null, 'yes'])
+
 check('Parts II, IV and V are said to be empty, and nothing is written in them', [f8843.notIncluded.some((n) => /Parts II, IV and V/.test(n)), Object.keys(f8843.values).every((n) => !/f1_(18|19|2[0-5])|c1_1\[|Page2/.test(n))], [true, true])
 
 console.log('\nMINE: ID numbers: last 4 only, everywhere\n')
@@ -311,7 +329,14 @@ const shownStreams = (d: PDFDocument): Buffer[] => {
 }
 const hex = (s: string) => Buffer.from(s, 'latin1').toString('hex').toUpperCase()
 const MARK_HEX = hex(PROTOTYPE_MARK)
+const SCHOOL_FAKE = { name: 'Sample University (FAKE)', address: '1 Example Street, Sampleville, NY 10001', phone: '555-555-0100' }
 const fillsIN = forms('IN')
+{
+  // lines 9, 10, 13 really land in the PDF (fake school and director; the longest line allowed)
+  const longest = { name: 'N'.repeat(60), address: 'A'.repeat(80), phone: '5'.repeat(24) }
+  const f = (await PDFDocument.load(await renderForm(forms('IN', { facts: { ...FACTS, school: SCHOOL_FAKE, director: longest, greenCard: 'yes' } })['form-8843'], 2025))).getForm()
+  check('Form 8843 PDF: lines 9, 10 and 13 hold what was typed, even at the longest length', [f.getTextField(F8843.line9).getText(), f.getTextField(F8843.line10).getText()?.length, f.getCheckBox(F8843.line13Yes).isChecked(), f.getCheckBox(F8843.line13No).isChecked(), f.getTextField(F8843.line14).getText() ?? ''], [`${SCHOOL_FAKE.name}, ${SCHOOL_FAKE.address}, ${SCHOOL_FAKE.phone}`, 60 + 80 + 24 + 4, true, false, ''])
+}
 for (const [label, fill, blankPages] of [['Form 8843', fillsIN['form-8843'], 4], ['Form 1040-NR (India)', fillsIN['form-1040nr'], 2], ['Form 1040-NR (China)', forms('CN')['form-1040nr'], 2]] as const) {
   const bytes = await renderForm(fill, 2025)
   const out = await PDFDocument.load(bytes)

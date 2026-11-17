@@ -2,6 +2,7 @@
 // Pure (no React, no network). The server's side, `cleanFacts`, is in clean.ts (it must not import the browser's answers).
 import type { Answers } from '../flow/answers.ts'
 import { daysFor, inScope, studentYearsFor } from '../residency/fromAnswers.ts'
+import { cleanContact } from './clean.ts'
 import type { FormFacts } from './types.ts'
 
 export function formFacts(a: Answers, year: number): FormFacts {
@@ -14,5 +15,8 @@ export function formFacts(a: Answers, year: number): FormFacts {
     daysComplete: !!d?.complete,
     studentYears: sy?.counted ?? [],
     inScope: inScope(a, year),
+    school: cleanContact(a.residency?.school),
+    director: cleanContact(a.residency?.director),
+    greenCard: a.residency?.greenCard ?? null,
   }
 }
