@@ -9,6 +9,7 @@
 import { PDFDocument } from 'pdf-lib'
 import { renderForm } from '../server/forms.ts'
 import { build1040NR, F1040NR } from '../src/forms/map-1040nr.ts'
+import { STATE_INVESTMENT_NOTE } from '../src/tax/state.ts'
 import { asksTaxHome, daysInUS } from '../src/flow/taxHome.ts'
 import { DIVIDEND_NOTE, estimateReturn, hideNumbers, isCalculated, type Section } from '../src/tax/estimate.ts'
 import { buildTaxInput, type InvestmentInput, type TaxInput, type TradeInput } from '../src/tax/input.ts'
@@ -96,13 +97,25 @@ check('with dividends as well: one 30% tax on both ($1,400 + $250 → $495); lab
 check('tax withheld on the 1099-B ($40, box 4) is credited on line 25b: owes $1,228', [line(us({ wages: [W2], trades: [trade({ withheld: D(40) })] }), 'withheld-1099'), (us({ wages: [W2], trades: [trade({ withheld: D(40) })] }) as { amount: number }).amount], [D(40), D(1_228)])
 check('the page says what it relies on: Figures used cites Pub 519 page 20 (tax home) and 32 (30%), and the 1040-NR instructions pages 42 and 44 (Schedule NEC line 9)', isCalculated(gain) && ['Publication 519 (2025), page 20, Personal Property', 'Publication 519 (2025), page 32', 'Instructions for Form 1040-NR (2025): page 42', 'page 44, Schedule NEC'].map((c) => gain.sources.some((x) => x.citation.includes(c))), [true, true, true, true])
 check('the “main home” stand-in for the tax home is marked TODO confirm with CPA', isCalculated(gain) && gain.sources.some((x) => x.citation.includes('TODO confirm with CPA') && x.citation.includes('main home')), true)
-check('the state still shows no number with trading', missing(estimateReturn(input({ wages: [W2], trades: [trade()] }, 'BR', 183, 'us')).state), ['We can’t include your trading in the state estimate yet.'])
 // the 1040-NR: line 23a 75, line 24 4,454, owes 1,268 on line 37
 const gainForm = build1040NR({ docs: [], estimate: estimateReturn(input({ wages: [W2], trades: [trade()] }, 'BR', 183, 'us')) })
 check('the 1040-NR: line 23a and 23d $75, line 24 $4,454, owes $1,268 on line 37', [F1040NR.line23a, F1040NR.line23d, F1040NR.line24, F1040NR.line37].map((n) => gainForm.values[n]), ['75', '75', '4,454', '1,268'])
 check('…and the last page says Schedule NEC (with the trading gain) isn’t included; the “not entered” note is only for untaxed trading', [gainForm.notIncluded.some((n) => n.includes('Schedule NEC') && n.includes('trading gain')), gainForm.notIncluded.some((n) => n.startsWith('Your trading is not entered'))], [true, false])
 const homeForm = build1040NR({ docs: [], estimate: estimateReturn(input({ wages: [W2], trades: [trade()] }, 'BR', 183, 'home')) })
 check('main home in the home country: nothing on line 23a, and the “trading is not entered” note names the 183-day and U.S.-source rules', [homeForm.values[F1040NR.line23a], homeForm.notIncluded.some((n) => n.startsWith('Your trading is not entered') && n.includes('Publication 519 (2025), pages 20 and 32'))], [undefined, true])
+
+console.log('\nMINE: the state with investment income (prototype assumption, TODO confirm with CPA: it adds no state tax)\n')
+const stateOf = (o: Partial<TaxInput>) => estimateReturn(input({ wages: [W2], ...o })).state
+const sameState = (a: Section, b: Section) => isCalculated(a) && isCalculated(b) && a.status === b.status && a.amount === b.amount
+const stLine = (s: Section) => isCalculated(s) ? s.lines.find((l) => l.id === 'state-investment-income') : undefined
+check('New York with a 1042-S dividend ($1,400): the same state number as without it', sameState(stateOf({ investments: [div1042()] }), stateOf({})), true)
+check('New York with a 1099-DIV ($118.40) and with trading (a $250 gain): the same number', [sameState(stateOf({ investments: [div1099()] }), stateOf({})), sameState(stateOf({ trades: [trade()] }), stateOf({}))], [true, true])
+check('California too (all three)', [{ investments: [div1042()] }, { trades: [trade()] }].map((o) => sameState(stateOf({ wages: [{ ...W2, stateCode: 'CA' }], ...o } as never), stateOf({ wages: [{ ...W2, stateCode: 'CA' }] }))), [true, true])
+check('the line “Investment income (no extra state tax assumed)”: $1,400 + $250 = $1,650, marked TODO confirm with CPA', [stLine(stateOf({ investments: [div1042()], trades: [trade()] }))?.label, stLine(stateOf({ investments: [div1042()], trades: [trade()] }))?.amount, stLine(stateOf({ investments: [div1042()], trades: [trade()] }))?.source.includes('TODO confirm with CPA')], ['Investment income (no extra state tax assumed)', D(1_650), true])
+check('a trading loss counts as $0; no investment income at all: no line', [stLine(stateOf({ trades: [trade({ costBasis: D(6_000) })] }))?.amount, stLine(stateOf({}))], [0, undefined])
+check('the note “Assumes this state doesn’t tax your investment income.” shows with a calculated state, not otherwise', [STATE_INVESTMENT_NOTE, estimateReturn(input({ wages: [W2], investments: [div1042()] })).notes.includes(STATE_INVESTMENT_NOTE), estimateReturn(input({ wages: [W2] })).notes.includes(STATE_INVESTMENT_NOTE), estimateReturn(input({ wages: [{ ...W2, stateCode: 'FL' }], investments: [div1042()] })).notes.includes(STATE_INVESTMENT_NOTE)], ['Assumes this state doesn’t tax your investment income.', true, false, false])
+check('a scholarship still keeps the no-number rule', missing(estimateReturn(input({ wages: [W2], investments: [div1042()], scholarships: [{ itemId: 'scholarship', payer: 'Sample University', gross: D(9_000), withheld: D(1_260), incomeCode: '16', exemptionCode: '00', taxRate: '14.00' } as never], scholarshipUse: { paidFor: 'living' } as never })).state), ['We can’t include your scholarship in the state estimate yet.'])
+check('number off: the state investment amount is not sent', JSON.stringify(hideNumbers(estimateReturn(input({ wages: [W2], investments: [div1042()] })))).includes('165000'), false)
 
 console.log('\nMINE: India and China with a taxed gain\n')
 check('lived in India, taxed gain: no number (a treaty may exempt or lower it), and the message names the trading gain', missing(fed({ wages: [W2], trades: [trade()] }, 'IN', 183, 'us')), ['You lived in India before coming to the U.S. Its tax treaty with the U.S. may exempt or lower the tax on your trading gain, and the estimate doesn’t cover that yet.'])
@@ -125,8 +138,6 @@ const withSch = fed({ wages: [W2], investments: [div1042()], scholarships: [{ it
 check('a scholarship 1042-S and an investment 1042-S: line 25g adds both box 10s ($1,260 + $420)', [line(withSch, 'withheld-1042s'), isCalculated(withSch) && withSch.lines.find((l) => l.id === 'withheld-1042s')?.label], [D(1_680), 'Tax withheld on your 1042-S forms'])
 
 console.log('\nMINE: the state estimate shows no number\n')
-check('New York with dividends: not calculated, says why', missing(estimateReturn(input({ wages: [W2], investments: [div1042()] })).state), ['We can’t include your investment income in the state estimate yet.'])
-check('New York with trading: not calculated, says why', missing(estimateReturn(input({ wages: [W2], trades: [trade()] })).state), ['We can’t include your trading in the state estimate yet.'])
 
 console.log('\nMINE: “Show how we got this”, citations, the download, and “Show estimate number” off\n')
 const full = fed({ wages: [W2], investments: [div1042(), div1099()], trades: [trade()] })

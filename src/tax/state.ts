@@ -27,6 +27,16 @@ export const NOT_SUPPORTED_MESSAGE = 'State return not supported yet'
 
 /** Prototype assumption (TODO confirm with CPA): the state doesn't tax U.S. bank interest, so it leaves the state number unchanged */
 export const STATE_INTEREST_NOTE = 'Assumes this state doesn’t tax your bank interest.'
+/** Prototype assumption (TODO confirm with CPA): investment income (dividends, interest, trading) adds no state tax */
+export const STATE_INVESTMENT_NOTE = 'Assumes this state doesn’t tax your investment income.'
+const INVESTMENT_SOURCE = 'Prototype assumption, not from an official state instruction. TODO confirm with CPA'
+const investmentLine = (input: TaxInput, form: string): Line[] => {
+  if (!input.investments.length && !input.trades.length) return []
+  // dividends and interest as shown on the forms, plus the net trading gain (a loss counts as zero; a missing cost basis as no gain)
+  const gain = Math.max(0, input.trades.reduce((n, t) => n + t.proceeds - (t.costBasis ?? t.proceeds), 0))
+  const dollars = roundToDollars(input.investments.reduce((n, i) => n + i.gross, 0) + gain)
+  return [{ id: 'state-investment-income', group: 'income', label: 'Investment income (no extra state tax assumed)', formLine: `${form}: not entered`, from: 'From your 1042-S, 1099-DIV or 1099-B', source: INVESTMENT_SOURCE, dollars }]
+}
 const INTEREST_SOURCE = 'Prototype assumption, not from an official state instruction. TODO confirm with CPA'
 const interestLine = (input: TaxInput, form: string): Line[] =>
   input.bankInterest.length
@@ -59,11 +69,10 @@ export function stateSection(input: TaxInput): StateSection {
   if (!supported) return { code, status: 'not-supported', message: NOT_SUPPORTED_MESSAGE, withheld: cents(withheld) }
 
   if (stops.length) return notCalculated(...stops)
-  // A scholarship, dividends or trading: states tax these by their own rules, which aren't built yet: no state number
-  // rather than one that leaves them out. Bank interest is the exception, for the prototype: see STATE_INTEREST_NOTE
+  // A scholarship: states tax it by their own rules, which aren't built yet: no state number rather than one that leaves it
+  // out. Bank interest, investment income and trading are the exception, for the prototype: see STATE_INTEREST_NOTE and
+  // STATE_INVESTMENT_NOTE
   if (input.scholarships.length) return notCalculated('We can’t include your scholarship in the state estimate yet.')
-  if (input.investments.length) return notCalculated('We can’t include your investment income in the state estimate yet.')
-  if (input.trades.length) return notCalculated('We can’t include your trading in the state estimate yet.')
   if (input.other.length) {
     const names = [...new Set(input.other.map((o) => o.label))]
     return notCalculated(...names.map((n) => `We can’t include ${n} in the estimate yet.`))
@@ -94,6 +103,7 @@ function newYork(ny: NyConfig, wages: number, withheld: number, input: TaxInput)
   const lines = toLines([
     { id: 'state-wages', group: 'income', label: 'Wages', formLine: 'Form IT-201, line 1', from: from(input), source: 'Form IT-201 (2025), page 1', dollars: wages },
     ...interestLine(input, 'Form IT-201'),
+    ...investmentLine(input, 'Form IT-201'),
     { id: 'state-agi', group: 'income', label: 'New York adjusted gross income', formLine: 'Form IT-201, line 33', from: 'Wages are the only income counted', source: 'Form IT-201 (2025), page 2', dollars: agi },
     { id: 'state-deduction', group: 'deductions', label: 'Standard deduction', formLine: 'Form IT-201, line 34', from: 'Single, itemized deductions not included', source: 'Instructions for Form IT-201 (2025), page 11', dollars: deduction },
     { id: 'state-taxable', group: 'deductions', label: 'Taxable income', formLine: 'Form IT-201, line 38', source: 'Form IT-201 (2025), page 3', dollars: taxable },
@@ -138,6 +148,7 @@ function california(ca: CaConfig, wages: number, withheld: number, input: TaxInp
   const lines = toLines([
     { id: 'state-wages', group: 'income', label: 'Wages', formLine: 'Form 540, line 13', from: from(input), source: 'Personal Income Tax Booklet 2025, page 40', dollars: wages },
     ...interestLine(input, 'Form 540'),
+    ...investmentLine(input, 'Form 540'),
     { id: 'state-agi', group: 'income', label: 'California adjusted gross income', formLine: 'Form 540, line 17', from: 'Wages are the only income counted', source: 'Personal Income Tax Booklet 2025, page 40', dollars: agi },
     { id: 'state-deduction', group: 'deductions', label: 'Standard deduction', formLine: 'Form 540, line 18', from: 'Single, itemized deductions not included', source: 'Personal Income Tax Booklet 2025, page 13', dollars: deduction },
     { id: 'state-taxable', group: 'deductions', label: 'Taxable income', formLine: 'Form 540, line 19', source: 'Personal Income Tax Booklet 2025, page 40', dollars: taxable },

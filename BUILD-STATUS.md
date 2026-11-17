@@ -106,6 +106,15 @@ again → Continue to upload → upload a file, three refusals in a row, Escape,
 5. Checks: `npm run check:income` (same state number with and without interest, NY and CA, line, note, other types still no number).
 TODO confirm with CPA: whether NY and CA tax U.S. bank interest for a nonresident student. This is a prototype assumption, not from an official state instruction.
 
+## How to see state with investment income
+
+1. `npm run dev`; in the questions pick **Trading** with your job, set Time in the U.S. to arrival 2023, upload any file; Review: tick everything. Open `/result`.
+2. **State: New York** shows a refund of **$381**, the same as without the trading. Notes: "Assumes this state doesn't tax your investment income." (only when a state number is calculated).
+3. "Show how we got this": **Investment income (no extra state tax assumed)** with the amount (dividends and interest as shown on the forms, plus the net trading gain; a loss counts as $0), "Form IT-201: not entered", source marked "TODO confirm with CPA". California the same (Form 540).
+4. A scholarship still gives "We can't include your scholarship in the state estimate yet."
+5. Checks: `npm run check:investments`, `check:income`.
+TODO confirm with CPA: this is a prototype assumption, not an official rule. New York and California generally do tax a resident's dividends, interest and capital gains; whether and how they reach a nonresident student isn't settled here.
+
 ## How to see the trading home question
 
 1. `npm run dev`. In the questions pick **Trading** with your job and upload any file. Set Time in the U.S. to first arrival **2023**, arrival date **Aug 15, 2023**, no trips (365 days in 2025). After the trading upload comes **In 2025, where was your main home?** ("Where you mainly worked or lived"): **In the U.S.** / **Home country**. (With arrival Aug 15, **2025** (about 139 days) it is not asked.)

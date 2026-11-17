@@ -11,7 +11,7 @@
 // Every section is labelled "Estimate (prototype)" on screen (ESTIMATE_LABEL).
 import { federalSection } from './federal.ts'
 import type { Blocker, TaxInput } from './input.ts'
-import { stateSection, STATE_INTEREST_NOTE } from './state.ts'
+import { stateSection, STATE_INTEREST_NOTE, STATE_INVESTMENT_NOTE } from './state.ts'
 import { treatyFor } from './treaty.ts'
 import { yearConfig } from './years/index.ts'
 
@@ -135,6 +135,7 @@ function notesFor(input: TaxInput, stateCalculated: boolean): string[] {
   if (!treaty) notes.push(RESULT_NOTES[1])
   if (input.bankInterest.length) notes.push(INTEREST_NOTE)
   if (input.bankInterest.length && stateCalculated) notes.push(STATE_INTEREST_NOTE)
+  if ((input.investments.length || input.trades.length) && stateCalculated) notes.push(STATE_INVESTMENT_NOTE)
   if (input.investments.some((i) => i.form === '1099-DIV')) notes.push(DIVIDEND_NOTE)
   if (input.scholarships.length && (input.scholarshipUse.paidFor === 'tuition' || input.scholarshipUse.paidFor === 'both')) notes.push(DEGREE_NOTE)
   return notes
