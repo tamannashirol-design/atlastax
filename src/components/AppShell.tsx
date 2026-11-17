@@ -1,7 +1,6 @@
 import { CaretLeftIcon, FileTextIcon, HouseIcon, UserIcon, type Icon } from '@phosphor-icons/react'
 import type { ReactNode } from 'react'
 import { Link, navigate } from '../lib/router'
-import { FakeAuthBadge } from './FakeAuthBadge'
 
 // App shell: three rows filling the screen.
 //   1. Top bar (every breakpoint): back, title.
@@ -20,7 +19,7 @@ const tabs: { id: Tab; href: string; label: string; Icon: Icon }[] = [
 
 const focusRing = 'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-text'
 
-/** action: the top bar's right side (e.g. "Save and exit"). Default: the fake sign-in badge (testing only). */
+/** action: the top bar's right side (e.g. "Save and exit"). Default: nothing. */
 type Props = { title: ReactNode; backHref?: string; /** History state for the back arrow (e.g. { fromFlow: true }) */ backState?: Record<string, unknown>; activeTab: Tab; action?: ReactNode; children: ReactNode }
 
 export function AppShell({ title, backHref, backState, activeTab, action, children }: Props) {
@@ -52,7 +51,7 @@ export function AppShell({ title, backHref, backState, activeTab, action, childr
             <span aria-hidden />
           )}
           <div className="flex min-w-0 justify-center truncate text-center text-body font-semibold">{title}</div>
-          <div className="flex min-w-0 justify-end">{action ?? <FakeAuthBadge />}</div>
+          <div className="flex min-w-0 justify-end">{action}</div>
         </div>
       </header>
 

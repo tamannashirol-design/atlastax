@@ -510,3 +510,7 @@ Things to know:
 - **The amount is the federal one** (the 1040-NR); the state is not shown here.
 - **The count-up changes digits only** (no layout movement); the finished number is also plain text for screen readers.
 - **Method names are placeholders** (TODO confirm with CPA): which payment and refund methods exist for a Form 1040-NR, and whether a student can e-file it at all.
+
+## Fake sign-in badge removed
+
+The "Logged in (fake)" / "Logged out (fake)" button is gone from every top corner (app screens and the intro). To switch the fake sign-in state for testing, use `?auth=in` / `?auth=out` in the address, or the toggle on /motion. CLAUDE.md still mentions the header badge (to update when you confirm).

@@ -1,6 +1,5 @@
 import { AnimatePresence, motion, useAnimationFrame, useMotionValue, useReducedMotionConfig, type MotionValue } from 'framer-motion'
 import { useRef, useState, type KeyboardEvent } from 'react'
-import { FakeAuthBadge } from '../components/FakeAuthBadge'
 import { Logo } from '../components/Logo'
 import { PrimaryButton } from '../components/PrimaryButton'
 import { spring } from '../lib/motion'
@@ -230,7 +229,6 @@ export function IntroWide({ frame, mode, onClose }: { frame: Frame; mode: IntroM
       {page && (
         <header className="page-content flex h-(--top-bar-h) shrink-0 items-center justify-between">
           <Logo />
-          <FakeAuthBadge />
         </header>
       )}
       {/* Read when the replay dialog opens (aria-describedby on the dialog) */}

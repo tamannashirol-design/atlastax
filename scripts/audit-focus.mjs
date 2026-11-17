@@ -312,7 +312,6 @@ if (!only || 'landing wide'.includes(only)) {
   await page.goto(BASE + '/?auth=out', { waitUntil: 'networkidle' })
   await page.evaluate(watchBody)
   console.log(where)
-  // The header's fake sign-in badge (testing only) comes first; then the steps
   await tabTo(page, /^Answer a few simple questions/)
   await check(page, where, 'Tab → selected step', { focus: /^Answer a few simple questions/ })
   await page.keyboard.press('ArrowDown')
