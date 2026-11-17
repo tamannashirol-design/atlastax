@@ -501,7 +501,7 @@ Things to know:
 ## How to see the E-file concept screen
 
 1. `npm run dev`; get to `/result` (Documents → Continue → Review, tick everything → Looks good). Press **E-file** at the bottom of "Download your forms" (or open `/result/efile?result=owed` / `?result=refund` for sample numbers).
-2. The screen: title **E-file**, the label **Concept: not connected to the IRS**, a wallet holding three generic cards (debit, credit, bank account; straight, stacked in one column; sage and a light cobalt wash, no brand names or colors), then **Amount owed** or **Your refund** with the federal amount. On open (about 1.3s) the three cards drop into the wallet one after the other, 300ms apart, then the amount counts up. With "Reduce motion" on, the cards fade in together and the amount shows at once.
+2. The screen: title **E-file**, the label **Concept: not connected to the IRS**, a wallet holding three generic cards (debit, credit, bank account; sage and a light cobalt wash, no brand names or colors), then **Amount owed** or **Your refund** with the federal amount. On open (about 1s) the bank card slides into the wallet, then the amount counts up. With "Reduce motion" on, it only fades and the amount shows at once.
 3. **Owed:** rows **Debit or credit card** and **Bank account** (a tap shows "Coming soon" on the row, nothing else), and a small **Pay by check** link that opens "What to do next". **Refund:** **Direct deposit** ("Coming soon") and **Paper check by mail** (opens the same sheet). Nothing owed and no refund, or no number yet: a plain message and a link back.
 4. Checks: `npm run check:efile` (which label, amount and options; part of the build); `npm run audit:efile` (real clicks, needs `npm run dev`).
 
