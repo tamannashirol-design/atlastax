@@ -6,6 +6,7 @@
 //   OFFICIAL  the inputs and expected lines come from an IRS publication (the example named in each case)
 //   MINE      a synthetic case I made up (fake documents only); the expected answer is worked out by hand in the comment
 import { estimateReturn, hideNumbers, isCalculated, INTEREST_NOTE, DEGREE_NOTE, type Section } from '../src/tax/estimate.ts'
+import { STATE_INTEREST_NOTE } from '../src/tax/state.ts'
 import { taxableScholarship } from '../src/tax/federal.ts'
 import { buildTaxInput, type InterestInput, type ScholarshipInput, type TaxInput } from '../src/tax/input.ts'
 
@@ -86,7 +87,21 @@ check('living costs only (nothing left out) or no scholarship: no degree note', 
 
 console.log('\nMINE: the state estimate doesn’t leave them out silently\n')
 check('New York with a scholarship: not calculated, says why', [estimateReturn(input({ wages: [W2], scholarships: [scholarship()], scholarshipUse: use('living') })).state.status, (estimateReturn(input({ wages: [W2], scholarships: [scholarship()], scholarshipUse: use('living') })).state as { missing: string[] }).missing], ['not-calculated', ['We can’t include your scholarship in the state estimate yet.']])
-check('New York with bank interest: not calculated, says why', (estimateReturn(input({ wages: [W2], bankInterest: [interest()] })).state as { missing: string[] }).missing, ['We can’t include your bank interest in the state estimate yet.'])
+// MINE (prototype assumption, TODO confirm with CPA): the state doesn't tax U.S. bank interest, so the state number is the same as without it.
+// The fake W-2 (NY, wages $38,450, state withheld $1,893) with $42.17 of interest; and the same wages in California.
+const stateOf = (o: Partial<TaxInput>) => estimateReturn(input({ wages: [W2], ...o })).state
+const ca = { ...W2, stateCode: 'CA' }
+const sameNumber = (a: Section, b: Section) => isCalculated(a) && isCalculated(b) && a.status === b.status && a.amount === b.amount
+check('New York with bank interest: the same state number as without it', sameNumber(stateOf({ bankInterest: [interest()] }), stateOf({})), true)
+check('California with bank interest: the same state number as without it', sameNumber(stateOf({ wages: [ca], bankInterest: [interest()] }), stateOf({ wages: [ca] })), true)
+check('the state breakdown shows “Bank interest (not taxed by the state)” = $42 (whole dollars), from the 1099-INT, marked TODO confirm with CPA', ((s) => isCalculated(s) && s.lines.filter((l) => l.id === 'state-bank-interest').map((l) => [l.label, l.amount, l.source.includes('TODO confirm with CPA')]))(stateOf({ bankInterest: [interest()] })), [['Bank interest (not taxed by the state)', D(42), true]])
+check('…in California too', ((s) => isCalculated(s) && s.lines.some((l) => l.id === 'state-bank-interest'))(stateOf({ wages: [ca], bankInterest: [interest()] })), true)
+check('no bank interest: no such line, and no state note', [((s) => isCalculated(s) && s.lines.some((l) => l.id === 'state-bank-interest'))(stateOf({})), estimateReturn(input({ wages: [W2] })).notes.includes(STATE_INTEREST_NOTE)], [false, false])
+check('the note “Assumes this state doesn’t tax your bank interest.” shows with a calculated state', [STATE_INTEREST_NOTE, estimateReturn(input({ wages: [W2], bankInterest: [interest()] })).notes.includes(STATE_INTEREST_NOTE)], ['Assumes this state doesn’t tax your bank interest.', true])
+check('no state number (a state we don’t do, or no-tax Texas): the note is not shown', [estimateReturn(input({ wages: [{ ...W2, stateCode: 'TX' }], bankInterest: [interest()] })).notes.includes(STATE_INTEREST_NOTE), estimateReturn(input({ wages: [{ ...W2, stateCode: 'FL' }], bankInterest: [interest()] })).notes.includes(STATE_INTEREST_NOTE)], [false, false])
+check('other income types keep the no-number rule: dividends, trading', [(estimateReturn(input({ wages: [W2], bankInterest: [interest()], investments: [{ form: '1099-DIV', gross: D(100), withheld: 0, incomeCode: null, exemptionCode: null, taxRate: null } as never] })).state as { missing?: string[] }).missing, (estimateReturn(input({ wages: [W2], trades: [{ form: '1099-B', proceeds: D(200), costBasis: D(100), withheld: 0 } as never] })).state as { missing?: string[] }).missing], [['We can’t include your investment income in the state estimate yet.'], ['We can’t include your trading in the state estimate yet.']])
+check('…and the scholarship, even with bank interest', (estimateReturn(input({ wages: [W2], bankInterest: [interest()], scholarships: [scholarship()], scholarshipUse: use('living') })).state as { missing: string[] }).missing, ['We can’t include your scholarship in the state estimate yet.'])
+check('number off: the state interest amount is not sent', JSON.stringify(hideNumbers(estimateReturn(input({ wages: [W2], bankInterest: [interest()] })))).includes('4217'), false)
 check('Texas still “no state return needed”', estimateReturn(input({ wages: [{ ...W2, stateCode: 'TX' }], scholarships: [scholarship()], scholarshipUse: use('living') })).state.status, 'no-tax')
 
 console.log('\nMINE: “Show how we got this”, citations, and “Show estimate number” off\n')

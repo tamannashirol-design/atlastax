@@ -11,7 +11,7 @@
 // Every section is labelled "Estimate (prototype)" on screen (ESTIMATE_LABEL).
 import { federalSection } from './federal.ts'
 import type { Blocker, TaxInput } from './input.ts'
-import { stateSection } from './state.ts'
+import { stateSection, STATE_INTEREST_NOTE } from './state.ts'
 import { treatyFor } from './treaty.ts'
 import { yearConfig } from './years/index.ts'
 
@@ -107,12 +107,13 @@ export const FORMS_NOT_READY: FormStatus[] = [
  */
 export function estimateReturn(input: TaxInput): Estimate {
   const federal = federalSection(input)
+  const state = stateSection(input)
   return {
     year: input.year,
     blockers: input.blockers,
     federal,
-    state: stateSection(input),
-    notes: notesFor(input),
+    state,
+    notes: notesFor(input, isCalculated(state)),
     dueBasis: input.wages.length ? 'wages' : 'no-wages',
     forms: FORMS_NOT_READY,
     numbersHidden: false,
@@ -126,13 +127,14 @@ export function estimateReturn(input: TaxInput): Estimate {
  *   "Treaty benefits aren't included yet." goes away ONLY for someone who lived in India or China before coming
  *   (student visa): the treaty line then shows in the breakdown.
  */
-function notesFor(input: TaxInput): string[] {
+function notesFor(input: TaxInput, stateCalculated: boolean): string[] {
   const cfg = yearConfig(input.year)
   const treaty = cfg ? treatyFor(input, cfg) : null
   const notes: string[] = []
   if (input.person.marital === null) notes.push(RESULT_NOTES[0])
   if (!treaty) notes.push(RESULT_NOTES[1])
   if (input.bankInterest.length) notes.push(INTEREST_NOTE)
+  if (input.bankInterest.length && stateCalculated) notes.push(STATE_INTEREST_NOTE)
   if (input.investments.some((i) => i.form === '1099-DIV')) notes.push(DIVIDEND_NOTE)
   if (input.scholarships.length && (input.scholarshipUse.paidFor === 'tuition' || input.scholarshipUse.paidFor === 'both')) notes.push(DEGREE_NOTE)
   return notes

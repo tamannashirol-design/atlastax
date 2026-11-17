@@ -97,6 +97,15 @@ so it is always on top. The consent record and "no file leaves before agreement"
 untouched. Test: `npm run audit:consent` (dev server running; real clicks: Not now → Add
 again → Continue to upload → upload a file, three refusals in a row, Escape, the X).
 
+## How to see state with bank interest
+
+1. `npm run dev`; in the questions pick **Bank interest** with your job (answer Yes, upload any file); Review: tick the fake 1099-INT ($42.17). Open `/result`.
+2. **State: New York** now shows a number (before: "We can't include your bank interest in the state estimate yet"). It is the same number as without the interest.
+3. "Show how we got this": **Bank interest (not taxed by the state)** $42, "Form IT-201: not entered", source "Prototype assumption ... TODO confirm with CPA". Notes under the headline: "Assumes this state doesn't tax your bank interest." (shown only when a state number is calculated). California the same (Form 540).
+4. Scholarship, dividends and trading still give "We can't include ... in the state estimate yet."
+5. Checks: `npm run check:income` (same state number with and without interest, NY and CA, line, note, other types still no number).
+TODO confirm with CPA: whether NY and CA tax U.S. bank interest for a nonresident student. This is a prototype assumption, not from an official state instruction.
+
 ## How to see the trading home question
 
 1. `npm run dev`. In the questions pick **Trading** with your job and upload any file. Set Time in the U.S. to first arrival **2023**, arrival date **Aug 15, 2023**, no trips (365 days in 2025). After the trading upload comes **In 2025, where was your main home?** ("Where you mainly worked or lived"): **In the U.S.** / **Home country**. (With arrival Aug 15, **2025** (about 139 days) it is not asked.)
