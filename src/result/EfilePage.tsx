@@ -12,15 +12,15 @@ import { hideNumbers, type Estimate } from '../tax/estimate'
 import { isResultFixture, type ResultFixture } from '../tax/fixtureNames'
 import { COMING_SOON, CONCEPT_LABEL, efileView, type EfileOption } from './efile'
 import { NextStepsSheet } from './NextStepsSheet'
-import { Wallet } from './Wallet'
+import { CARDS_DONE, Wallet } from './Wallet'
 
 // The E-file CONCEPT screen (/result/efile), reached from "Want to e-file instead?" on /result.
 // Not connected to the IRS: a card or bank option only says "Coming soon"; "Pay by check" and "Paper check by mail"
 // open the same "What to do next" sheet. Which label, amount and options show is decided in ./efile.ts, not here.
 //
-// Motion on open (about 600ms), transform + opacity only: a card slides into the wallet (soft, ~400ms), then the
-// amount counts up (quick, 250ms, starting at 350ms). Reduced motion: the wallet and the amount fade in (150ms), no movement,
-// and the amount shows at once. The count-up changes the digits only; the number is also in the page as plain text.
+// Motion on open (about 1.3s), transform + opacity only: the three cards drop into the wallet one after the other
+// (soft, 300ms apart: see Wallet.tsx), then the amount counts up (quick, 250ms, right after the last card lands).
+// Reduced motion: the wallet and the amount fade in (150ms), no movement, and the amount shows at once. The count-up changes the digits only; the number is also in the page as plain text.
 const HEADING_ID = 'efile-title'
 const focusRing = 'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-text'
 
@@ -35,7 +35,7 @@ function CountUp({ cents, reduce }: { cents: number; reduce: boolean }) {
       value.set(cents)
       return
     }
-    const controls = animate(value, cents, { ...spring.quick, delay: 0.35 })
+    const controls = animate(value, cents, { ...spring.quick, delay: CARDS_DONE })
     return () => controls.stop()
   }, [cents, reduce, value])
   return (

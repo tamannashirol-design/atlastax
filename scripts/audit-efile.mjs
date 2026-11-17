@@ -1,6 +1,6 @@
 // Real-click audit of the E-file concept screen (/result/efile), reached from "Want to e-file instead?" on /result.
 //   - labelled "Concept: not connected to the IRS"; a wallet illustration; "Amount owed" or "Your refund" with the amount
-//   - on open: a card slides into the wallet, then the amount counts up (about 600ms); reduced motion: fade only, no movement
+//   - on open: the three cards drop into the wallet one after the other, straight, then the amount counts up; reduced motion: fade only, no movement
 //   - owed: Debit or credit card, Bank account (each shows "Coming soon" and nothing else), Pay by check (opens the sheet)
 //   - refund: Direct deposit ("Coming soon"), Paper check by mail (opens the sheet)
 // Fake documents only (the development server's mock reader). Run with the dev server up:
@@ -67,9 +67,9 @@ async function openAndSample(page, times) {
     if (wait > 0) await page.waitForTimeout(wait)
     samples.push(
       await page.evaluate(() => {
-        const g = document.querySelector('[data-wallet-card]')
+        const cards = [...document.querySelectorAll('[data-wallet-card]')].map((g) => ({ transform: getComputedStyle(g).transform, opacity: getComputedStyle(g).opacity }))
         const amt = document.querySelector('[data-amount] p.font-display')
-        return { transform: g ? getComputedStyle(g).transform : null, opacity: g ? getComputedStyle(g).opacity : null, amount: amt?.querySelector('[aria-hidden]')?.textContent ?? null }
+        return { cards, transform: cards[0]?.transform ?? null, amount: amt?.querySelector('[aria-hidden]')?.textContent ?? null }
       }),
     )
   }
@@ -79,13 +79,18 @@ async function openAndSample(page, times) {
 console.log('AMOUNT OWED (lived in Brazil: the fake W-2 owes $1,193)\n')
 {
   const { context, page } = await resultPage('BR')
-  const samples = await openAndSample(page, [60, 200, 420, 560, 1100])
+  const samples = await openAndSample(page, [60, 330, 640, 1000, 2000])
   check('the button opens /result/efile', new URL(page.url()).pathname === '/result/efile')
   check('the label says “Concept: not connected to the IRS”', await page.getByText('Concept: not connected to the IRS', { exact: true }).isVisible())
   check('a wallet illustration is on the page, with no text inside it', (await page.locator('svg[data-wallet]').count()) === 1 && (await page.locator('svg[data-wallet] text').count()) === 0)
-  check('early on, the card has not settled (it is moving or still hidden) and the amount is not final yet', samples[0].transform !== 'none' || samples[0].opacity !== '1', JSON.stringify(samples[0]))
-  check('the card ends settled and fully visible', samples[4].opacity === '1' && /^(none|matrix\(1, 0, 0, 1, 0, 0\))$/.test(samples[4].transform ?? ''), JSON.stringify(samples[4]))
-  check('the amount counts up: it is below the final number mid-way, and $1,193 at the end', samples[1].amount !== '$1,193' && samples[4].amount === '$1,193', JSON.stringify(samples.map((s) => s.amount)))
+  const op = (i) => samples.map((x) => Number(x.cards[i].opacity))
+  check('three cards: debit, credit and bank account', samples[0].cards.length === 3)
+  check('they come one after the other: at 330ms the first is in view and the last has not started', op(0)[1] > 0.3 && op(2)[1] < 0.05, JSON.stringify([op(0), op(1), op(2)]))
+  check('…at 640ms the first two are in and the last is not done yet', op(0)[2] === 1 && op(1)[2] === 1 && op(2)[2] < 1, JSON.stringify([op(0), op(1), op(2)]))
+  check('all three end settled and fully visible', samples[4].cards.every((c) => c.opacity === '1' && /^(none|matrix\(1, 0, 0, 1, 0, 0\))$/.test(c.transform)), JSON.stringify(samples[4].cards))
+  check('the cards are straight: no rotation (every transform is a plain move)', samples.every((x) => x.cards.every((c) => c.transform === 'none' || /^matrix\(1, 0, 0, 1, 0, -?[\d.]+\)$/.test(c.transform))), JSON.stringify(samples.map((x) => x.cards.map((c) => c.transform))))
+  check('they stack in one column: same left edge, each lower than the one behind', await page.evaluate(() => { const r = [...document.querySelectorAll('[data-wallet-card] > path:first-of-type')].map((p) => p.getBoundingClientRect()); return r.length === 3 && Math.abs(r[0].left - r[1].left) < 1 && Math.abs(r[1].left - r[2].left) < 1 && r[0].top < r[1].top && r[1].top < r[2].top }))
+  check('the amount waits for the last card: still $0 at 640ms, counting after, $1,193 at the end', samples[2].amount === '$0' && samples[4].amount === '$1,193', JSON.stringify(samples.map((x) => x.amount)))
   const text = await page.locator('main').innerText()
   check('it says “Amount owed” with the amount, from the estimate', /Amount owed/.test(text) && /\$1,193/.test(text))
   check('the rows are Debit or credit card and Bank account, and a small “Pay by check” link', (await page.getByRole('button', { name: 'Debit or credit card' }).count()) === 1 && (await page.getByRole('button', { name: 'Bank account' }).count()) === 1 && (await page.getByRole('button', { name: 'Pay by check' }).count()) === 1)
@@ -117,7 +122,7 @@ console.log('\nREDUCED MOTION\n')
 {
   const { context, page } = await resultPage('BR', { reducedMotion: 'reduce' })
   const samples = await openAndSample(page, [40, 120, 250, 500])
-  check('the card never moves: no transform at any moment', samples.every((s) => /^(none|matrix\(1, 0, 0, 1, 0, 0\))$/.test(s.transform ?? '')), JSON.stringify(samples.map((s) => s.transform)))
+  check('the cards never move: no transform at any moment', samples.every((s) => s.cards.every((c) => /^(none|matrix\(1, 0, 0, 1, 0, 0\))$/.test(c.transform))), JSON.stringify(samples.map((s) => s.cards.map((c) => c.transform))))
   check('the amount is final from the start (no counting)', samples.every((s) => s.amount === '$1,193'), JSON.stringify(samples.map((s) => s.amount)))
   await context.close()
 }
@@ -125,7 +130,7 @@ console.log('\nREDUCED MOTION\n')
 console.log('\nREFUND (lived in India: the fake W-2 gets $697 back)\n')
 {
   const { context, page } = await resultPage('IN')
-  await openAndSample(page, [1100])
+  await openAndSample(page, [2000])
   const text = await page.locator('main').innerText()
   check('it says “Your refund” with $697', /Your refund/.test(text) && /\$697/.test(text))
   check('the rows are Direct deposit and Paper check by mail; no card, bank or Pay by check', (await page.getByRole('button', { name: /^Direct deposit/ }).count()) === 1 && (await page.getByRole('button', { name: /^Paper check by mail/ }).count()) === 1 && (await page.getByRole('button', { name: /Debit or credit card|^Bank account|Pay by check/ }).count()) === 0)
