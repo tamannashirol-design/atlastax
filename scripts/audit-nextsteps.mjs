@@ -3,8 +3,10 @@
 //   - no sheet until something is downloaded; then it slides up, once per download (three downloads → three sheets)
 //   - amount owed: print, attach, mail, pay (no refund step); refund: print, attach, mail, refund (no pay step)
 //   - both mailing addresses, the official payment link, the due date as upcoming
-//   - "E-file" (labelled Concept) only shows "E-file is coming soon": nothing else happens
-//   - the X, "Done" and Escape close it, and focus goes back to the Download button
+//   - the sheet has no E-file button; the downloads card has "Want to e-file instead?" with a quiet E-file button (labelled
+//     Concept) that only shows "E-file is coming soon"
+//   - "How to mail it" under each Download opens the sheet WITHOUT downloading anything
+//   - the X, "Done" and Escape close it, and focus goes back to the button that opened it
 // Fake documents only (the development server's mock reader). Run with the dev server up:
 //   npm run dev        (in one terminal)
 //   npm run audit:nextsteps
@@ -89,24 +91,53 @@ console.log('AMOUNT OWED (lived in Brazil: the fake W-2 owes $1,193)\n')
   check('both mailing addresses, exactly as printed in the instructions', ['Austin, TX 73301-0215', 'P.O. Box 1303', 'Charlotte, NC 28201-1303'].every((t) => text.includes(t)))
   check('the IRS’s own payment page is linked', (await sheet(page).locator('a[href="https://www.irs.gov/payments"]').count()) === 1)
   check('each step shows the page it comes from', (await sheet(page).locator('li[data-step]').evaluateAll((els) => els.every((e) => /(page|pages) \d+/.test(e.textContent ?? '')))) === true)
-  const efile = sheet(page).getByRole('button', { name: /E-file/ })
-  check('the E-file button is labelled as a concept', /Concept/.test(await efile.innerText()))
-  check('no note until it is tapped', !(await sheet(page).innerText()).includes('E-file is coming soon'))
-  await efile.click()
-  check('tapping E-file shows the small note “E-file is coming soon”', (await sheet(page).innerText()).includes('E-file is coming soon'))
-  check('…and nothing else happens: the sheet is still open, same steps, no navigation', (await sheetOpen(page)) && page.url().endsWith('/result') && JSON.stringify(await steps(page)) === JSON.stringify(['print', 'attach', 'mail', 'pay']))
+  check('the sheet has no E-file button (it moved to the downloads card)', (await sheet(page).getByRole('button', { name: /E-file/ }).count()) === 0 && !(await sheet(page).innerText()).includes('E-file'))
   await sheet(page).getByLabel('Close').click()
   await page.waitForTimeout(900)
   check('the X closes it', !(await sheetOpen(page)))
   check('focus goes back to the Download button', await page.evaluate(() => /Download/.test(document.activeElement?.textContent ?? '')))
   await download(page, 'Form 1040-NR')
   check('downloading again opens it again (once per download)', await sheetOpen(page))
-  check('the note is gone in the new one (it starts fresh)', !(await sheet(page).innerText()).includes('E-file is coming soon'))
   await sheet(page).getByRole('button', { name: 'Done' }).click()
   await page.waitForTimeout(900)
   check('“Done” closes it', !(await sheetOpen(page)))
   await download(page, 'Form 8843')
   check('a download of Form 8843 opens it too', await sheetOpen(page))
+  await sheet(page).getByRole('button', { name: 'Done' }).click()
+  await page.waitForTimeout(900)
+
+  // "How to mail it": no download, same sheet
+  let downloads = 0
+  page.on('download', () => downloads++)
+  const card = page.locator('section[aria-labelledby="result-downloads"]')
+  check('each ready form has a quiet “How to mail it” button (two on this page)', (await card.getByRole('button', { name: /How to mail it/ }).count()) === 2)
+  const howNR = card.getByRole('button', { name: /How to mail it Form 1040-NR|How to mail it.*1040/ })
+  const dlBox = await card.getByRole('button', { name: /Download Form 1040-NR/ }).boundingBox()
+  const howBox = await howNR.boundingBox()
+  check('it sits under that form’s Download button', !!dlBox && !!howBox && howBox.y > dlBox.y + dlBox.height - 1 && Math.abs(howBox.x - dlBox.x) < 40, JSON.stringify({ dlBox, howBox }))
+  await howNR.click()
+  await page.waitForTimeout(900)
+  check('pressing it opens “What to do next”', await sheetOpen(page))
+  check('…and downloads NOTHING', downloads === 0, `downloads: ${downloads}`)
+  check('…with the same steps (print, attach, mail, pay)', JSON.stringify(await steps(page)) === JSON.stringify(['print', 'attach', 'mail', 'pay']), JSON.stringify(await steps(page)))
+  await sheet(page).getByLabel('Close').click()
+  await page.waitForTimeout(900)
+  check('closing it puts focus back on “How to mail it”', await page.evaluate(() => /How to mail it/.test(document.activeElement?.textContent ?? '')))
+  await card.getByRole('button', { name: /How to mail it Form 8843|How to mail it.*8843/ }).click()
+  await page.waitForTimeout(900)
+  check('the Form 8843 one opens it too, still without a download', (await sheetOpen(page)) && downloads === 0)
+  await page.keyboard.press('Escape')
+  await page.waitForTimeout(900)
+
+  // the e-file concept, at the bottom of the card
+  const eline = card.getByText('Want to e-file instead?')
+  check('the card ends with “Want to e-file instead?”, below both forms', (await eline.isVisible()) && (await eline.boundingBox()).y > (await card.getByRole('button', { name: /How to mail it Form 8843|How to mail it.*8843/ }).boundingBox()).y)
+  const efile = card.getByRole('button', { name: /^E-file/ })
+  check('its E-file button is labelled as a concept', /Concept/.test(await efile.innerText()))
+  check('no note until it is tapped', !(await card.innerText()).includes('E-file is coming soon'))
+  await efile.click()
+  check('tapping it shows the small note “E-file is coming soon”', (await card.innerText()).includes('E-file is coming soon'))
+  check('…and nothing else happens: no sheet, no download, same page', !(await sheetOpen(page)) && downloads === 0 && page.url().endsWith('/result'))
   await page.keyboard.press('Escape')
   await page.waitForTimeout(900)
   check('Escape closes it', !(await sheetOpen(page)))

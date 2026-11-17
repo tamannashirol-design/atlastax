@@ -213,9 +213,10 @@ export default function ResultPage() {
                 <Card id="result-downloads" title="Download your forms" motionProps={card(1)}>
                   <ul className="flex flex-col divide-y divide-border-decorative">
                     {estimate.forms.map((f) => (
-                      <DownloadRow key={f.id} form={f} year={year} answers={answers} numbers={showNumber && !fixture} tellMe={setAnnounce} onDownloaded={() => setNextOpen(true)} />
+                      <DownloadRow key={f.id} form={f} year={year} answers={answers} numbers={showNumber && !fixture} tellMe={setAnnounce} onDownloaded={() => setNextOpen(true)} onHowToMail={() => setNextOpen(true)} />
                     ))}
                   </ul>
+                  <EfileLine />
                 </Card>
                 <Card id="result-details" title="Your details" motionProps={card(2)}>
                   <p className="text-small text-text-muted">Change anything you confirmed, and this estimate updates.</p>
@@ -244,7 +245,7 @@ const stateTitle = (code: string | null) => {
  * with what the form leaves blank, what to check and what isn't included (also on the form's last page).
  * The PDF is made on the server per click and never saved there; here it is only handed to the browser's download.
  */
-function DownloadRow({ form, year, answers, numbers, tellMe, onDownloaded }: { form: FormStatus; year: number; answers: Answers; numbers: boolean; tellMe: (text: string) => void; onDownloaded: () => void }) {
+function DownloadRow({ form, year, answers, numbers, tellMe, onDownloaded, onHowToMail }: { form: FormStatus; year: number; answers: Answers; numbers: boolean; tellMe: (text: string) => void; onDownloaded: () => void; onHowToMail: () => void }) {
   const [busy, setBusy] = useState(false)
   const [failed, setFailed] = useState(false)
   const [open, setOpen] = useState(false)
@@ -286,6 +287,11 @@ function DownloadRow({ form, year, answers, numbers, tellMe, onDownloaded }: { f
               We couldn’t prepare this form. Try again.
             </p>
           )}
+          {/* Opens "What to do next" without downloading anything (it also opens by itself after a download) */}
+          <button type="button" onClick={onHowToMail} className={`self-start ${linkClass}`}>
+            How to mail it
+            <span className="sr-only"> {form.label}</span>
+          </button>
           <p className="text-small text-text-muted">A PDF marked “Prototype estimate, not for filing” on every page. ID numbers show only their last 4 digits.</p>
           <button type="button" aria-expanded={open} aria-controls={panel} onClick={() => setOpen(!open)} className={`self-start ${linkClass}`}>
             {open ? 'Hide what’s left blank' : `What’s left blank (${blank.length})`}
@@ -300,6 +306,27 @@ function DownloadRow({ form, year, answers, numbers, tellMe, onDownloaded }: { f
         </>
       )}
     </li>
+  )
+}
+
+/**
+ * "Want to e-file instead?": a CONCEPT only. The quiet button shows "E-file is coming soon" and does nothing else
+ * (the e-file flow isn't built).
+ */
+function EfileLine() {
+  const [note, setNote] = useState(false)
+  return (
+    <div className="flex flex-col gap-1 border-t border-border-decorative pt-4">
+      <p className="text-body">Want to e-file instead?</p>
+      <button type="button" onClick={() => setNote(true)} className="flex min-h-11 items-center gap-3 self-start rounded-sm text-body font-semibold focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-text">
+        <span className="underline underline-offset-4">E-file</span>
+        <span className="rounded-xs bg-sage-100 px-2 text-small font-normal text-text-muted">Concept</span>
+      </button>
+      {/* Always in the page, so the note is announced when it appears */}
+      <p aria-live="polite" className="min-h-5 text-small text-text-muted">
+        {note ? 'E-file is coming soon' : ''}
+      </p>
+    </div>
   )
 }
 

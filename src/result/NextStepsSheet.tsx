@@ -1,5 +1,4 @@
 import { ArrowSquareOutIcon } from '@phosphor-icons/react'
-import { useState } from 'react'
 import { BottomSheet } from '../components/BottomSheet'
 import { SecondaryButton } from '../components/SecondaryButton'
 import { nextSteps } from '../forms/nextSteps'
@@ -7,14 +6,13 @@ import type { Estimate } from '../tax/estimate'
 
 // "What to do next": slides up over /result after each download (render it inside <AnimatePresence>). Same sheet as
 // the privacy and upload sheets: title, the X (Close), and a quiet "Done" at the bottom. Which steps show, and every
-// word, address and link, come from src/forms/nextSteps.ts (never decided here). Under the steps: an "E-file" button
-// that is only a CONCEPT: it shows "E-file is coming soon" and does nothing else.
+// word, address and link, come from src/forms/nextSteps.ts (never decided here). It opens after a download, and from the
+// "How to mail it" button under each Download (no download). The E-file concept is on the downloads card, not here.
 const linkClass =
   'flex min-h-11 items-center gap-1 self-start rounded-sm text-body font-semibold underline underline-offset-4 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-text'
 
 export function NextStepsSheet({ estimate, onClose }: { estimate: Estimate; onClose: () => void }) {
   const content = nextSteps(estimate)
-  const [efile, setEfile] = useState(false)
   if (!content) return null
   return (
     <BottomSheet title={content.title} onClose={onClose}>
@@ -62,14 +60,6 @@ export function NextStepsSheet({ estimate, onClose }: { estimate: Estimate; onCl
         ))}
       </ol>
       <div className="flex flex-col gap-2 pt-8">
-        <SecondaryButton onClick={() => setEfile(true)}>
-          E-file
-          <span className="ml-3 rounded-xs bg-sage-100 px-2 text-small text-text-muted">Concept</span>
-        </SecondaryButton>
-        {/* Always in the page, so the note is announced when it appears */}
-        <p aria-live="polite" className="min-h-5 text-small text-text-muted">
-          {efile ? 'E-file is coming soon' : ''}
-        </p>
         <SecondaryButton onClick={onClose}>Done</SecondaryButton>
       </div>
     </BottomSheet>
