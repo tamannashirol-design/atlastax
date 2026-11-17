@@ -316,12 +316,12 @@ function DownloadRow({ form, year, answers, numbers, tellMe, onDownloaded, onHow
 function EfileLine() {
   const [note, setNote] = useState(false)
   return (
-    <div className="flex flex-col gap-1 border-t border-border-decorative pt-4">
-      <p className="text-body">Want to e-file instead?</p>
-      <button type="button" onClick={() => setNote(true)} className="flex min-h-11 items-center gap-3 self-start rounded-sm text-body font-semibold focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-text">
-        <span className="underline underline-offset-4">E-file</span>
-        <span className="rounded-xs bg-sage-100 px-2 text-small font-normal text-text-muted">Concept</span>
-      </button>
+    <div className="flex flex-col gap-3 border-t border-border-decorative pt-4">
+      <p className="flex items-center gap-3 text-body">
+        Want to e-file instead?
+        <span className="rounded-xs bg-sage-100 px-2 text-small text-text-muted">Concept</span>
+      </p>
+      <PrimaryButton onClick={() => setNote(true)}>E-file</PrimaryButton>
       {/* Always in the page, so the note is announced when it appears */}
       <p aria-live="polite" className="min-h-5 text-small text-text-muted">
         {note ? 'E-file is coming soon' : ''}
