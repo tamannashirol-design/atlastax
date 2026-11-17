@@ -476,3 +476,7 @@ production cases), focus audit **146 checks, 0 failed**, production-build check 
   ID, previous return), because they are read when added. They go in
   `src/extraction.config.ts`, TODO confirm with CPA.
 - Step 6 must support "Enter it myself" with empty fields for one document.
+
+## /result clean-up (designer's request)
+
+Removed from `/result`: the "Prototype" bar with the "Show estimate number" switch, the sentence "Based on the details you confirmed. This is an estimate, not a promise, and nothing has been filed.", the notes list under the headline (treaty, bank interest, state assumptions), the "A PDF marked ... last 4 digits" line under each Download, and the word "(prototype)" in the section labels ("Estimate"). The estimate still builds the notes and the server still has the number switch (`ESTIMATE_NUMBER_VISIBLE`, on); only the screen no longer shows them. The downloaded PDFs are still stamped "Prototype estimate, not for filing" and still show only the last 4 digits. CLAUDE.md still describes the old switch and label (to update when you confirm).

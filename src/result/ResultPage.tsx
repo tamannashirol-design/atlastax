@@ -1,10 +1,9 @@
 import { CheckCircleIcon, CircleDashedIcon } from '@phosphor-icons/react'
 import { AnimatePresence, motion, useReducedMotionConfig } from 'framer-motion'
-import { useEffect, useRef, useState, useSyncExternalStore, type ReactNode } from 'react'
+import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { AppShell } from '../components/AppShell'
 import { PrimaryButton } from '../components/PrimaryButton'
 import { SecondaryButton } from '../components/SecondaryButton'
-import { Switch } from '../components/Switch'
 import { ESTIMATE_NUMBER_VISIBLE } from '../config'
 import { usStates } from '../data/places'
 import { useAnswers, useFilingYear, type Answers } from '../flow/answers'
@@ -37,43 +36,13 @@ const HEADING_ID = 'result-title'
 const linkClass =
   'flex min-h-11 items-center rounded-sm text-body font-semibold underline underline-offset-4 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-text'
 
-// ---- the "Show estimate number" preference (this browser only) ----
-const KEY = 'atlastax:show-estimate-number'
-const listeners = new Set<() => void>()
-const read = (): boolean => {
-  try {
-    const v = localStorage.getItem(KEY)
-    return v === null ? ESTIMATE_NUMBER_VISIBLE : v === '1'
-  } catch {
-    return ESTIMATE_NUMBER_VISIBLE
-  }
-}
-function useShowNumber() {
-  const on = useSyncExternalStore(
-    (l) => {
-      listeners.add(l)
-      return () => listeners.delete(l)
-    },
-    read,
-  )
-  const set = (v: boolean) => {
-    try {
-      localStorage.setItem(KEY, v ? '1' : '0')
-    } catch {
-      /* storage blocked: the switch just won't be remembered */
-    }
-    listeners.forEach((l) => l())
-  }
-  return [on, set] as const
-}
-
 const usd = (cents: number | null) => (cents === null ? 'Hidden in this prototype' : new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', minimumFractionDigits: cents % 100 === 0 ? 0 : 2 }).format(cents / 100))
 
 export default function ResultPage() {
   const answers = useAnswers()
   const year = useFilingYear()
   const reduce = useReducedMotionConfig() ?? false
-  const [showNumber, setShowNumber] = useShowNumber()
+  const showNumber = ESTIMATE_NUMBER_VISIBLE // the on-screen switch is gone; the server setting still decides (src/config.ts)
 
   // Dev test inputs (read once)
   const [fixture] = useState<ResultFixture | null>(() => {
@@ -147,11 +116,6 @@ export default function ResultPage() {
     >
       <div className="page-x">
         <div className="page-content page-grid items-start gap-y-6 pt-6 pb-12 tablet:pt-8">
-          {/* Prototype controls: always visible, so nobody forgets they exist */}
-          <div className="col-span-full flex flex-wrap items-center justify-between gap-x-6 gap-y-1 rounded-md border border-border-decorative bg-surface px-4">
-            <p className="text-small text-text-muted">Prototype</p>
-            <Switch label="Show estimate number" on={showNumber} onChange={setShowNumber} />
-          </div>
           {fixture && (
             <p className="col-span-full text-small text-text-muted">
               Test input “{fixture}” (from the address): sample numbers to check the screen. They are not calculated and not your return.
@@ -175,13 +139,6 @@ export default function ResultPage() {
                 <h1 id={HEADING_ID} tabIndex={-1} className="font-display text-display text-balance outline-none">
                   {blocked ? 'We can’t give an estimate yet' : 'Your estimate'}
                 </h1>
-                {/* TODO confirm with legal */}
-                <p className="text-small text-text-muted">Based on the details you confirmed. This is an estimate, not a promise, and nothing has been filed.</p>
-                <ul className="flex flex-col text-small text-text-muted">
-                  {estimate.notes.map((n) => (
-                    <li key={n}>{n}</li>
-                  ))}
-                </ul>
               </div>
 
               <div className="col-span-full flex flex-col gap-6 tablet:col-span-5 desktop:col-span-8">
@@ -292,7 +249,6 @@ function DownloadRow({ form, year, answers, numbers, tellMe, onDownloaded, onHow
             How to mail it
             <span className="sr-only"> {form.label}</span>
           </button>
-          <p className="text-small text-text-muted">A PDF marked “Prototype estimate, not for filing” on every page. ID numbers show only their last 4 digits.</p>
           <button type="button" aria-expanded={open} aria-controls={panel} onClick={() => setOpen(!open)} className={`self-start ${linkClass}`}>
             {open ? 'Hide what’s left blank' : `What’s left blank (${blank.length})`}
           </button>

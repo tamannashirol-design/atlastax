@@ -15,7 +15,7 @@ import { stateSection, STATE_INTEREST_NOTE, STATE_INVESTMENT_NOTE } from './stat
 import { treatyFor } from './treaty.ts'
 import { yearConfig } from './years/index.ts'
 
-export const ESTIMATE_LABEL = 'Estimate (prototype)'
+export const ESTIMATE_LABEL = 'Estimate'
 /** Always shown on /result, in this wording */
 export const RESULT_NOTES = ['Assumes single filing status.', 'Treaty benefits aren’t included yet.'] as const
 /** With a 1099-INT: the interest is excluded only if it's from a U.S. bank (Pub 519 (2025), page 22) */
