@@ -26,7 +26,7 @@ import { isResultFixture, type ResultFixture } from '../tax/fixtureNames'
 //   when both are calculated. Notes: single filing status, treaty benefits not included.
 //   Downloads: Form 8843 and Form 1040-NR (src/forms, server/forms.ts): a Download button when a form can be
 //   prepared (filled on the server per click, never saved or logged, every page marked "Prototype estimate, not
-//   for filing"), the fields it leaves blank, and why a form isn't ready.
+//   for filing"), and why a form isn't ready.
 //   "Show estimate number" (prototype switch, this browser only): off = no amount anywhere.
 // Recalculates every time it opens and whenever the answers change while it's open.
 // Dev: ?result=refund|owed|blocked|waiting shows labelled TEST inputs (fixtures.ts) instead.
@@ -170,9 +170,13 @@ export default function ResultPage() {
                 <Card id="result-downloads" title="Download your forms" motionProps={card(1)}>
                   <ul className="flex flex-col divide-y divide-border-decorative">
                     {estimate.forms.map((f) => (
-                      <DownloadRow key={f.id} form={f} year={year} answers={answers} numbers={showNumber && !fixture} tellMe={setAnnounce} onDownloaded={() => setNextOpen(true)} onHowToMail={() => setNextOpen(true)} />
+                      <DownloadRow key={f.id} form={f} year={year} answers={answers} numbers={showNumber && !fixture} tellMe={setAnnounce} onDownloaded={() => setNextOpen(true)} />
                     ))}
                   </ul>
+                  {/* One "How to mail it" for both forms, above the e-file option: opens "What to do next" without downloading */}
+                  <button type="button" onClick={() => setNextOpen(true)} className={`self-start ${linkClass}`}>
+                    How to mail it
+                  </button>
                   <EfileLine />
                 </Card>
                 <Card id="result-details" title="Your details" motionProps={card(2)}>
@@ -198,17 +202,14 @@ const stateTitle = (code: string | null) => {
 }
 
 /**
- * One form in "Download your forms": its status, a Download button when it can be prepared, and a disclosure
- * with what the form leaves blank, what to check and what isn't included (also on the form's last page).
+ * One form in "Download your forms": its status and a Download button when it can be prepared
+ * (what the form leaves blank is on the form's last page, not on this screen).
  * The PDF is made on the server per click and never saved there; here it is only handed to the browser's download.
  */
-function DownloadRow({ form, year, answers, numbers, tellMe, onDownloaded, onHowToMail }: { form: FormStatus; year: number; answers: Answers; numbers: boolean; tellMe: (text: string) => void; onDownloaded: () => void; onHowToMail: () => void }) {
+function DownloadRow({ form, year, answers, numbers, tellMe, onDownloaded }: { form: FormStatus; year: number; answers: Answers; numbers: boolean; tellMe: (text: string) => void; onDownloaded: () => void }) {
   const [busy, setBusy] = useState(false)
   const [failed, setFailed] = useState(false)
-  const [open, setOpen] = useState(false)
   const ready = form.status === 'ready'
-  const blank = form.blank ?? []
-  const panel = `${form.id}-left`
   const name = form.label.replace(/(\S)-(?=\S)/g, '$1⁠-⁠')
 
   const run = async () => {
@@ -244,21 +245,6 @@ function DownloadRow({ form, year, answers, numbers, tellMe, onDownloaded, onHow
               We couldn’t prepare this form. Try again.
             </p>
           )}
-          {/* Opens "What to do next" without downloading anything (it also opens by itself after a download) */}
-          <button type="button" onClick={onHowToMail} className={`self-start ${linkClass}`}>
-            How to mail it
-            <span className="sr-only"> {form.label}</span>
-          </button>
-          <button type="button" aria-expanded={open} aria-controls={panel} onClick={() => setOpen(!open)} className={`self-start ${linkClass}`}>
-            {open ? 'Hide what’s left blank' : `What’s left blank (${blank.length})`}
-          </button>
-          {open && (
-            <div id={panel} className="flex flex-col gap-4">
-              <FormList heading="Left blank" items={blank} empty="Nothing" />
-              <FormList heading="Please check" items={form.check ?? []} />
-              <FormList heading="Not included" items={form.notIncluded ?? []} />
-            </div>
-          )}
         </>
       )}
     </li>
@@ -273,9 +259,8 @@ function EfileLine() {
   const [note, setNote] = useState(false)
   return (
     <div className="flex flex-col gap-3 border-t border-border-decorative pt-4">
-      <p className="flex items-center gap-3 text-body">
+      <p className="text-body">
         Want to e-file instead?
-        <span className="rounded-xs bg-sage-100 px-2 text-small text-text-muted">Concept</span>
       </p>
       <PrimaryButton onClick={() => setNote(true)}>E-file</PrimaryButton>
       {/* Always in the page, so the note is announced when it appears */}
@@ -283,24 +268,6 @@ function EfileLine() {
         {note ? 'E-file is coming soon' : ''}
       </p>
     </div>
-  )
-}
-
-function FormList({ heading, items, empty }: { heading: string; items: string[]; empty?: string }) {
-  if (!items.length && !empty) return null
-  return (
-    <section aria-label={heading} className="flex flex-col gap-1">
-      <h3 className="text-small font-semibold text-text-muted">{heading}</h3>
-      {items.length ? (
-        <ul className="flex list-disc flex-col gap-1 pl-6 text-small">
-          {items.map((t) => (
-            <li key={t}>{t}</li>
-          ))}
-        </ul>
-      ) : (
-        <p className="text-small">{empty}</p>
-      )}
-    </section>
   )
 }
 

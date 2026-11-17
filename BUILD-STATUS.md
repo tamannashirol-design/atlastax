@@ -493,3 +493,7 @@ Things to know:
 - **Not required documents:** the values are what the person typed or checked, so no Review screen; nothing here is on the Documents page.
 - **Only the two names are needed to continue**; missing address/phone are listed on the form's last page, not guessed.
 - TODO confirm with CPA: what "program director" means for each status, and what a Yes on line 13 means for the return (nothing in the estimate changes on it).
+
+## Downloads card, simplified
+
+"What's left blank" is gone from the download rows (what a form leaves blank is still on the form's own last page). There is ONE "How to mail it" button in the card, below both forms and above "Want to e-file instead?"; it opens "What to do next" without downloading. The E-file button no longer has a "Concept" tag; it still only shows "E-file is coming soon". Check: `npm run audit:nextsteps`.

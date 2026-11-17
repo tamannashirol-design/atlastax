@@ -84,10 +84,7 @@ check('line 9: the typed school name, the sample address, the phone as edited', 
 check('line 10: the sample program director (name and phone; no address)', form.getTextField(F8843.line10).getText() === 'Pat Sample (FAKE), 555-555-0101', form.getTextField(F8843.line10).getText())
 check('line 13: Yes ticked, No empty', form.getCheckBox(F8843.line13Yes).isChecked() && !form.getCheckBox(F8843.line13No).isChecked())
 check('line 14 (the explanation) is left blank', (form.getTextField(F8843.line14).getText() ?? '') === '')
-await page.getByRole('dialog', { name: 'What to do next' }).getByLabel('Close').click().catch(() => {})
-await page.getByRole('button', { name: /What’s left blank/ }).first().click().catch(() => {})
-const blankText = await page.locator('main').innerText()
-check('“What’s left blank” on the page: nothing for line 9, only the director’s missing address for line 10, and line 14 to write by hand (because of the Yes)', !/Line 9:/.test(blankText) && /Line 10: the address of your program director/.test(blankText) && !/Line 10: name, address and phone/.test(blankText) && /Line 14/.test(blankText), blankText.match(/Line \d+[^\n]*/g)?.join(' | '))
+check('what a form leaves blank is no longer on the page (it is on the form’s last page)', !/What’s left blank|Left blank/.test(await page.locator('main').innerText()))
 await context.close()
 
 console.log('\nSKIPPING\n')
