@@ -51,6 +51,10 @@ export function stateSection(input: TaxInput): StateSection {
   if (!supported) return { code, status: 'not-supported', message: NOT_SUPPORTED_MESSAGE, withheld: cents(withheld) }
 
   if (stops.length) return notCalculated(...stops)
+  // A scholarship or interest: states tax these by their own rules (U.S. bank interest is exempt only federally), which
+  // aren't built yet: no state number rather than one that leaves them out
+  if (input.scholarships.length) return notCalculated('We can’t include your scholarship in the state estimate yet.')
+  if (input.bankInterest.length) return notCalculated('We can’t include your bank interest in the state estimate yet.')
   if (input.other.length) {
     const names = [...new Set(input.other.map((o) => o.label))]
     return notCalculated(...names.map((n) => `We can’t include ${n} in the estimate yet.`))

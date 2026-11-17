@@ -166,6 +166,21 @@ function incomeFollowUps(): FlowScreen[] {
       helpLabel: 'Not sure whether tax was withheld?',
     }),
     upload('scholarship-1042s', '1042-S', 'Upload your 1042-S for your scholarship', 'From your university', LATER),
+    // Only the part used for things other than tuition, fees and required books is taxed (Pub 519 (2025), pages 24–25;
+    // Instructions for Form 1040-NR (2025), page 31, line 8r). Rules: src/tax/federal.ts, years/income-2025.ts.
+    tiles(
+      'scholarship-paid-for',
+      'What did your scholarship pay for?',
+      [
+        { value: 'tuition', code: 'Tuition' },
+        { value: 'living', code: 'Living costs' },
+        { value: 'both', code: 'Both' },
+      ],
+      has('scholarship'),
+      // No tile descriptions: three tiles with them overflow the answer area on a phone (like "OPT, CPT, or both")
+      { helper: 'Tuition includes fees and required books' },
+    ),
+    amount('scholarship-stipend', (_, year) => `How much of it was for living costs in ${year}?`, 'Rent, food or travel. Check your award letter', and(has('scholarship'), answered('scholarship-paid-for', 'both'))),
     // Freelance (expenses wait for tax review)
     ...selfEmployed('freelance', 'freelance work', 'freelance'),
     // Investments

@@ -13,6 +13,7 @@
 import type { Source } from '../estimate.ts'
 import { STATES_2025, type StatesConfig } from './states-2025.ts'
 import { TREATIES_2025, type Treaty } from './treaties-2025.ts'
+import { INCOME_2025, type IncomeConfig } from './income-2025.ts'
 
 export const TODO_CPA = 'TODO confirm with CPA'
 
@@ -96,6 +97,8 @@ export type YearConfig = {
   states: StatesConfig
   /** Student treaty benefits for the federal estimate, by two-letter citizenship code (India, China) */
   treaties: Record<string, Treaty>
+  /** U.S. bank interest and scholarships (Form 1042-S): codes and sources */
+  income: IncomeConfig
   review: typeof TODO_CPA
 }
 
@@ -108,5 +111,6 @@ export const YEAR_2025: YearConfig = {
   sources: SOURCES,
   states: STATES_2025,
   treaties: TREATIES_2025,
+  income: INCOME_2025,
   review: TODO_CPA,
 }

@@ -94,6 +94,7 @@ const spots1040: Spot[] = [
   [F1040NR.line1a, 1, 504, 384, 'line 1a'],
   [F1040NR.line1k, 1, 410, 252, 'line 1k'],
   [F1040NR.line1z, 1, 504, 240, 'line 1z'],
+  [F1040NR.line8, 1, 504, 108, 'line 8'],
   [F1040NR.line9, 1, 504, 96, 'line 9'],
   [F1040NR.line11a, 1, 504, 60, 'line 11a'],
   [F1040NR.line11b, 2, 504, 732, 'line 11b'],
@@ -106,6 +107,7 @@ const spots1040: Spot[] = [
   [F1040NR.line24, 2, 504, 498, 'line 24'],
   [F1040NR.line25a, 2, 410, 474, 'line 25a'],
   [F1040NR.line25d, 2, 504, 438, 'line 25d'],
+  [F1040NR.line25g, 2, 504, 402, 'line 25g'],
   [F1040NR.line33, 2, 504, 300, 'line 33'],
   [F1040NR.line34, 2, 504, 288, 'line 34 (overpaid)'],
   [F1040NR.line37, 2, 504, 198, 'line 37 (amount you owe)'],
@@ -232,9 +234,23 @@ console.log('\nMINE: when a form is not ready\n')
 const blockedEstimate = estimateReturn(buildTaxInput({ year: 2025, person: { citizenship: 'IN', visa: 'F-1' }, income: [], items: [{ id: 'passport', kind: 'document', label: 'Passport', status: 'missing' }], documents: [] }))
 const blocked = buildForms({ year: 2025, docs: [], estimate: blockedEstimate })
 check('something unconfirmed holds both back, with the reason', [blocked['form-8843'].status, blocked['form-1040nr'].status, blocked['form-8843'].reason], ['not-ready', 'not-ready', 'Waiting for the items listed above.'])
-const scholarship = makeEstimate('IN', docs, { items: [...items, { id: 'scholarship', kind: 'document', label: '1042-S', status: 'added' }], documents: [...docs, doc('scholarship', '1042-S')] })
-const sch = buildForms({ year: 2025, docs, facts: FACTS, estimate: scholarship })
-check('income the estimate can’t handle (a 1042-S): no 1040-NR (it says why), but Form 8843 is still ready', [sch['form-1040nr'].status, sch['form-1040nr'].reason, sch['form-8843'].status], ['not-ready', 'We can’t include 1042-S in the estimate yet.', 'ready'])
+// Freelance income with a 1099-NEC: still not worked out by the estimate
+const freelance = makeEstimate('IN', docs, { income: ['opt-cpt', 'freelance'], items: [...items, { id: 'freelance', kind: 'document', label: '1099-NEC', status: 'added' }], documents: [...docs, doc('freelance', '1099-NEC')] })
+const fl = buildForms({ year: 2025, docs, facts: FACTS, estimate: freelance })
+check('income the estimate can’t handle (a 1099-NEC): no 1040-NR (it says why), but Form 8843 is still ready', [fl['form-1040nr'].status, fl['form-1040nr'].reason, fl['form-8843'].status], ['not-ready', 'We can’t include 1099-NEC in the estimate yet.', 'ready'])
+
+console.log('\nMINE: a scholarship (fake 1042-S: box 2 $9,000, box 10 $1,260) and bank interest (fake 1099-INT: $42.17) on the 1040-NR\n')
+const moreDocs = [...docs, doc('scholarship', '1042-S'), doc('bank-interest', '1099-INT')]
+const moreItems: TaxItem[] = [...items, { id: 'scholarship', kind: 'document', label: '1042-S', status: 'added' }, { id: 'bank-interest', kind: 'document', label: '1099-INT', status: 'added' }]
+const moreEstimate = (paidFor: string, stipend?: string) => estimateReturn(buildTaxInput({ year: 2025, person: { citizenship: 'BR', livedBefore: 'BR', visa: 'F-1', marital: 'single', digitalAssets: 'no' }, income: ['opt-cpt', 'scholarship', 'bank-interest'], items: moreItems, documents: moreDocs, scholarshipUse: { paidFor, stipend } }))
+const more = buildForms({ year: 2025, docs: moreDocs, facts: FACTS, estimate: moreEstimate('both', '4000.00'), person: { marital: 'single', digitalAssets: 'no' } })['form-1040nr']
+// both, $4,000 living costs: line 8 4,000; line 9 42,450; tax 4,859; 25a 3,186; 25g 1,260; 33 4,446; owes 413 (check:income)
+check('line 8 = the taxable scholarship ($4,000); line 9 = $42,450; line 25g = $1,260 (box 10); line 33 = $4,446; owes $413 on line 37', [F1040NR.line8, F1040NR.line9, F1040NR.line16, F1040NR.line25a, F1040NR.line25g, F1040NR.line33, F1040NR.line37].map((n) => v(more, n)), ['4,000', '42,450', '4,859', '3,186', '1,260', '4,446', '413'])
+const p1 = (t: string) => `topmostSubform[0].Page1[0].${t}`
+check('bank interest goes nowhere on the form: lines 2a and 2b stay empty (Instructions for Form 1040-NR, page 19)', [v(more, p1('f1_55[0]')), v(more, p1('f1_56[0]'))], [undefined, undefined])
+check('…and the last page says why, plus Schedule 1 (line 8r) and attaching the 1042-S', ['bank interest is not entered', 'Schedule 1 (Form 1040), with your taxable scholarship on line 8r', 'Attach your Form 1042-S'].map((x) => more.notIncluded.some((n) => n.includes(x))), [true, true, true])
+const tuitionOnly = buildForms({ year: 2025, docs: moreDocs, facts: FACTS, estimate: moreEstimate('tuition'), person: { marital: 'single', digitalAssets: 'no' } })['form-1040nr']
+check('scholarship all for tuition: line 8 is $0, the $1,260 is still on line 25g', [v(tuitionOnly, F1040NR.line8), v(tuitionOnly, F1040NR.line25g)], ['0', '1,260'])
 const y2024 = buildForms({ year: 2024, docs, facts: FACTS, estimate: { ...makeEstimate('IN'), year: 2024 } })
 check('a tax year with no forms (2024): neither, with a plain message', [y2024['form-8843'].status, y2024['form-1040nr'].reason], ['not-ready', 'We can’t prepare this tax year yet.'])
 const hidden = hideNumbers(makeEstimate('IN'))

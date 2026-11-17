@@ -560,7 +560,7 @@ before we write questions for them.
 | Bank interest | Did you get a form for this interest? (upload it, or "No form") · Total interest amount if no form | The return needs the amount; a bank form, if any, already has it |
 | OPT or CPT | Upload your W-2 (one per employer; "Add another") · Was it OPT, CPT, or both? | The W-2 has wages and withholding; OPT/CPT tells us which work authorization the job falls under |
 | On-campus job | Upload your W-2 (one per employer; "Add another") | Same document source as other wages |
-| Scholarship or fellowship | Did your university withhold any tax from your scholarship? (Yes / No, from the old flow) · Upload your 1042-S, or "I'll add it later" · Did part of it pay for things other than tuition and required fees? **(tax review)** | The old flow already asks about withholding; the 1042-S holds the amounts; the last question only matters if a tax professional confirms it should be asked |
+| Scholarship or fellowship | Did your university withhold any tax from your scholarship? (Yes / No, from the old flow) · Upload your 1042-S, or "I'll add it later" · **What did your scholarship pay for?** (Tuition / Living costs / Both; built) · **How much of it was for living costs?** (only for Both; built) | The old flow already asks about withholding; the 1042-S holds the amounts; the last question only matters if a tax professional confirms it should be asked |
 | Freelance | Upload each 1099-NEC, or enter the total you were paid if there's no form · Did you have work-related expenses? **(tax review)** | We need what you were paid; whether expenses can be counted needs confirmation |
 | Investments | Upload your brokerage or bank tax form(s) (1042-S or 1099-DIV), or "No form" | The forms list dividends and any tax withheld |
 | Trading | Upload your brokerage tax form(s) (1099-B or 1042-S), or "No form" | The forms list sales; nothing else should be asked until we know what's needed **(tax review)** |
@@ -591,6 +591,8 @@ and contract expenses, Donation, Child care.
 | /income/campus-w2 | On-campus job | Upload your W-2 from your on-campus job | Upload · "I'll add it later" |
 | /income/scholarship-withheld | Scholarship | Did your university withhold tax from your scholarship? | Yes / No |
 | /income/scholarship-1042s | Scholarship | Upload your 1042-S for your scholarship | Upload · "I'll add it later" |
+| /income/scholarship-paid-for | Scholarship | What did your scholarship pay for? Helper: "Tuition includes fees and required books" | Tiles Tuition / Living costs / Both (no descriptions: three tiles with them overflow on a phone) |
+| /income/scholarship-stipend | Scholarship, "Both" only | How much of it was for living costs in {year}? Helper: "Rent, food or travel. Check your award letter" | Amount |
 | /income/freelance-form | Freelance | Did you get a 1099-NEC for your freelance work? | Yes / No |
 | /income/freelance-1099 | …and Yes | Upload your 1099-NEC forms for freelance work | Upload · "I'll add it later" |
 | /income/freelance-amount | …and No | How much were you paid for freelance work in {year}? | Amount |

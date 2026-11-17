@@ -53,6 +53,43 @@ export type WageInput = {
   stateWithheld: number
 }
 
+/** A confirmed Form 1042-S for a scholarship or fellowship (the "scholarship" document). Boxes per the 2025
+ *  Instructions for Form 1042-S: box 1 income code (page 24; Appendix A, page 36), box 2 gross income (page 25),
+ *  box 3a chapter 3 exemption code and box 3b tax rate (page 26), box 10 total withholding credit (page 29). */
+export type ScholarshipInput = {
+  itemId: string
+  /** Box 12d, withholding agent's name (display only) */
+  payer: string | null
+  /** Box 1 (16 = scholarship or fellowship grants) */
+  incomeCode: string
+  /** Box 2, cents */
+  gross: number
+  /** Box 3a; null when "Not on my form" */
+  exemptionCode: string | null
+  /** Box 3b as printed (e.g. "14.00"); null when "Not on my form" */
+  taxRate: string | null
+  /** Box 10 (7a + 8 + 9), cents: what Form 1040-NR line 25g credits */
+  withheld: number
+}
+
+/** A confirmed Form 1099-INT for bank interest (the "bank-interest" document) */
+export type InterestInput = {
+  itemId: string
+  /** The bank (display only) */
+  payer: string | null
+  /** Box 1, cents */
+  interest: number
+  /** Box 4 (federal income tax withheld), cents; 0 when "Not on my form" */
+  withheld: number
+}
+
+/** The answers to the scholarship questions (src/flow/screens.tsx): what it paid for, and the stipend for living costs */
+export type ScholarshipUse = {
+  paidFor: 'tuition' | 'living' | 'both' | null
+  /** Cents; only for "both" */
+  stipend: number | null
+}
+
 /** Confirmed (or self-reported) income the engine doesn't read yet */
 export type OtherIncome = { itemId: string; form: FormType | null; label: string }
 
@@ -71,6 +108,9 @@ export type TaxInput = {
     digitalAssets: 'yes' | 'no' | null
   }
   wages: WageInput[]
+  scholarships: ScholarshipInput[]
+  bankInterest: InterestInput[]
+  scholarshipUse: ScholarshipUse
   other: OtherIncome[]
   /** The income cards the person picked (decides what the engine must handle) */
   incomeTypesPresent: string[]
@@ -85,6 +125,8 @@ export type BuildArgs = {
   income: string[]
   items: TaxItem[]
   documents: ConfirmedDocument[]
+  /** The scholarship answers as the browser sent them (checked here) */
+  scholarshipUse?: { paidFor?: unknown; stipend?: unknown }
 }
 
 /** "24,180.00" → 2418000. null for anything that isn't a plain, non-negative amount with at most 2 decimals. */
@@ -103,9 +145,11 @@ const formName = (form: FormType | undefined) => form ?? 'document'
 /** Does this value need the person's tick before it may be used? */
 const needsTick = (spec: FieldSpec, f: ConfirmedField) => spec.needsTick || f.confidence === 'low'
 
-export function buildTaxInput({ year, person, income, items, documents: docs }: BuildArgs): TaxInput {
+export function buildTaxInput({ year, person, income, items, documents: docs, scholarshipUse: use }: BuildArgs): TaxInput {
   const blockers: Blocker[] = []
   const wages: WageInput[] = []
+  const scholarships: ScholarshipInput[] = []
+  const bankInterest: InterestInput[] = []
   const other: OtherIncome[] = []
   const block = (b: Blocker) => blockers.push(b)
 
@@ -149,14 +193,14 @@ export function buildTaxInput({ year, person, income, items, documents: docs }: 
     }
     if (!ok) continue
 
+    const money = (key: string, label: string): number | null => {
+      const text = used[key]
+      if (text === null) return 0 // "Not on my form" (only possible where the field may be blank)
+      const c = toCents(text)
+      if (c === null) block({ id: `${item.id}:${key}:invalid`, reason: `${item.label}: ${label} isn’t a valid amount.`, fix: { label: `Check your ${doc.form}`, target: review(item.id) } })
+      return c
+    }
     if (doc.form === 'W-2') {
-      const money = (key: string, label: string): number | null => {
-        const text = used[key]
-        if (text === null) return 0 // "Not on my form" (only possible where the field may be blank)
-        const c = toCents(text)
-        if (c === null) block({ id: `${item.id}:${key}:invalid`, reason: `${item.label}: ${label} isn’t a valid amount.`, fix: { label: 'Check your W-2', target: review(item.id) } })
-        return c
-      }
       const w = money('wages', 'Wages')
       const fed = money('federalWithheld', 'Federal tax withheld')
       const sw = money('stateWages', 'State wages')
@@ -164,17 +208,39 @@ export function buildTaxInput({ year, person, income, items, documents: docs }: 
       if (w === null || fed === null || sw === null || st === null) continue
       const state = used.state
       wages.push({ itemId: item.id, employer: used.employerName ?? null, wages: w, federalWithheld: fed, stateCode: state ? state.toUpperCase() : null, stateWages: sw, stateWithheld: st })
+    } else if (doc.form === '1042-S' && item.id === 'scholarship') {
+      const gross = money('grossIncome', 'Gross income')
+      const withheld = money('federalWithheld', 'Total tax withheld')
+      if (gross === null || withheld === null) continue
+      scholarships.push({ itemId: item.id, payer: used.withholdingAgent ?? null, incomeCode: (used.incomeCode ?? '').trim(), gross, exemptionCode: used.exemptionCode?.trim() || null, taxRate: used.taxRate?.trim() || null, withheld })
+    } else if (doc.form === '1099-INT' && item.id === 'bank-interest') {
+      const interest = money('interest', 'Interest income')
+      const withheld = money('federalWithheld', 'Federal tax withheld')
+      if (interest === null || withheld === null) continue
+      bankInterest.push({ itemId: item.id, payer: used.payerName ?? null, interest, withheld })
     } else if (doc.form !== 'Passport' && doc.form !== 'I-94') {
-      // 1042-S, 1099s: confirmed, but the engine doesn't read them yet
+      // Other 1042-S and 1099s (investments, trading, freelance): confirmed, but the engine doesn't read them yet
       other.push({ itemId: item.id, form: doc.form, label: item.label })
     }
   }
+
+  // The scholarship questions: what it paid for decides the taxable part (src/tax/federal.ts). Unanswered: a blocker
+  // that goes to the question (never a guess).
+  const paidFor = use?.paidFor === 'tuition' || use?.paidFor === 'living' || use?.paidFor === 'both' ? use.paidFor : null
+  const stipend = typeof use?.stipend === 'string' ? toCents(use.stipend) : null
+  const scholarshipUse: ScholarshipUse = { paidFor, stipend: paidFor === 'both' ? stipend : null }
+  const question = (path: string): Target => ({ path, state: null })
+  if (scholarships.length && !paidFor) block({ id: 'scholarship:paid-for', reason: 'Scholarship: tell us what it paid for.', fix: { label: 'Answer the question', target: question('/income/scholarship-paid-for') } })
+  if (scholarships.length && paidFor === 'both' && (stipend === null || stipend <= 0)) block({ id: 'scholarship:stipend', reason: 'Scholarship: tell us how much of it was for living costs.', fix: { label: 'Answer the question', target: question('/income/scholarship-stipend') } })
 
   return {
     year,
     filingStatus: 'single',
     person: { citizenship: person.citizenship ?? null, visa: person.visa ?? null, livedBefore: person.livedBefore ?? null, marital: person.marital ?? null, digitalAssets: person.digitalAssets ?? null },
     wages,
+    scholarships,
+    bankInterest,
+    scholarshipUse,
     other,
     incomeTypesPresent: [...income],
     blockers,

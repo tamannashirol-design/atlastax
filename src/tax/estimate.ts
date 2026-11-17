@@ -18,6 +18,10 @@ import { yearConfig } from './years/index.ts'
 export const ESTIMATE_LABEL = 'Estimate (prototype)'
 /** Always shown on /result, in this wording */
 export const RESULT_NOTES = ['Assumes single filing status.', 'Treaty benefits aren’t included yet.'] as const
+/** With a 1099-INT: the interest is excluded only if it's from a U.S. bank (Pub 519 (2025), page 22) */
+export const INTEREST_NOTE = 'Assumes this is interest from a U.S. bank account.'
+/** With a scholarship partly or wholly for tuition, fees and books: only a degree candidate can leave that part out (Pub 519 (2025), page 25) */
+export const DEGREE_NOTE = 'Assumes you’re studying for a degree, so the part of your scholarship for tuition, fees and books isn’t taxed.'
 
 export type LineGroup = 'income' | 'deductions' | 'tax' | 'payments' | 'result'
 export type EstimateLine = {
@@ -123,6 +127,8 @@ function notesFor(input: TaxInput): string[] {
   const notes: string[] = []
   if (input.person.marital === null) notes.push(RESULT_NOTES[0])
   if (!treaty) notes.push(RESULT_NOTES[1])
+  if (input.bankInterest.length) notes.push(INTEREST_NOTE)
+  if (input.scholarships.length && (input.scholarshipUse.paidFor === 'tuition' || input.scholarshipUse.paidFor === 'both')) notes.push(DEGREE_NOTE)
   return notes
 }
 

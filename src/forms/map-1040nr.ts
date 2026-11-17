@@ -17,12 +17,14 @@
 //   Line 1a  W-2 box 1 (after any treaty exemption) f1_42
 //   Line 1k  treaty-exempt income                   f1_53   (China)
 //   Line 1z  add lines 1a to 1h                     f1_54
+//   Line 8   additional income (Schedule 1 line 10)   f1_68   (the taxable scholarship, Schedule 1 line 8r)
 //   Line 9   total effectively connected income     f1_69
 //   Line 11a adjusted gross income                  f1_71
 //   Page 2
 //   Line 11b / 12 / 14 / 15                         f2_01 / f2_02 / f2_06 / f2_07   (line 12: the India treaty standard deduction)
 //   Line 16 tax / 18 / 22 / 24 total tax            f2_09 / f2_11 / f2_15 / f2_20
-//   Line 25a W-2 withheld / 25d / 33 total payments f2_21 / f2_24 / f2_35
+//   Line 25a W-2 withheld / 25d / 25g 1042-S / 33   f2_21 / f2_24 / f2_27 / f2_35
+//   U.S. bank interest: NOT entered (exempt: Instructions for Form 1040-NR (2025), page 19, line 2a Exception 2, line 2b Exception 3)
 //   Line 34 overpaid (refund) / Line 37 amount owed f2_36 / f2_42
 //   Third-party designee: Yes / No                  c2_7[0] / c2_7[1]   (always No: AtlasTax doesn't ask)
 import { isCalculated, type Estimate, type EstimateLine } from '../tax/estimate.ts'
@@ -48,6 +50,7 @@ export const F1040NR = {
   line1a: p1('f1_42[0]'),
   line1k: p1('Line1k_ReadOrder[0].f1_53[0]'), // inside the IRS's own group
   line1z: p1('f1_54[0]'),
+  line8: p1('f1_68[0]'),
   line9: p1('f1_69[0]'),
   line11a: p1('f1_71[0]'),
   line11b: p2('f2_01[0]'),
@@ -60,6 +63,7 @@ export const F1040NR = {
   line24: p2('f2_20[0]'),
   line25a: p2('Line25_ReadOrder[0].f2_21[0]'), // inside the IRS's own group
   line25d: p2('f2_24[0]'),
+  line25g: p2('f2_27[0]'),
   line33: p2('f2_35[0]'),
   line34: p2('f2_36[0]'),
   line37: p2('f2_42[0]'),
@@ -125,6 +129,9 @@ export function build1040NR({ docs, estimate, person = { marital: null, digitalA
   put(F1040NR.line1a, wages)
   if (treaty) put(F1040NR.line1k, treaty.amount)
   put(F1040NR.line1z, wages)
+  // Line 8: the taxable scholarship (Schedule 1 line 8r → line 10 → Form 1040-NR line 8; Instructions page 31)
+  const scholarshipLine = get('scholarship')
+  if (scholarshipLine) put(F1040NR.line8, scholarshipLine.amount)
   put(F1040NR.line9, amount('total-income'))
   put(F1040NR.line11a, amount('total-income'))
   put(F1040NR.line11b, amount('total-income'))
@@ -147,7 +154,10 @@ export function build1040NR({ docs, estimate, person = { marital: null, digitalA
   const withheld = amount('withheld')
   put(F1040NR.line25a, withheld)
   put(F1040NR.line25d, withheld)
-  put(F1040NR.line33, withheld)
+  // Line 25g: 1042-S box 10 (Instructions page 22); line 33: all payments
+  const withheld1042 = get('withheld-1042s')
+  if (withheld1042) put(F1040NR.line25g, withheld1042.amount)
+  put(F1040NR.line33, amount('total-payments') ?? withheld)
   const result = amount('result')
   if (isCalculated(fed) && result !== null) {
     if (fed.status === 'refund') {
@@ -162,7 +172,12 @@ export function build1040NR({ docs, estimate, person = { marital: null, digitalA
   values[F1040NR.designeeNo] = true
   if (treaty || deduction?.treaty) check.push(`A student treaty benefit is included (${treaty ? 'line 1k' : 'line 12'}), based on the country you lived in before coming to the U.S.`)
 
-  notIncluded.push('Lines 2 to 8 (interest, dividends, retirement income, capital gains and other income) are not part of this estimate yet, so they are empty.')
+  notIncluded.push(scholarshipLine ? 'Lines 2 to 7 (other interest, dividends, retirement income and capital gains) are not part of this estimate yet, so they are empty.' : 'Lines 2 to 8 (other interest, dividends, retirement income, capital gains and other income) are not part of this estimate yet, so they are empty.')
+  if (get('bank-interest')) notIncluded.push('Your U.S. bank interest is not entered: for a nonresident it is exempt, and the instructions say not to include it on lines 2a or 2b (Instructions for Form 1040-NR (2025), page 19).')
+  if (scholarshipLine) {
+    notIncluded.push('Schedule 1 (Form 1040), with your taxable scholarship on line 8r (it goes to line 8 of this form), is not included yet.')
+    notIncluded.push('Attach your Form 1042-S to the front of this form when you mail it.')
+  }
   notIncluded.push('Schedule OI (Form 1040-NR) is required with every Form 1040-NR' + (treaty ? ', and its item L explains the treaty-exempt income on line 1k, plus a statement of why you qualify (Instructions for Form 1040-NR, page 18)' : '') + '. It is not included yet.')
   // Instructions for Form 1040-NR (2025), page 23, Assemble Your Return: "Attach a copy of Forms W-2 … to the front of
   // Form 1040-NR"; Form W-2 (2025): "Copy B—To Be Filed With Employee’s FEDERAL Tax Return"
