@@ -11,7 +11,7 @@ import { taxItemsFrom } from './input'
 
 /** What the server needs: a small non-sensitive summary of the documents, and the facts the forms need from the answers (visa, citizenship, days counted). No ID numbers, no travel history. */
 export function estimateRequest(a: Answers, year: number) {
-  return { person: { citizenship: a.citizenship, visa: a.visa, livedBefore: a.livedBefore, marital: a.marital, digitalAssets: a.digitalAssets }, income: a.income ?? [], items: taxItemsFrom(requiredItems(a)), facts: formFacts(a, year), scholarship: scholarshipAnswers(a) }
+  return { person: { citizenship: a.citizenship, visa: a.visa, livedBefore: a.livedBefore, marital: a.marital, digitalAssets: a.digitalAssets, taxHome: a.details?.['trading-tax-home'] }, income: a.income ?? [], items: taxItemsFrom(requiredItems(a)), facts: formFacts(a, year), scholarship: scholarshipAnswers(a) }
 }
 
 /** The scholarship questions' answers: what it paid for, and the stipend for living costs (a plain amount, e.g. "4000.00"). */

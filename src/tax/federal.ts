@@ -63,10 +63,16 @@ export function federalSection(input: TaxInput): Calculated | NotCalculated | No
   if (input.trades.some((t) => t.costBasis === null)) return noNumber('Your 1099-B doesn’t show the cost basis (box 1e), so your gain can’t be worked out.')
   const netGain = signedDollars(input.trades.reduce((n, t) => n + t.proceeds - (t.costBasis ?? 0), 0)) // gains minus losses
   const days = input.person.daysInUS
+  // With 183 days or more, the gain is taxed only if it's from U.S. sources: for stock, if the tax home is in the U.S. (Pub 519 p. 20).
+  // The answer to "was your main home in the U.S. or in your home country?" stands in for the tax home (TODO confirm with CPA).
+  const taxHome = input.person.taxHome
+  const over183 = days !== null && days >= I.capitalGainDays
   if (input.trades.length && netGain > 0) {
     if (days === null) return noNumber(`To check the 183-day rule for your trading gains we need the days you were in the U.S. in ${input.year}. Finish “Time in the U.S.” first.`)
-    if (days >= I.capitalGainDays) return noNumber(`You were in the U.S. ${days} days in ${input.year}, so your trading gains may be taxed. That depends on where your tax home was, which we don’t ask yet.`)
+    if (over183 && taxHome === null) return noNumber(`You were in the U.S. ${days} days in ${input.year}, so whether your trading gains are taxed depends on where your main home was. Answer the question about your main home.`)
   }
+  // The gain taxed at 30%: net gain, 183 days or more, main home in the U.S. (Schedule NEC line 9, column (c))
+  const gainTaxed = input.trades.length > 0 && over183 && taxHome === 'us' && netGain > 0 ? netGain : 0
 
   // 4. Nothing to calculate from
   if (!input.wages.length && !input.scholarships.length && !input.bankInterest.length && !input.investments.length && !input.trades.length) return noNumber('There’s no W-2 to calculate from.')
@@ -85,7 +91,7 @@ export function federalSection(input: TaxInput): Calculated | NotCalculated | No
   const dividends = roundToDollars(taxedInvestments.filter(isDividend).reduce((n, i) => n + i.gross, 0))
   const necInterest = roundToDollars(taxedInvestments.filter((i) => !isDividend(i)).reduce((n, i) => n + i.gross, 0))
   const exemptInterest = roundToDollars(input.investments.filter((i) => exemptInterestOf(i)).reduce((n, i) => n + i.gross, 0))
-  const necIncome = dividends + necInterest // Schedule NEC line 13, column (c)
+  const necIncome = dividends + necInterest + gainTaxed // Schedule NEC line 13, column (c)
   const necTax = roundToDollars(necIncome * I.necRatePercent) // dollars × percent = cents → line 14 → 15 → Form 1040-NR line 23a
   const scholarship = input.scholarships.length ? taxableScholarship(grossScholarship, input.scholarshipUse) : 0
 
@@ -97,7 +103,10 @@ export function federalSection(input: TaxInput): Calculated | NotCalculated | No
   if (treaty?.code === 'CN' && scholarship > 0) return noNumber('You lived in China before coming to the U.S. The U.S.–China treaty may make your scholarship tax-free, and the estimate doesn’t work that out yet.')
   // A treaty country may set a lower rate on dividends and interest (Instructions for Form 1040-NR (2025), page 42), which the
   // estimate doesn't cover: no number rather than 30% (TODO confirm with CPA)
-  if (treaty && necIncome > 0) return noNumber(`You lived in ${treaty.country} before coming to the U.S. Its tax treaty with the U.S. may set a lower rate on your dividends or interest, and the estimate doesn’t cover that yet.`)
+  if (treaty && necIncome > 0) {
+    const what = [dividends + necInterest > 0 ? 'dividends or interest' : '', gainTaxed > 0 ? 'trading gain' : ''].filter(Boolean).join(' or your ')
+    return noNumber(`You lived in ${treaty.country} before coming to the U.S. Its tax treaty with the U.S. may exempt or lower the tax on your ${what}, and the estimate doesn’t cover that yet.`)
+  }
   const exempt = treaty?.kind === 'wage-exemption' ? Math.min(w2Wages, treaty.exemptWagesPerYear) : 0
   const wages = w2Wages - exempt // line 1a
   const totalIncome = wages + scholarship // line 9 = 1z + 8 (bank interest is excluded: not on the return)
@@ -129,6 +138,7 @@ export function federalSection(input: TaxInput): Calculated | NotCalculated | No
     ? [line({ id: 'bank-interest', group: 'income', label: 'Bank interest (not taxed)', formLine: 'Not entered on Form 1040-NR', from: `From your 1099-INT${payer(input.bankInterest)}: exempt for a nonresident`, source: 'Publication 519 (2025), page 22; Instructions for Form 1040-NR (2025), page 19', dollars: interest })]
     : []
 
+  const necWhat = dividends + necInterest > 0 ? (gainTaxed > 0 ? 'dividends, interest and trading gain' : 'dividends and interest') : 'trading gain'
   const has1099 = input.investments.some((i) => i.form === '1099-DIV') || input.trades.length > 0
   const has1042 = input.scholarships.length > 0 || investment1042.length > 0
   const investmentLines: EstimateLine[] = [
@@ -141,9 +151,20 @@ export function federalSection(input: TaxInput): Calculated | NotCalculated | No
     ...(input.investments.some((i) => exemptInterestOf(i))
       ? [line({ id: 'investment-interest-exempt', group: 'income', label: 'Interest (not taxed)', formLine: 'Not taxed (a Schedule NEC exception)', from: 'Deposit or portfolio interest on your 1042-S', source: 'Publication 519 (2025), page 22; Instructions for Form 1040-NR (2025), page 43', dollars: exemptInterest })]
       : []),
-    ...(input.trades.length
-      ? [line({ id: 'trading', group: 'income', label: netGain > 0 ? 'Trading gains (not taxed)' : 'Trading: no net gain', formLine: 'Schedule NEC, lines 16 to 18: not entered', from: netGain > 0 ? `In the U.S. ${days} days in ${input.year}: fewer than ${I.capitalGainDays}` : 'Losses beyond gains aren’t allowed', source: 'Publication 519 (2025), page 32; Instructions for Form 1040-NR (2025), page 44', dollars: Math.max(0, netGain) })]
-      : []),
+    // Trading: taxed at 30% (183+ days and a U.S. main home), or shown as not taxed (under 183 days, or a main home in the home country)
+    ...(input.trades.length && gainTaxed > 0
+      ? [line({ id: 'trading-gain', group: 'income', label: 'Trading gain (taxed at 30%)', formLine: 'Schedule NEC, line 9 (from line 18), column (c)', from: `In the U.S. ${days} days in ${input.year}, main home in the U.S.`, source: 'Publication 519 (2025), pages 20 and 32; Instructions for Form 1040-NR (2025), pages 42 and 44', dollars: gainTaxed })]
+      : input.trades.length
+        ? [line({
+            id: 'trading',
+            group: 'income',
+            label: netGain > 0 ? 'Trading gains (not taxed)' : 'Trading: no net gain',
+            formLine: 'Schedule NEC, lines 16 to 18: not entered',
+            from: netGain <= 0 ? 'Losses beyond gains aren’t allowed' : over183 ? 'You told us your main home was in your home country, so the gain isn’t from U.S. sources' : `In the U.S. ${days} days in ${input.year}: fewer than ${I.capitalGainDays}`,
+            source: 'Publication 519 (2025), ' + (over183 && netGain > 0 ? 'pages 20 and 32' : 'page 32') + '; Instructions for Form 1040-NR (2025), page 44',
+            dollars: Math.max(0, netGain),
+          })]
+        : []),
   ]
 
   const use = input.scholarshipUse.paidFor
@@ -197,7 +218,7 @@ export function federalSection(input: TaxInput): Calculated | NotCalculated | No
     }),
     ...(necIncome > 0
       ? [
-          line({ id: 'nec-tax', group: 'tax', label: 'Tax on dividends and interest (30%)', formLine: 'Form 1040-NR, line 23a', from: 'Schedule NEC, line 15', source: 'Instructions for Form 1040-NR (2025), page 42; Form 1040-NR (2025), page 2', dollars: necTax }),
+          line({ id: 'nec-tax', group: 'tax', label: `Tax on ${necWhat} (30%)`, formLine: 'Form 1040-NR, line 23a', from: 'Schedule NEC, line 15', source: 'Instructions for Form 1040-NR (2025), page 42; Form 1040-NR (2025), page 2', dollars: necTax }),
           line({ id: 'total-tax', group: 'tax', label: 'Total tax', formLine: 'Form 1040-NR, line 24', from: 'Lines 16 and 23a', source: 'Form 1040-NR (2025), page 2', dollars: totalTax }),
         ]
       : []),
@@ -224,6 +245,7 @@ export function federalSection(input: TaxInput): Calculated | NotCalculated | No
     ...(input.investments.length ? [I.sources.nec30, I.sources.necCodes, I.sources.necLines] : []),
     ...(input.investments.some((i) => i.form === '1099-DIV') ? [I.sources.dividends1099] : []),
     ...(input.trades.length ? [I.sources.capitalGains, I.sources.gainSource] : []),
+    ...(gainTaxed > 0 ? [I.sources.gainTax] : []),
     S.rounding,
     ...(treaty?.kind === 'standard-deduction' ? [treaty.sources.rule, treaty.sources.amount, treaty.sources.conditions] : [S.deductions]),
     S.lineChoice,

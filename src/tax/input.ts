@@ -141,6 +141,9 @@ export type TaxInput = {
     digitalAssets: 'yes' | 'no' | null
     /** Days in the U.S. in the tax year, from "Time in the U.S." (only when every count is answered); null = not known */
     daysInUS: number | null
+    /** "In 2025, was your main home in the U.S. or in your home country?" (asked only with trading income and 183+ days):
+     *  the stand-in for the tax home (Pub 519 (2025), pages 8 and 20). null = not asked or not answered. */
+    taxHome: 'us' | 'home' | null
   }
   wages: WageInput[]
   scholarships: ScholarshipInput[]
@@ -158,7 +161,7 @@ export type TaxInput = {
 
 export type BuildArgs = {
   year: number
-  person: { citizenship?: string; visa?: string; livedBefore?: string; marital?: 'single' | 'married'; digitalAssets?: 'yes' | 'no'; daysInUS?: number }
+  person: { citizenship?: string; visa?: string; livedBefore?: string; marital?: 'single' | 'married'; digitalAssets?: 'yes' | 'no'; daysInUS?: number; taxHome?: 'us' | 'home' }
   income: string[]
   items: TaxItem[]
   documents: ConfirmedDocument[]
@@ -289,10 +292,17 @@ export function buildTaxInput({ year, person, income, items, documents: docs, sc
   if (scholarships.length && !paidFor) block({ id: 'scholarship:paid-for', reason: 'Scholarship: tell us what it paid for.', fix: { label: 'Answer the question', target: question('/income/scholarship-paid-for') } })
   if (scholarships.length && paidFor === 'both' && (stipend === null || stipend <= 0)) block({ id: 'scholarship:stipend', reason: 'Scholarship: tell us how much of it was for living costs.', fix: { label: 'Answer the question', target: question('/income/scholarship-stipend') } })
 
+  // Trading with 183 days or more in the U.S.: whether the gain is taxed depends on where the main home was. Needed only if
+  // there's a gain (or the cost basis is missing, so we can't tell); a loss is never taxed. Unanswered: a blocker to the question.
+  const days = Number.isInteger(person.daysInUS) ? person.daysInUS! : null
+  const taxHome = person.taxHome === 'us' || person.taxHome === 'home' ? person.taxHome : null
+  const mayHaveGain = trades.some((t) => t.costBasis === null) || trades.reduce((n, t) => n + t.proceeds - (t.costBasis ?? 0), 0) > 0
+  if (trades.length && days !== null && days >= 183 && taxHome === null && mayHaveGain) block({ id: 'trading:tax-home', reason: 'Trading: tell us where your main home was.', fix: { label: 'Answer the question', target: { path: '/income/trading-tax-home', state: null } } })
+
   return {
     year,
     filingStatus: 'single',
-    person: { citizenship: person.citizenship ?? null, visa: person.visa ?? null, livedBefore: person.livedBefore ?? null, marital: person.marital ?? null, digitalAssets: person.digitalAssets ?? null, daysInUS: Number.isInteger(person.daysInUS) && person.daysInUS! >= 0 && person.daysInUS! <= 366 ? person.daysInUS! : null },
+    person: { citizenship: person.citizenship ?? null, visa: person.visa ?? null, livedBefore: person.livedBefore ?? null, marital: person.marital ?? null, digitalAssets: person.digitalAssets ?? null, daysInUS: Number.isInteger(person.daysInUS) && person.daysInUS! >= 0 && person.daysInUS! <= 366 ? person.daysInUS! : null, taxHome: person.taxHome === 'us' || person.taxHome === 'home' ? person.taxHome : null },
     wages,
     scholarships,
     bankInterest,

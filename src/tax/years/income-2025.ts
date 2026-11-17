@@ -73,7 +73,12 @@ export const INCOME_2025: IncomeConfig = {
     gainSource: {
       table: 'Trading: where a gain comes from',
       citation:
-        'Publication 519 (2025), page 20, Personal Property: a gain “generally has its source in the United States if you have a tax home in the United States”; tax home: page 8. AtlasTax doesn’t ask where your tax home was, so with 183 days or more there is no number (TODO confirm with CPA).',
+        'Publication 519 (2025), page 20, Personal Property: a gain on personal property (stock is personal property) “generally has its source in the United States if you have a tax home in the United States. If you do not have a tax home in the United States, the gain or loss is generally considered to be from sources outside the United States.” Tax home (pages 8 and 20): “the general area of your main place of business, employment, or post of duty, regardless of where you maintain your family home”; with no regular place of business, “the place where you regularly live”. AtlasTax asks “was your main home in the U.S. or in your home country?” and uses the answer as the tax home (TODO confirm with CPA: the question says “main home”, the rule says tax home). The exceptions on pages 20 and 21 (inventory, depreciable property, intangibles, an office or fixed place of business) are not worked out.',
+    },
+    gainTax: {
+      table: 'Trading: the tax on a U.S. gain',
+      citation:
+        'Publication 519 (2025), page 32: with 183 days or more in the U.S., “your net gain from sales or exchanges of capital assets is taxed at a 30% (or lower treaty) rate”; net gain is U.S.-source gains over U.S.-source losses, and the capital loss carryover and losses beyond gains aren’t used. Instructions for Form 1040-NR (2025): page 42, Schedule NEC, “Enter your income in the row that lists the correct category of income and in the column that lists the correct tax rate” (30% is column (c)); page 44, Schedule NEC “Line 9—Capital Gain: Enter the amount from Schedule NEC (Form 1040-NR), line 18”, and lines 16 to 18, “Include these gains and losses only if you were in the United States at least 183 days”. The tax joins the dividends and interest on Schedule NEC line 15 → Form 1040-NR line 23a. A tax treaty may exempt or lower it: not covered (TODO confirm with CPA).',
     },
     bankInterest: {
       table: 'U.S. bank interest',

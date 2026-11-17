@@ -152,7 +152,7 @@ export function createApp(overrides: Partial<ServerOptions> = {}): Handler {
       const facts = cleanFacts(body.facts)
       // Days in the U.S. in the tax year (Time in the U.S.), only when every count is answered: the 183-day rule reads it
       const daysInUS = facts.daysComplete ? facts.days[String(year)] : undefined
-      const input = buildTaxInput({ year, person: { citizenship: person.citizenship ? String(person.citizenship) : undefined, visa: person.visa ? String(person.visa) : undefined, livedBefore: code(person.livedBefore), marital: pick(person.marital, ['single', 'married'] as const), digitalAssets: pick(person.digitalAssets, ['yes', 'no'] as const), daysInUS }, income, items: items as TaxItem[], documents: docs, scholarshipUse: (body.scholarship ?? {}) as { paidFor?: unknown; stipend?: unknown } })
+      const input = buildTaxInput({ year, person: { citizenship: person.citizenship ? String(person.citizenship) : undefined, visa: person.visa ? String(person.visa) : undefined, livedBefore: code(person.livedBefore), marital: pick(person.marital, ['single', 'married'] as const), digitalAssets: pick(person.digitalAssets, ['yes', 'no'] as const), daysInUS, taxHome: pick(person.taxHome, ['us', 'home'] as const) }, income, items: items as TaxItem[], documents: docs, scholarshipUse: (body.scholarship ?? {}) as { paidFor?: unknown; stipend?: unknown } })
       if (path === '/api/dev/tax-input') return send(res, 200, input)
       const estimate = estimateReturn(input)
       const fills = buildForms({ year, docs, facts, estimate, person: input.person })

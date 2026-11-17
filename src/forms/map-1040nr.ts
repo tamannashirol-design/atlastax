@@ -187,8 +187,8 @@ export function build1040NR({ docs, estimate, person = { marital: null, digitalA
   if (treaty || deduction?.treaty) check.push(`A student treaty benefit is included (${treaty ? 'line 1k' : 'line 12'}), based on the country you lived in before coming to the U.S.`)
 
   notIncluded.push(scholarshipLine ? 'Lines 2 to 7 (other interest, dividends, retirement income and capital gains) are not part of this estimate yet, so they are empty.' : 'Lines 2 to 8 (other interest, dividends, retirement income, capital gains and other income) are not part of this estimate yet, so they are empty.')
-  if (get('dividends') || get('nec-interest') || get('investment-interest-exempt')) notIncluded.push('Schedule NEC (Form 1040-NR), with your dividends and interest (its line 15 gives line 23a of this form), is not included yet.')
-  if (get('trading')) notIncluded.push('Your trading is not entered: capital gains are taxed only if you were in the U.S. at least 183 days, and losses beyond gains aren’t allowed (Instructions for Form 1040-NR (2025), page 44).')
+  if (get('dividends') || get('nec-interest') || get('investment-interest-exempt') || get('trading-gain')) notIncluded.push(`Schedule NEC (Form 1040-NR), with your ${get('trading-gain') ? 'dividends, interest and trading gain' : 'dividends and interest'} (its line 15 gives line 23a of this form), is not included yet.`)
+  if (get('trading')) notIncluded.push('Your trading is not entered: capital gains are taxed only if you were in the U.S. at least 183 days and the gain is from U.S. sources, and losses beyond gains aren’t allowed (Instructions for Form 1040-NR (2025), page 44; Publication 519 (2025), pages 20 and 32).')
   if (get('bank-interest')) notIncluded.push('Your U.S. bank interest is not entered: for a nonresident it is exempt, and the instructions say not to include it on lines 2a or 2b (Instructions for Form 1040-NR (2025), page 19).')
   if (scholarshipLine) {
     notIncluded.push('Schedule 1 (Form 1040), with your taxable scholarship on line 8r (it goes to line 8 of this form), is not included yet.')

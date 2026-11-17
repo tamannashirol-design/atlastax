@@ -16,6 +16,7 @@ import { asksArrivalDate, asksIfStudent, asksYearAbroad, daysFor, inScope, isOut
 import { OtherWaysToFile } from '../residency/OtherWaysToFile'
 import { ArrivalDate, TimeSummary, TripsStep, YearAbroad } from '../residency/TimeInUS'
 import { setAnswers, setDetail, setResidency, type Answers } from './answers'
+import { asksTaxHome } from './taxHome'
 import { documentsDone, ruleForUploadScreen, uploadScreenApplies, type SkipValue } from './requiredDocuments'
 import { at, sectionIndex, type FlowPosition, type SectionId } from './sections'
 
@@ -187,6 +188,25 @@ function incomeFollowUps(): FlowScreen[] {
     upload('investments-upload', 'tax form', 'Upload your investment tax forms', `From your brokerage or bank, such as a ${ruleForUploadScreen('investments-upload').form}`, LATER),
     // Trading
     upload('trading-upload', 'tax form', 'Upload your brokerage tax forms', `Such as a ${ruleForUploadScreen('trading-upload').form}`, LATER),
+    // Trading gains are taxed (at 30%) only with 183 days or more in the U.S., and only if the gain is from U.S. sources,
+    // which for stock depends on the tax home (Pub 519 (2025), pages 20 and 32). So: asked only with trading income AND 183+ days.
+    // TODO confirm with CPA: "main home" stands in for the tax home (the main place of work, or where you regularly live).
+    {
+      ...tiles(
+        'trading-tax-home',
+        'Where was your main home?',
+        [
+          { value: 'us', code: 'In the U.S.' },
+          { value: 'home', code: 'Home country' },
+        ],
+        has('trading'),
+        { helper: 'Where you mainly worked or lived' },
+      ),
+      // Designer's wording "…was your main home in the U.S. or in your home country?" is 4 lines on a phone (3 from 600px), over the
+      // layout limit (3, then 2), so the two options moved to the tiles
+      question: (_, year) => `In ${year}, where was your main home?`,
+      when: (a, year) => asksTaxHome(a, year),
+    },
     // Contract work (expenses wait for tax review)
     ...selfEmployed('contract-work', 'contract work', 'contract'),
     // No earnings: nothing to ask. Donation and Child care: on hold for tax review.

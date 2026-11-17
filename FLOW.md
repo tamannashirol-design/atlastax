@@ -591,6 +591,7 @@ and contract expenses, Donation, Child care.
 | /income/campus-w2 | On-campus job | Upload your W-2 from your on-campus job | Upload · "I'll add it later" |
 | /income/scholarship-withheld | Scholarship | Did your university withhold tax from your scholarship? | Yes / No |
 | /income/scholarship-1042s | Scholarship | Upload your 1042-S for your scholarship | Upload · "I'll add it later" |
+| /income/trading-tax-home | Trading, only with 183+ days in the U.S. | In {year}, where was your main home? Helper: "Where you mainly worked or lived" (designer's "…in the U.S. or in your home country?" was 4 lines on a phone, so the two options are the tiles) | Tiles In the U.S. / Home country. Home country: trading gains aren't taxed. U.S.: the net gain is taxed at 30%. TODO confirm with CPA (stands in for the tax home) |
 | /income/scholarship-paid-for | Scholarship | What did your scholarship pay for? Helper: "Tuition includes fees and required books" | Tiles Tuition / Living costs / Both (no descriptions: three tiles with them overflow on a phone) |
 | /income/scholarship-stipend | Scholarship, "Both" only | How much of it was for living costs in {year}? Helper: "Rent, food or travel. Check your award letter" | Amount |
 | /income/freelance-form | Freelance | Did you get a 1099-NEC for your freelance work? | Yes / No |
