@@ -26,8 +26,8 @@ dist-ssr
 # Screenshots from layout checks (not committed)
 screenshots/
 
-# Motion reference videos (large, kept locally only): the whole folder, whatever the video format
-references/motion/
+# Design references (old screens, motion videos): kept on this computer only, never committed
+references/
 
 # Uploaded files and server records (development)
 .data/
