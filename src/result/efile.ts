@@ -1,11 +1,11 @@
 // The E-file CONCEPT screen (/result/efile): which label, amount and options to show for an estimate. Pure (no React).
 // It reads the federal section of the Estimate (the 1040-NR is what would be e-filed) and decides nothing about tax.
-// Nothing here is connected to the IRS: a card or bank option only says "Coming soon".
+// Nothing here is connected to the IRS: a card, bank or direct deposit option goes to the celebration screen.
 // TODO confirm with CPA: which payment and refund methods exist for a Form 1040-NR (and whether a student can e-file it at all).
 import { isCalculated, type Estimate } from '../tax/estimate.ts'
 
-/** soon = "Coming soon" appears on the row; sheet = opens "What to do next" (paper: print, sign, mail) */
-export type EfileOption = { id: 'card' | 'bank' | 'direct-deposit' | 'check' | 'paper-check'; label: string; action: 'soon' | 'sheet' }
+/** celebrate = straight to the "taxes are done" screen (no details asked; concept only); sheet = opens "What to do next" (paper: print, sign, mail) */
+export type EfileOption = { id: 'card' | 'bank' | 'direct-deposit' | 'check' | 'paper-check'; label: string; action: 'celebrate' | 'sheet' }
 
 export type EfileView =
   | { kind: 'owed'; label: 'Amount owed'; cents: number | null; heading: string; options: EfileOption[] }
@@ -16,7 +16,6 @@ export type EfileView =
   | { kind: 'unavailable'; message: string }
 
 export const CONCEPT_LABEL = 'Concept: not connected to the IRS'
-export const COMING_SOON = 'Coming soon'
 
 export function efileView(estimate: Estimate): EfileView {
   const f = estimate.federal
@@ -29,8 +28,8 @@ export function efileView(estimate: Estimate): EfileView {
       cents: f.amount,
       heading: 'Ways to pay',
       options: [
-        { id: 'card', label: 'Debit or credit card', action: 'soon' },
-        { id: 'bank', label: 'Bank account', action: 'soon' },
+        { id: 'card', label: 'Debit or credit card', action: 'celebrate' },
+        { id: 'bank', label: 'Bank account', action: 'celebrate' },
         { id: 'check', label: 'Pay by check', action: 'sheet' },
       ],
     }
@@ -41,7 +40,7 @@ export function efileView(estimate: Estimate): EfileView {
     cents: f.amount,
     heading: 'Ways to get your refund',
     options: [
-      { id: 'direct-deposit', label: 'Direct deposit', action: 'soon' },
+      { id: 'direct-deposit', label: 'Direct deposit', action: 'celebrate' },
       { id: 'paper-check', label: 'Paper check by mail', action: 'sheet' },
     ],
   }

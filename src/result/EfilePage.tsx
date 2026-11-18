@@ -4,18 +4,18 @@ import { AppShell } from '../components/AppShell'
 import { SecondaryButton } from '../components/SecondaryButton'
 import { ESTIMATE_NUMBER_VISIBLE } from '../config'
 import { useAnswers, useFilingYear } from '../flow/answers'
-import { RESULT_PATH } from '../flow/screens'
+import { EFILE_DONE_PATH, RESULT_PATH } from '../flow/screens'
 import { spring } from '../lib/motion'
-import { Link } from '../lib/router'
+import { Link, navigate } from '../lib/router'
 import { fetchEstimate } from '../tax/client'
 import { hideNumbers, type Estimate } from '../tax/estimate'
 import { isResultFixture, type ResultFixture } from '../tax/fixtureNames'
-import { COMING_SOON, CONCEPT_LABEL, efileView, type EfileOption } from './efile'
+import { CONCEPT_LABEL, efileView, type EfileOption } from './efile'
 import { NextStepsSheet } from './NextStepsSheet'
 import { Wallet } from './Wallet'
 
 // The E-file CONCEPT screen (/result/efile), reached from "Want to e-file instead?" on /result.
-// Not connected to the IRS: a card or bank option only says "Coming soon"; "Pay by check" and "Paper check by mail"
+// Not connected to the IRS: a card, bank or direct deposit option goes to the celebration (EfileDonePage); "Pay by check" and "Paper check by mail"
 // open the same "What to do next" sheet. Which label, amount and options show is decided in ./efile.ts, not here.
 //
 // Motion on open (about 1s), transform + opacity only: a card slides into the wallet (soft, ~400ms, after a 250ms pause), then the
@@ -60,7 +60,7 @@ export default function EfilePage() {
   const [estimate, setEstimate] = useState<Estimate | null>(null)
   const [failed, setFailed] = useState(false)
   const [attempt, setAttempt] = useState(0)
-  const [soon, setSoon] = useState<string | null>(null)
+  const [leaving, setLeaving] = useState(false) // the wallet settles shut, then the celebration opens
   const [sheet, setSheet] = useState(false)
 
   useEffect(() => {
@@ -94,7 +94,12 @@ export default function EfilePage() {
   }, [ready, failed])
 
   const view = estimate ? efileView(estimate) : null
-  const choose = (o: EfileOption) => (o.action === 'sheet' ? setSheet(true) : setSoon(o.id))
+  const choose = (o: EfileOption) => {
+    if (o.action === 'sheet') return setSheet(true)
+    if (leaving) return
+    setLeaving(true)
+    window.setTimeout(() => navigate(EFILE_DONE_PATH), reduce ? 0 : 200)
+  }
   const fade = { initial: { opacity: 0 }, animate: { opacity: 1 }, transition: reduce ? spring.fade : { ...spring.soft } }
 
   return (
@@ -130,7 +135,10 @@ export default function EfilePage() {
               <>
                 <div className="flex flex-col items-center gap-4 rounded-lg bg-surface p-6 shadow-1">
                   <motion.div {...fade}>
-                    <Wallet reduce={reduce} />
+                    {/* The quick settle: the wallet closes up a touch as you choose (movement only; reduced motion skips it) */}
+                    <motion.div animate={leaving && !reduce ? { scale: 0.94, y: 4 } : { scale: 1, y: 0 }} transition={spring.quick}>
+                      <Wallet reduce={reduce} />
+                    </motion.div>
                   </motion.div>
                   {(view.kind === 'owed' || view.kind === 'refund') && (
                     <motion.div className="flex flex-col items-center gap-1 text-center" data-amount {...fade}>
@@ -165,10 +173,6 @@ export default function EfilePage() {
                               className={`flex min-h-14 w-full items-center justify-between gap-4 rounded-sm border border-border-strong bg-surface px-4 text-left text-body font-semibold active:bg-sage-100 ${focusRing}`}
                             >
                               {o.label}
-                              {/* Always in the page, so "Coming soon" is announced when it appears */}
-                              <span aria-live="polite" className="text-small font-normal text-text-muted">
-                                {soon === o.id ? COMING_SOON : ''}
-                              </span>
                             </button>
                           </li>
                         ))}

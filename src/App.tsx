@@ -1,10 +1,11 @@
 import DocumentsPage from './documents/DocumentsPage'
 import FlowPage from './flow/FlowPage'
-import { EFILE_PATH, READING_PATH, RESULT_PATH, REVIEW_PATH, STOP_PATH, isFlowPath, isGatedPath } from './flow/screens'
+import { EFILE_DONE_PATH, EFILE_PATH, READING_PATH, RESULT_PATH, REVIEW_PATH, STOP_PATH, isFlowPath, isGatedPath } from './flow/screens'
 import ReadingPage from './reading/ReadingPage'
 import ReviewPage from './review/ReviewPage'
 import ResultPage from './result/ResultPage'
 import EfilePage from './result/EfilePage'
+import EfileDonePage from './result/EfileDonePage'
 import { useAnswers, useFilingYear } from './flow/answers'
 import { lazy, Suspense, useEffect } from 'react'
 import HomePage from './home/HomePage'
@@ -57,6 +58,8 @@ export default function App() {
   if (path === RESULT_PATH) return <ResultPage />
   // The E-file concept screen (from "Want to e-file instead?"); not connected to the IRS
   if (path === EFILE_PATH) return <EfilePage />
+  // The celebration after a card, bank or direct deposit choice (concept)
+  if (path === EFILE_DONE_PATH) return <EfileDonePage />
   // Logged out: the intro is the entry page. Logged in: Home (fake auth, see lib/auth)
   if (path === '/') return loggedIn ? <HomePage /> : <LandingPage />
   // The intro, always (logged in or not)

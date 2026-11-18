@@ -130,6 +130,7 @@
   --folder-shadow: var(--color-text);
 
   /* Wallet illustration (E-file concept): sage and a light cobalt wash only, never solid cobalt (that is the primary button's) */
+  --confetti-yellow: #f2cf5b; /* the celebration's soft yellow accent: confetti only, never text or controls */
   --wallet-back: color-mix(in oklch, var(--color-sage-100), var(--color-border-decorative) 40%);
   --wallet-front-top: color-mix(in srgb, var(--color-sage-100), var(--color-surface) 60%);
   --wallet-front-bottom: var(--color-primary-tint);
