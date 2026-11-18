@@ -14,14 +14,34 @@ export type StageCard = { id: string; name: string }
 const STAGGER_MS = 450
 const FIRST_MS = 400
 const FEED_AFTER_MS = 240
-const STRIP_MS = 900
-const STRIPS = 10
+const STRIP_MS = 1900 // the slowest strip: its delay plus its fall
+const STRIPS = 16
 const COLORS = ['var(--color-primary)', 'var(--color-border-decorative)', 'var(--color-text)', 'var(--color-sage-100)']
 
+// Paper doesn't fall evenly: every strip gets its own width, length, start, speed, sway and spin. Fixed numbers (a seeded
+// sequence), so it looks the same every time, but no two strips match.
+const rnd = (k: number) => {
+  const x = Math.sin(k * 12.9898 + 78.233) * 43758.5453
+  return x - Math.floor(x)
+}
 const stripsFor = (n: number) =>
   Array.from({ length: STRIPS }, (_, i) => {
-    const k = n * 13 + i * 7
-    return { i, color: COLORS[(k + i) % COLORS.length], dx: ((k * 17) % 61) - 30, fall: 96 + ((k * 11) % 56), spin: ((k * 23) % 90) - 45, w: 3 + (k % 3), h: 14 + ((k * 5) % 12), delay: (i % 5) * 0.04 }
+    const k = n * 31 + i * 7 + 1
+    const sway = 10 + rnd(k + 1) * 26
+    const dir = rnd(k + 2) < 0.5 ? -1 : 1
+    return {
+      i,
+      color: COLORS[Math.floor(rnd(k + 3) * COLORS.length)],
+      w: 2 + Math.round(rnd(k + 4) * 4), // 2 to 6 wide
+      h: 10 + Math.round(rnd(k + 5) * 24), // 10 to 34 long
+      fall: 150 + rnd(k + 6) * 90, // 150 to 240 down
+      sway: [0, dir * sway, -dir * sway * 0.6, dir * sway * 0.9],
+      spin: [0, dir * (30 + rnd(k + 7) * 80), -dir * (20 + rnd(k + 8) * 70), dir * (60 + rnd(k + 9) * 140)],
+      curl: 0.55 + rnd(k + 10) * 0.35, // how flat it turns as it tumbles (transform only)
+      dur: 1.1 + rnd(k + 11) * 0.5, // 1.1 to 1.6s
+      delay: 0.12 + rnd(k + 12) * 0.3, // they don't all let go at once
+      offset: (rnd(k + 13) - 0.5) * 150, // where along the slot
+    }
   })
 
 function MiniCard({ card, still, refCb }: { card: StageCard; still?: boolean; refCb?: (el: HTMLLIElement | null) => void }) {
@@ -103,7 +123,7 @@ export function ShredderStage({ cards, kept, failed, reduce, onDone }: { cards: 
         shred(i)
         await wait(STAGGER_MS)
       }
-      await wait(FEED_AFTER_MS + 400 + 120 + STRIP_MS - STAGGER_MS)
+      await wait(FEED_AFTER_MS + STRIP_MS - STAGGER_MS)
       if (stop) return
       setFinished(true)
       onDoneRef.current()
@@ -149,16 +169,30 @@ export function ShredderStage({ cards, kept, failed, reduce, onDone }: { cards: 
             <Shredder finished={finished} reduce={reduce} />
           </div>
           {/* The tray: strips fall out of the underside and fade (decoration only) */}
-          <div aria-hidden className="relative h-24 w-60">
+          <div aria-hidden className="relative h-48 w-60">
             {!failed &&
               bursts.map((n) =>
                 stripsFor(n).map((p) => (
                   <motion.span
                     key={`${n}-${p.i}`}
                     className="absolute top-0 left-1/2 block rounded-[1px]"
-                    style={{ backgroundColor: p.color, width: p.w, height: p.h, opacity: 0, marginLeft: ((p.i - STRIPS / 2) * 12) / 1 }}
-                    animate={{ y: [0, p.fall * 0.5, p.fall], x: [0, p.dx * 0.6, p.dx], rotate: [0, p.spin, p.spin * 1.6], opacity: [0, 1, 1, 0] }}
-                    transition={{ duration: STRIP_MS / 1000, delay: 0.12 + p.delay, times: [0, 0.5, 1], ease: ['easeIn', 'easeIn'], opacity: { duration: STRIP_MS / 1000, delay: 0.12 + p.delay, times: [0, 0.05, 0.7, 1] } }}
+                    style={{ backgroundColor: p.color, width: p.w, height: p.h, opacity: 0, marginLeft: p.offset }}
+                    animate={{
+                      y: [0, p.fall * 0.2, p.fall * 0.5, p.fall],
+                      x: p.sway,
+                      rotate: p.spin,
+                      scaleX: [1, p.curl, 1, p.curl],
+                      opacity: [0, 1, 1, 1, 0],
+                    }}
+                    transition={{
+                      duration: p.dur,
+                      delay: p.delay,
+                      times: [0, 0.3, 0.6, 1],
+                      y: { duration: p.dur, delay: p.delay, times: [0, 0.3, 0.6, 1], ease: ['easeIn', 'linear', 'easeIn'] }, // speeds up as it drops
+                      x: { duration: p.dur, delay: p.delay, times: [0, 0.3, 0.6, 1], ease: 'easeInOut' },
+                      rotate: { duration: p.dur, delay: p.delay, times: [0, 0.3, 0.6, 1], ease: 'easeInOut' },
+                      opacity: { duration: p.dur, delay: p.delay, times: [0, 0.04, 0.55, 0.8, 1] }, // visible for most of the fall, fades only near the end
+                    }}
                   />
                 )),
               )}

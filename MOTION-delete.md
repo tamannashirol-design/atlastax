@@ -123,3 +123,5 @@ stays and grows. Ours: a navy slab with a round light, strips in our palette tha
 1. **Strips in the tray**: fade away (my suggestion: calm, nothing left on screen) or stay as a pile like the reference?
 2. **Sheet error**: OK that the sheet no longer shows the error (it moves to the stage after the cards return)?
 3. **Counter**: "Shredding 2 of 5" under the machine, or a small number on the machine itself?
+
+Update: the strips are now irregular (random-looking but fixed sizes, delays, speeds, sway and spin) and fall further (150-240px) before fading.
