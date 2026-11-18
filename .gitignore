@@ -26,11 +26,16 @@ dist-ssr
 # Screenshots from layout checks (not committed)
 screenshots/
 
-# Motion reference videos (large, kept locally only)
-references/motion/*.mov
+# Motion reference videos (large, kept locally only): the whole folder, whatever the video format
+references/motion/
 
 # Uploaded files and server records (development)
 .data/
 
 # PNG exports of the design system overview (npm run export:overview)
 exports/
+
+# Secrets and local settings: never commit (a template named .env.example is fine)
+.env
+.env.*
+!.env.example
