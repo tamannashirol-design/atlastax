@@ -9,6 +9,7 @@ import { clearDetail, setDetail, useAnswers, useFilingYear } from '../flow/answe
 import { documentsLine, incomeItemsLine, selfReportKey, type DocumentItem, type IncomeItem } from '../flow/requiredDocuments'
 import { DocumentCard } from './DocumentCard'
 import { DocumentUploadSheet } from './DocumentUploadSheet'
+import { DeleteSheet } from '../delete/DeleteSheet'
 import { documentArt, incomeArt } from './artwork'
 import { returnStatus } from '../home/returnStatus'
 import { READING_PATH, pathForSection, resumeScreen } from '../flow/screens'
@@ -57,6 +58,7 @@ export default function DocumentsPage() {
   const answers = useAnswers()
   const year = useFilingYear()
   const reduce = useReducedMotionConfig() ?? false
+  const [deleting, setDeleting] = useState(false)
   // Follows history state, so opening the tab while on this page drops the flow frame
   const fromFlow = useHistoryState().fromFlow === true
   // The open upload sheet: which document, and a file dropped on its card (if any)
@@ -266,6 +268,11 @@ export default function DocumentsPage() {
                 )}
               </div>
             )}
+
+            {/* Quiet: opens the confirmation sheet; nothing is deleted before that sheet's own button */}
+            <button type="button" onClick={() => setDeleting(true)} className={`mt-10 self-start text-small ${quietLink}`}>
+              Delete everything
+            </button>
           </div>
         </div>
       </div>
@@ -273,6 +280,8 @@ export default function DocumentsPage() {
       <p className="sr-only" aria-live="polite">
         {announce}
       </p>
+
+      <AnimatePresence>{deleting && <DeleteSheet scope="everything" onClose={() => setDeleting(false)} />}</AnimatePresence>
 
       <AnimatePresence onExitComplete={() => afterSheet.current()}>
         {uploading && (

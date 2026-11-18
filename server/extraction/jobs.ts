@@ -161,6 +161,19 @@ export function readingJobs({ providerFor, filesDir, listFiles }: Deps) {
       return (await filesFor(sessionId, year, itemId)).length > 0
     },
 
+    /** "Delete my documents": stop and drop every reading of this person's documents that `covers` (all of them when omitted), for every year. Values go with it. */
+    forget(sessionId: string, covers: (itemId: string) => boolean = () => true) {
+      for (const [key, map] of docs) {
+        if (!key.startsWith(`${sessionId}:`)) continue
+        for (const [itemId, doc] of [...map]) {
+          if (!covers(itemId)) continue
+          doc.abort?.abort()
+          map.delete(itemId)
+          emit(key, { type: 'removed', run: runOf(key), itemId })
+        }
+      }
+    },
+
     whenFilesChange(fn: typeof onFilesChanged) {
       onFilesChanged = fn
     },

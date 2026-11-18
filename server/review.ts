@@ -41,6 +41,14 @@ export function reviewStore(jobs: Jobs, listFiles: (sessionId: string) => Promis
       return [...items].map((i) => view(sessionId, year, i))
     },
 
+    /** "Delete my documents": forget what this person confirmed or typed (the extracted values too, in the jobs) for every document `covers`. */
+    forget(sessionId: string, covers: (itemId: string) => boolean = () => true) {
+      for (const key of [...saved.keys()]) {
+        const [s, , itemId] = key.split(':')
+        if (s === sessionId && covers(itemId)) saved.delete(key)
+      }
+    },
+
     /** null: not a document this person has. 'not-done': asked to confirm with details left. */
     async save(sessionId: string, year: number, itemId: string, body: Record<string, unknown>): Promise<ReviewDoc | null | 'not-done'> {
       if (!(itemId in ITEM_FORMS) || !(await jobs.hasFiles(sessionId, year, itemId))) return null

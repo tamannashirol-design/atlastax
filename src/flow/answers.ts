@@ -3,6 +3,8 @@
 // the browser blocks storage.
 import { useSyncExternalStore } from 'react'
 import { TAX_YEAR } from '../config'
+import type { DeleteScope } from './deletion'
+import { answersAfterForms } from './deletionAnswers'
 
 export type Answers = {
   visa?: 'F-1' | 'J-1' | 'M-1'
@@ -33,6 +35,10 @@ export type Answers = {
   fileIds?: Record<string, (string | null)[]>
   /** Review: the screen the person was on (a document id, or "summary"), to resume there. No values. */
   reviewAt?: string
+  /** The E-file celebration was reached: Home shows the "return is done" card (src/home/DoneCard.tsx) */
+  returnDone?: boolean
+  /** "Keep my documents" was pressed on that card */
+  doneCardDismissed?: boolean
 }
 
 export type ResidencyAnswers = {
@@ -138,6 +144,12 @@ export function takeFileId(key: string, index: number): string | undefined {
   const [id] = ids.splice(index, 1)
   setAnswers({ fileIds: { ...answers.fileIds, [key]: ids } })
   return id ?? undefined
+}
+
+/** After the server has confirmed a deletion: forget the same things here. forms: the tax forms' file names and ids, every year. everything: every year's answers. */
+export function deleteStoredAnswers(scope: DeleteScope) {
+  if (scope === 'everything') return commit({ year: TAX_YEAR, years: {} })
+  commit({ ...store, years: Object.fromEntries(Object.entries(store.years).map(([y, a]) => [y, answersAfterForms(a)])) })
 }
 
 /** Switch to another tax year (its own answers, kept separately). */

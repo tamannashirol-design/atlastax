@@ -19,6 +19,7 @@ import { useExtraction } from '../extraction/client'
 import { homeFixture, homeReadingFixture } from './fixtures'
 import { returnStatus, type HomeState, type ReturnStatus } from './returnStatus'
 import { OtherWaysToFile } from '../residency/OtherWaysToFile'
+import { DoneCard } from './DoneCard'
 
 // Home: the landing screen for everyone who's logged in, in every state of
 // their return (returnStatus() decides: new, in-progress, needs-documents,
@@ -239,6 +240,9 @@ export default function HomePage() {
     )
   }
 
+  // The return is done (E-file celebration reached) and the card wasn't dismissed: what to do with the documents
+  const showDone = !fixture && !!answers.returnDone && !answers.doneCardDismissed
+
   return (
     <AppShell title={<Logo settle />} activeTab="home">
       <div className="page-x">
@@ -284,6 +288,7 @@ export default function HomePage() {
                 </div>
               )}
             </motion.section>
+            {showDone && <DoneCard motionProps={card(0)} />}
             {main}
           </div>
 

@@ -54,6 +54,7 @@ import type { FormId } from '../src/forms/templates.ts'
 import { estimateReturn, hideNumbers } from '../src/tax/estimate.ts'
 import { buildTaxInput, type TaxItem } from '../src/tax/input.ts'
 import { sniff, storage, type ConsentRecord } from './storage.ts'
+import { isDeleteScope, isTaxFormItem, scopeCovers } from '../src/flow/deletion.ts'
 
 type Handler = (req: IncomingMessage, res: ServerResponse, next?: () => void) => void
 
@@ -194,6 +195,22 @@ export function createApp(overrides: Partial<ServerOptions> = {}): Handler {
         return send(res, 200, r)
       }
       return send(res, 404, { error: 'not-found' })
+    }
+
+    // "Delete my documents": really removes this person's files from the disk and what was read from them.
+    // Answers 200 ONLY after checking the disk itself; anything else, and the browser says nothing was deleted.
+    if (path === '/api/data' && req.method === 'DELETE') {
+      const scope = url.searchParams.get('scope')
+      if (!isDeleteScope(scope)) return send(res, 400, { error: 'scope' })
+      if (!options.dev && url.searchParams.has('fail')) return send(res, 400, { error: 'dev-only' })
+      if (options.dev && url.searchParams.has('fail')) return send(res, 500, { error: 'test-failure' }) // dev switch: pretend the server failed, delete nothing
+      const doomed = (await store.listFiles(sessionId)).filter((m) => scopeCovers(scope, m.itemId))
+      for (const m of doomed) await store.remove(m.fileId)
+      const covers = (itemId: string) => scope === 'everything' || isTaxFormItem(itemId)
+      jobs.forget(sessionId, covers)
+      review.forget(sessionId, covers)
+      for (const m of doomed) if (!(await store.gone(m.fileId))) return send(res, 500, { error: 'not-deleted' })
+      return send(res, 200, { scope, deleted: doomed.length })
     }
 
     const del = path.match(/^\/api\/files\/([^/]+)$/)

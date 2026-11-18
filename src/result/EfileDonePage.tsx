@@ -3,7 +3,7 @@ import { motion, useReducedMotionConfig } from 'framer-motion'
 import { useEffect } from 'react'
 import { AppShell } from '../components/AppShell'
 import { PrimaryButton } from '../components/PrimaryButton'
-import { useFilingYear } from '../flow/answers'
+import { setAnswers, useFilingYear } from '../flow/answers'
 import { RESULT_PATH } from '../flow/screens'
 import { spring } from '../lib/motion'
 import { Link, navigate } from '../lib/router'
@@ -69,6 +69,7 @@ export default function EfileDonePage() {
   useEffect(() => {
     document.title = `${headline} · AtlasTax`
     document.getElementById(HEADING_ID)?.focus({ preventScroll: true })
+    setAnswers({ returnDone: true }) // Home then shows the "return is done" card (what to do with your documents)
   }, [headline])
 
   const t = reduce ? spring.fade : spring.soft

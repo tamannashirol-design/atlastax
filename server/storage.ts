@@ -10,7 +10,7 @@
 // a retention rule) is TODO with legal; this is the dev version.
 import { randomUUID } from 'node:crypto'
 import { createWriteStream, type WriteStream } from 'node:fs'
-import { mkdir, readdir, readFile, rename, rm, writeFile } from 'node:fs/promises'
+import { access, mkdir, readdir, readFile, rename, rm, writeFile } from 'node:fs/promises'
 import { join } from 'node:path'
 
 export type FileKind = 'pdf' | 'jpeg' | 'png' | 'heic' | 'webp'
@@ -94,6 +94,13 @@ export function storage(dataDir: string) {
       if (!isFileId(fileId)) return
       await rm(join(files, fileId), { force: true })
       await rm(join(files, `${fileId}.json`), { force: true })
+    },
+
+    /** True when neither the file nor its record is on the disk any more (checked on the disk itself, not in a list). */
+    async gone(fileId: string): Promise<boolean> {
+      if (!isFileId(fileId)) return true
+      const there = (p: string) => access(p).then(() => true, () => false)
+      return !(await there(join(files, fileId))) && !(await there(join(files, `${fileId}.json`)))
     },
 
     async consent(sessionId: string): Promise<ConsentRecord | null> {

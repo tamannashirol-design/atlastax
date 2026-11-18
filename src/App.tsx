@@ -6,6 +6,8 @@ import ReviewPage from './review/ReviewPage'
 import ResultPage from './result/ResultPage'
 import EfilePage from './result/EfilePage'
 import EfileDonePage from './result/EfileDonePage'
+import DeletedPage from './delete/DeletedPage'
+import { DELETED_PATH } from './delete/DeleteSheet'
 import { useAnswers, useFilingYear } from './flow/answers'
 import { lazy, Suspense, useEffect } from 'react'
 import HomePage from './home/HomePage'
@@ -60,6 +62,8 @@ export default function App() {
   if (path === EFILE_PATH) return <EfilePage />
   // The celebration after a card, bank or direct deposit choice (concept)
   if (path === EFILE_DONE_PATH) return <EfileDonePage />
+  // After a confirmed deletion (documents and answers)
+  if (path === DELETED_PATH) return <DeletedPage />
   // Logged out: the intro is the entry page. Logged in: Home (fake auth, see lib/auth)
   if (path === '/') return loggedIn ? <HomePage /> : <LandingPage />
   // The intro, always (logged in or not)
