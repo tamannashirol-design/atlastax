@@ -1,5 +1,5 @@
 // Real-click audit of the E-file concept screen (/result/efile), reached from "Want to e-file instead?" on /result.
-//   - labelled "Concept: not connected to the IRS"; a wallet illustration; "Amount owed" or "Your refund" with the amount
+//   - a wallet illustration; "Amount owed" or "Your refund" with the amount
 //   - on open: a card slides into the wallet, then the amount counts up (about 600ms); reduced motion: fade only, no movement
 //   - owed: Debit or credit card, Bank account (each goes to the celebration screen), Pay by check (opens the sheet)
 //   - refund: Direct deposit (celebration), Paper check by mail (opens the sheet)
@@ -81,7 +81,7 @@ console.log('AMOUNT OWED (lived in Brazil: the fake W-2 owes $1,193)\n')
   const { context, page } = await resultPage('BR')
   const samples = await openAndSample(page, [60, 200, 420, 560, 1100])
   check('the button opens /result/efile', new URL(page.url()).pathname === '/result/efile')
-  check('the label says “Concept: not connected to the IRS”', await page.getByText('Concept: not connected to the IRS', { exact: true }).isVisible())
+  check('the “Concept” label is gone', (await page.getByText('Concept:').count()) === 0)
   check('a wallet illustration is on the page, with no text inside it', (await page.locator('svg[data-wallet]').count()) === 1 && (await page.locator('svg[data-wallet] text').count()) === 0)
   check('early on, the card has not settled (it is moving or still hidden) and the amount is not final yet', samples[0].transform !== 'none' || samples[0].opacity !== '1', JSON.stringify(samples[0]))
   check('the card ends settled and fully visible', samples[4].opacity === '1' && /^(none|matrix\(1, 0, 0, 1, 0, 0\))$/.test(samples[4].transform ?? ''), JSON.stringify(samples[4]))
@@ -97,8 +97,7 @@ console.log('AMOUNT OWED (lived in Brazil: the fake W-2 owes $1,193)\n')
   const done = await page.locator('main').innerText()
   check('a card tap goes straight to the celebration, no details asked', new URL(page.url()).pathname === '/result/efile/done')
   check('headline “Your 2025 taxes are done”, in the display font', (await page.getByRole('heading', { level: 1 }).innerText()) === 'Your 2025 taxes are done' && (await page.getByRole('heading', { level: 1 }).evaluate((e) => getComputedStyle(e).fontFamily)).includes('Fraunces'))
-  check('the concept label stays visible', done.includes('Concept: not connected to the IRS'))
-  check('no “filed”, “accepted”, “IRS confirm”, and no refund timing or promises', !/\bfiled\b|accepted|confirm|\b(days?|weeks?|fast|quick|instant|guarantee)\b/i.test(done.replace('Concept: not connected to the IRS', '')), done)
+  check('no “filed”, “accepted”, “IRS confirm”, and no refund timing or promises', !/\bfiled\b|accepted|confirm|\b(days?|weeks?|fast|quick|instant|guarantee)\b/i.test(done), done)
   check('focus is on the headline', await page.evaluate(() => document.activeElement?.tagName === 'H1'))
   check('a live region announces it', (await page.locator('[role="status"]').innerText()).includes('Your 2025 taxes are done'))
   check('confetti is on the page (28 pieces) and then gone from view (faded out)', (await page.locator('span.absolute.block').count()) === 28 && (await page.locator('span.absolute.block').evaluateAll((els) => els.every((e) => getComputedStyle(e).opacity === '0'))))

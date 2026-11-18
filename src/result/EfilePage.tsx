@@ -10,7 +10,7 @@ import { Link, navigate } from '../lib/router'
 import { fetchEstimate } from '../tax/client'
 import { hideNumbers, type Estimate } from '../tax/estimate'
 import { isResultFixture, type ResultFixture } from '../tax/fixtureNames'
-import { CONCEPT_LABEL, efileView, type EfileOption } from './efile'
+import { efileView, type EfileOption } from './efile'
 import { NextStepsSheet } from './NextStepsSheet'
 import { Wallet } from './Wallet'
 
@@ -120,8 +120,6 @@ export default function EfilePage() {
               <h1 id={HEADING_ID} tabIndex={-1} className="font-display text-display outline-none">
                 E-file
               </h1>
-              {/* TODO confirm with legal: wording of the concept label */}
-              <p className="rounded-xs bg-sage-100 px-2 text-small text-text-muted">{CONCEPT_LABEL}</p>
             </div>
 
             {failed && !estimate && (

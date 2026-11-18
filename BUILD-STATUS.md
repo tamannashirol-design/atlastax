@@ -520,3 +520,6 @@ Removed "For students on F-1, J-1 and M-1 visas filing U.S. taxes." (phone and w
 
 ## E-file celebration screen (concept)
 `/result/efile/done` (`EfileDonePage.tsx`): Debit or credit card, Bank account and Direct deposit go straight here (no details); Pay by check and Paper check by mail still open "What to do next". "Coming soon" rows are gone. Headline "Your {year} taxes are done" + the concept label; no "filed"/"accepted"/IRS wording, no refund timing. About 1.5s: check pops (`pop`), confetti rises and drifts down once (keyframed path, 28 fixed pieces, cobalt/sage/navy/`--confetti-yellow`), headline fades up. Reduced motion: fade only, no confetti. Wording: TODO confirm with legal. Tested by `npm run audit:efile`.
+
+## "Concept: not connected to the IRS" label removed
+Removed from the E-file screen and the celebration screen (and the check that required it). Words on those screens still avoid "filed", "accepted" and refund timing.

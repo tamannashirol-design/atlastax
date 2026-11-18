@@ -15,7 +15,6 @@ export type EfileView =
   /** No number yet (something is missing, or this year can't be estimated) */
   | { kind: 'unavailable'; message: string }
 
-export const CONCEPT_LABEL = 'Concept: not connected to the IRS'
 
 export function efileView(estimate: Estimate): EfileView {
   const f = estimate.federal

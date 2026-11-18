@@ -7,7 +7,6 @@ import { useFilingYear } from '../flow/answers'
 import { RESULT_PATH } from '../flow/screens'
 import { spring } from '../lib/motion'
 import { Link, navigate } from '../lib/router'
-import { CONCEPT_LABEL } from './efile'
 
 // The celebration (/result/efile/done), after "Debit or credit card", "Bank account" or "Direct deposit" on the E-file
 // concept screen. Nothing is asked and nothing is sent: it is a concept. Words: never "filed", "accepted" or anything
@@ -100,13 +99,11 @@ export default function EfileDonePage() {
                 {headline}
               </h1>
               <p className="text-body text-text-muted">Thanks for going through it with us. You can come back to your forms any time.</p>
-              {/* TODO confirm with legal: wording of the concept label */}
-              <p className="rounded-xs bg-sage-100 px-2 text-small text-text-muted">{CONCEPT_LABEL}</p>
             </motion.div>
 
             {/* Read out once when the screen opens */}
             <p role="status" aria-live="polite" className="sr-only">
-              {headline}. {CONCEPT_LABEL}.
+              {headline}.
             </p>
 
             <div className="flex w-full flex-col gap-2">

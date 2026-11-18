@@ -4,7 +4,7 @@
 // the rows, the celebration) is tested with real clicks: npm run audit:efile.
 import { estimateReturn } from '../src/tax/estimate.ts'
 import { buildTaxInput, type TaxInput } from '../src/tax/input.ts'
-import { CONCEPT_LABEL, efileView } from '../src/result/efile.ts'
+import { efileView } from '../src/result/efile.ts'
 
 let failed = 0
 function check(name: string, got: unknown, want: unknown) {
@@ -30,8 +30,7 @@ check('the state is not part of this screen: a state refund or amount never show
 check('number off (hidden): the amount is null, never a made-up number', ((v) => v.kind === 'owed' && v.cents)(efileView({ ...estimateReturn(input()), federal: { ...(estimateReturn(input()).federal as object), amount: null } as never })), null)
 
 console.log('\nMINE: plain words, no promises\n')
-const words = JSON.stringify([owed, refund, CONCEPT_LABEL])
-check('the label is exactly “Concept: not connected to the IRS”', CONCEPT_LABEL, 'Concept: not connected to the IRS')
+const words = JSON.stringify([owed, refund])
 check('no promise about speed or fees: no fast, quick, instant, free, no fee, same day, days, within', /\b(fast|quick|quickly|instant|free|fees?|same[- ]day|days?|within|guarantee)/i.test(words), false)
 check('no brand names (card networks, banks, payment apps)', /visa|mastercard|amex|american express|discover|paypal|venmo|zelle|chase|apple pay|google pay/i.test(words), false)
 
