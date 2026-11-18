@@ -1,6 +1,8 @@
 # Delete motion: the shredder
 
-**Status: spec for approval. Nothing is built yet.**
+**Status: approved and built** (`src/delete/`: `DeletedPage` = the stage and the confirmation, `ShredderStage`, `Shredder`; `npm run audit:delete`).
+Decisions: strips fade away; the sheet no longer shows the error (the stage does); the count is a status line under the machine.
+Built differences: the browser forgets the answers the moment the server confirms (not when the animation ends), so the two never disagree; the cards are listed identity first, so the passport goes first. Not tested by a script: hiding the tab mid-way (the sequence waits for the tab to be visible; checked by reading the code).
 
 Source: `references/motion/references:motion:shredderdelete.mov` (the file's own clock says 8.1s, 1124×550, ~57fps; the player
 shows a different length, so read my times as "seconds into the file"). No video tool is installed here, so I pulled still frames
