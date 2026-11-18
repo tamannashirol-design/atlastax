@@ -4,9 +4,6 @@ import { Link } from '../lib/router'
 
 export type IntroMode = 'page' | 'replay'
 
-// TODO confirm: who the app is for. Describes the audience only; no outcome promises.
-export const WHO_FOR = 'For students on F‑1, J‑1 and M‑1 visas filing U.S. taxes.'
-
 const focusRing = 'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-text'
 
 /** Quiet "Log in" link (no accounts yet: goes to a placeholder page). */

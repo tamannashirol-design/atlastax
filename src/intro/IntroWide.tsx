@@ -3,7 +3,7 @@ import { useRef, useState, type KeyboardEvent } from 'react'
 import { Logo } from '../components/Logo'
 import { PrimaryButton } from '../components/PrimaryButton'
 import { spring } from '../lib/motion'
-import { LoginLink, PageFooter, WHO_FOR, type IntroMode } from './chrome'
+import { LoginLink, PageFooter, type IntroMode } from './chrome'
 import { SCENE_GAP_MS, scenes } from './content'
 import { gridStyle, type Frame } from './frame'
 import type { IntroExit } from './Intro'
@@ -17,7 +17,7 @@ import { LaptopPreview } from './LaptopPreview'
 //                heading and sentence, the others only their heading. A thin
 //                navy line fills beside the active step while it plays.
 //                At the bottom: Get started (the one cobalt button) and Skip.
-//   columns 6–12 "Preview" label and the demo panel: the real laptop layout
+//   columns 6–12 the demo panel: the real laptop layout
 //                (stepper rail + question column) in a card (LaptopPreview).
 // Stacked (768–1023, iPad portrait), on 8 columns: the steps become a row of
 // tabs (line fills underneath), the active sentence, the demo, then actions.
@@ -151,9 +151,6 @@ export function IntroWide({ frame, mode, onClose }: { frame: Frame; mode: IntroM
 
   const panel = (
     <div className="flex flex-col gap-3">
-      <span aria-hidden className="text-small text-text-muted">
-        Preview
-      </span>
       <div
         role="tabpanel"
         id="intro-panel"
@@ -203,7 +200,6 @@ export function IntroWide({ frame, mode, onClose }: { frame: Frame; mode: IntroM
       )}
     </div>
   )
-  const whoFor = page && <p className={`text-body text-text-muted ${frame.split ? 'pb-6' : 'pb-4'}`}>{WHO_FOR}</p>
   const Body = page ? 'main' : 'div'
 
   return (
@@ -243,7 +239,6 @@ export function IntroWide({ frame, mode, onClose }: { frame: Frame; mode: IntroM
         <Body className="flex flex-1 flex-col justify-center">
           <div className="grid page-content grid-rows-[auto_1fr] gap-x-(--grid-gutter) gap-y-10 py-12" style={gridStyle(frame)}>
             <div style={{ gridColumn: '1 / span 5', gridRow: 1 }}>
-              {whoFor}
               {tabList}
             </div>
             <div style={{ gridColumn: '6 / span 7', gridRow: '1 / span 2' }}>{panel}</div>
@@ -256,7 +251,6 @@ export function IntroWide({ frame, mode, onClose }: { frame: Frame; mode: IntroM
         <Body className="flex flex-1 flex-col justify-center">
           <div className="grid page-content gap-x-(--grid-gutter) py-12" style={gridStyle(frame)}>
             <div style={{ gridColumn: '1 / -1' }}>
-              {whoFor}
               {tabList}
             </div>
             {/* Active sentence: reserves 2 lines so the demo doesn't move between steps */}

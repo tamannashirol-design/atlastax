@@ -5,7 +5,7 @@ import { PrimaryButton } from '../components/PrimaryButton'
 import { SecondaryButton } from '../components/SecondaryButton'
 import { StepDots } from '../components/StepDots'
 import { spring } from '../lib/motion'
-import { LoginLink, PageFooter, WHO_FOR, type IntroMode } from './chrome'
+import { LoginLink, PageFooter, type IntroMode } from './chrome'
 import { SCENE_GAP_MS, scenes } from './content'
 import { gridStyle, questionColumn, type Frame } from './frame'
 import type { IntroExit } from './Intro'
@@ -169,7 +169,6 @@ export function IntroPhone({ frame, mode, onClose }: { frame: Frame; mode: Intro
           <div className="grid page-content gap-x-(--grid-gutter)" style={gridStyle(frame)}>
             {page ? (
               <div className="flex flex-col gap-2 pt-2 pb-2" style={col}>
-                <p className="pb-2 text-center text-small text-text-muted">{WHO_FOR}</p>
                 <PrimaryButton onClick={() => onClose('start')}>Get started</PrimaryButton>
                 <LoginLink onClick={() => onClose('login')} />
                 <PageFooter center />

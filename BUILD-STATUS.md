@@ -514,3 +514,6 @@ Things to know:
 ## Fake sign-in badge removed
 
 The "Logged in (fake)" / "Logged out (fake)" button is gone from every top corner (app screens and the intro). To switch the fake sign-in state for testing, use `?auth=in` / `?auth=out` in the address, or the toggle on /motion. CLAUDE.md still mentions the header badge (to update when you confirm).
+
+## Welcome page: audience line and "Preview" label removed
+Removed "For students on F-1, J-1 and M-1 visas filing U.S. taxes." (phone and wide) and the small "Preview" label above the laptop demo (wide). Screen-reader text for the demo is unchanged.
