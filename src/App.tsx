@@ -22,6 +22,7 @@ import { Link, navigate, usePath } from './lib/router'
 // build import.meta.env.DEV is false, so these pages (and their test uploads) aren't
 // even included; the addresses show "This screen is coming soon."
 const Styleguide = import.meta.env.DEV ? lazy(() => import('./styleguide/Styleguide')) : null
+const StyleguideOverview = import.meta.env.DEV ? lazy(() => import('./styleguide/Overview')) : null
 const MotionPage = import.meta.env.DEV ? lazy(() => import('./motion/MotionPage')) : null
 
 // Picks a page from the address bar. Flow screens share one FlowPage so the
@@ -37,6 +38,12 @@ export default function App() {
     if (gated) navigate(STOP_PATH, null, { replace: true })
   }, [gated])
   if (gated) return null
+  if (StyleguideOverview && path === '/styleguide/overview')
+    return (
+      <Suspense fallback={null}>
+        <StyleguideOverview />
+      </Suspense>
+    )
   if (Styleguide && path === '/styleguide')
     return (
       <Suspense fallback={null}>

@@ -178,7 +178,7 @@ export function FieldRow({ itemId, f, manual, save, registerFlush, say }: Props)
 }
 
 /** A 44pt checkbox row: real <input type="checkbox">, drawn with tokens (navy when checked, check in on-primary). */
-function Checkbox({ label, field, checked, onChange }: { label: string; field: string; checked: boolean; onChange: (checked: boolean) => void }) {
+export function Checkbox({ label, field, checked, onChange }: { label: string; field: string; checked: boolean; onChange: (checked: boolean) => void }) {
   return (
     <label className="flex min-h-11 cursor-pointer items-center gap-3 self-start rounded-sm pr-2 has-focus-visible:outline-2 has-focus-visible:outline-offset-2 has-focus-visible:outline-text">
       <span className="grid size-6 shrink-0">

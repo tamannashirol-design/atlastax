@@ -10,7 +10,7 @@ const js = readdirSync(dir).filter((f) => f.endsWith('.js'))
 const text = js.map((f) => readFileSync(join(dir, f), 'utf8')).join('\n')
 
 // Words that only exist on those pages
-const devOnly = { 'Masked ID numbers': '/styleguide', 'Mock reader scenario': '/motion', 'Upload moment': '/motion', 'Scrub uploading': '/motion' }
+const devOnly = { 'Masked ID numbers': '/styleguide', 'Mock reader scenario': '/motion', 'Upload moment': '/motion', 'Scrub uploading': '/motion', 'AtlasTax design system': '/styleguide/overview' }
 // And something that must be there, so a broken build can't pass by being empty
 const mustHave = ['Add each document to continue.']
 

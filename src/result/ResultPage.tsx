@@ -278,7 +278,7 @@ function TargetLink({ target, children }: { target: Target; children: ReactNode 
   )
 }
 
-function Card({ id, title, children, motionProps }: { id: string; title: string; children: ReactNode; motionProps: object }) {
+export function Card({ id, title, children, motionProps }: { id: string; title: string; children: ReactNode; motionProps: object }) {
   return (
     <motion.section {...motionProps} aria-labelledby={id} className="flex flex-col gap-4 rounded-lg bg-surface p-6 shadow-1">
       <h2 id={id} className="font-display text-title">
@@ -290,7 +290,7 @@ function Card({ id, title, children, motionProps }: { id: string; title: string;
 }
 
 /** The big moment: refund is calm and positive (success check), owed is neutral (no red, no alarm). */
-function Outcome({ status, amount, what }: { status: 'refund' | 'owed' | 'zero'; amount: number | null; what: string }) {
+export function Outcome({ status, amount, what }: { status: 'refund' | 'owed' | 'zero'; amount: number | null; what: string }) {
   if (status === 'zero') return <p className="text-body">We estimate you owe nothing {what === 'together' ? 'overall' : ''}, and no refund is due.</p>
   const refund = status === 'refund'
   return (

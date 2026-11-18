@@ -35,7 +35,8 @@
     "check:efile": "node scripts/check-efile.ts",
     "check:delete": "node scripts/check-delete.ts",
     "audit:efile": "node scripts/audit-efile.mjs",
-    "audit:delete": "node scripts/audit-delete.mjs"
+    "audit:delete": "node scripts/audit-delete.mjs",
+    "export:overview": "node scripts/export-overview.mjs"
   },
   "dependencies": {
     "@fontsource-variable/fraunces": "^5.3.0",

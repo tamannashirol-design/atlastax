@@ -8,17 +8,19 @@ import { pressScale, spring } from '../lib/motion'
 // "Remove file" in a confirmation sheet.
 // tone "quiet": no outline, cobalt label (designer's choice for Home's
 // "Filing for an earlier year?" under the cobalt button).
-type Props = { children: ReactNode; onClick?: () => void; disabled?: boolean; tone?: 'default' | 'destructive' | 'quiet' }
+type Props = { children: ReactNode; onClick?: () => void; disabled?: boolean; tone?: 'default' | 'destructive' | 'quiet'; /** Style guide only: show the pressed look without pressing. */ forcePressed?: boolean }
 
-export function SecondaryButton({ children, onClick, disabled, tone = 'default' }: Props) {
+export function SecondaryButton({ children, onClick, disabled, tone = 'default', forcePressed }: Props) {
   return (
     <motion.button
       type="button"
       onClick={onClick}
       disabled={disabled}
+      data-pressed={forcePressed || undefined}
       whileTap={disabled ? undefined : { scale: pressScale.button }}
+      animate={{ scale: forcePressed ? pressScale.button : 1 }}
       transition={spring.quick}
-      className={`flex h-14 w-full items-center justify-center rounded-sm bg-surface px-6 text-body font-semibold transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-text active:bg-sage-100 disabled:text-text-muted ${tone === 'quiet' ? 'text-primary' : 'border border-border-strong disabled:border-border-decorative'} ${tone === 'destructive' ? 'text-error' : ''}`}
+      className={`flex h-14 w-full items-center justify-center rounded-sm bg-surface px-6 text-body font-semibold transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-text active:bg-sage-100 data-pressed:bg-sage-100 disabled:text-text-muted ${tone === 'quiet' ? 'text-primary' : 'border border-border-strong disabled:border-border-decorative'} ${tone === 'destructive' ? 'text-error' : ''}`}
     >
       {children}
     </motion.button>

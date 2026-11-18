@@ -31,3 +31,6 @@ references/motion/*.mov
 
 # Uploaded files and server records (development)
 .data/
+
+# PNG exports of the design system overview (npm run export:overview)
+exports/

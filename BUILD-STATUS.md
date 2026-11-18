@@ -529,3 +529,6 @@ Home card "Your 2025 return is done" (shows after the E-file celebration; `answe
 
 ## Shredder delete motion
 Built from MOTION-delete.md. The confirm button opens `/deleted`, which sends the request while our document cards go into our own shredder (450ms apart; lift, slide behind the lip, strips fall). "Deleted" shows only when the last card is in AND the server said 200; a server failure brings the cards back with an error and Try again. Tax forms only: ID cards stay under "Staying". Reduced motion: no shredder, cards fade. Tested by `npm run audit:delete` (a slowed server answer proves the order).
+
+## Design system overview (development only)
+`/styleguide/overview`: one 1920x1080 canvas (16:9) scaled to fit the window, 12-column grid, static. Colors (hex read from index.css), type, buttons (default, pressed, disabled), components (the app's own tile, field, checkbox and result card), icons and motion tokens (read from lib/motion.ts). Not in the production build (checked). `?bg=transparent` removes the canvas background. Export a crisp 2x PNG (3840x2160): with `npm run dev` running, `npm run export:overview` (or `-- --transparent`), saved in `exports/` (git-ignored). By hand: window 1920x1080, DevTools device toolbar at DPR 2, "Capture screenshot". SecondaryButton gained `forcePressed` (style guide only).
